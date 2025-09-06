@@ -18,14 +18,39 @@
   ║                                                                                  ║
   ╚══════════════════════════════════════════════════════════════════════════════════╝
 -->
-<html lang="en">
+<html lang="en" xml:lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>KD's Digital Preservation Vault</title>
+  
+  <!-- Language declaration to prevent Chrome from detecting Japanese -->
+  <meta http-equiv="content-language" content="en">
+  <meta name="language" content="English">
+  
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="KD's Digital Preservation Vault - A personal archive preserving digital history. Featuring wiki archives, data vaults, PDF collections, and technical documentation.">
+  <meta name="keywords" content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
+  <meta name="author" content="Kunal Dawn">
+  <meta name="robots" content="index, follow">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://kunaldawn.com/">
+  <meta property="og:title" content="KD's Digital Preservation Vault">
+  <meta property="og:description" content="Preserve • Share • Rebuild — A personal digital preservation project keeping bits from rotting, one wget at a time.">
+  <meta property="og:image" content="/og-image.png">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://kunaldawn.com/">
+  <meta property="twitter:title" content="KD's Digital Preservation Vault">
+  <meta property="twitter:description" content="Preserve • Share • Rebuild — A personal digital preservation project keeping bits from rotting, one wget at a time.">
+  <meta property="twitter:image" content="/twitter-image.png">
+  
+  <title>KD's Digital Preservation Vault - Digital Archive & Knowledge Preservation</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
@@ -777,13 +802,30 @@
         font-size: 11px;
       }
       
-      /* Hide decorative elements on mobile */
+      /* Hide decorative elements on mobile except cat */
       .ascii-border,
       .terminal-frame,
       .loading-bar,
-      .floating-icon,
-      .desktop-cat {
+      .floating-icon {
         display: none;
+      }
+      
+      /* Keep cat visible on mobile but adjust position */
+      .desktop-cat {
+        bottom: 60px !important;
+        right: 10px !important;
+        width: 40px;
+        height: 35px;
+        z-index: 998; /* Below taskbar */
+      }
+      
+      .cat-body {
+        font-size: 9px !important;
+      }
+      
+      .cat-bubble {
+        font-size: 8px !important;
+        padding: 2px 4px !important;
       }
       
       /* Hide window controls on mobile */
@@ -797,9 +839,15 @@
         border: 1px solid rgba(0,255,150,0.2);
       }
       
-      /* Reduce matrix rain on mobile */
+      /* Keep matrix rain visible on mobile but optimize */
       .matrix-bg {
-        opacity: 0.08;
+        opacity: 0.15 !important;
+        display: block !important;
+      }
+      
+      .matrix-column {
+        font-size: 12px !important;
+        line-height: 1.1 !important;
       }
       
       /* Simplify taskbar on mobile */
@@ -1807,28 +1855,31 @@
       
       // Matrix rain effect
       function createMatrixRain() {
-        // Skip matrix rain on mobile for performance
-        if(window.innerWidth < 768) {
-          return;
-        }
+        // Create matrix rain for all devices but optimize for mobile
+        const isMobile = window.innerWidth < 768;
         
         const matrixBg = document.createElement('div');
         matrixBg.className = 'matrix-bg';
         document.body.appendChild(matrixBg);
         
-        const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン10ABCD3F6789';
-        const columns = Math.floor(window.innerWidth / 35);
+        // Using only ASCII characters to prevent language detection issues
+        const chars = '01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:<>?,./';
+        const columnWidth = isMobile ? 25 : 35;
+        const columns = Math.floor(window.innerWidth / columnWidth);
+        const maxColumns = isMobile ? 15 : columns; // Limit columns on mobile for performance
+        const actualColumns = Math.min(columns, maxColumns);
         
-        for(let i = 0; i < columns; i++) {
+        for(let i = 0; i < actualColumns; i++) {
           const column = document.createElement('div');
           column.className = 'matrix-column';
-          column.style.left = `${i * 35}px`;
+          column.style.left = `${i * columnWidth}px`;
           column.style.animationDuration = `${Math.random() * 10 + 8}s`;
           column.style.animationDelay = `${Math.random() * 8}s`;
           column.style.opacity = `${Math.random() * 0.5 + 0.5}`;
           
           let text = '';
-          for(let j = 0; j < 60; j++) {
+          const charCount = isMobile ? 30 : 60; // Fewer characters on mobile
+          for(let j = 0; j < charCount; j++) {
             const char = chars[Math.floor(Math.random() * chars.length)];
             const brightness = Math.random();
             if(brightness > 0.95) {
