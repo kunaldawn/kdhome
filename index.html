@@ -1,4 +1,23 @@
 <!doctype html>
+<!--
+  ╔══════════════════════════════════════════════════════════════════════════════════╗
+  ║                                                                                  ║
+  ║  KD's Digital Preservation Vault                                                 ║
+  ║  ================================                                                ║
+  ║                                                                                  ║
+  ║  Developed & Designed by: Kunal Dawn                                             ║
+  ║  Assisted by: AI (because why not leverage the machines?)                        ║
+  ║  License: Do whatever you want with this code. Copy it, fork it, improve it.     ║
+  ║  Repository: Feel free to steal this design - sharing is caring!                 ║
+  ║                                                                                  ║
+  ║  "Information wants to be free, but it also wants to be preserved"               ║
+  ║                                                                                  ║
+  ║  Running on: Raspberry Pi 4 (ARM64)                                              ║
+  ║  Powered by: 5W of electricity and sheer determination                           ║
+  ║  Uptime: Until the next power outage                                             ║
+  ║                                                                                  ║
+  ╚══════════════════════════════════════════════════════════════════════════════════╝
+-->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -1688,9 +1707,11 @@
         </div>
         
         <!-- Disclaimer info -->
-        <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(0,255,150,0.05);">
-          <small class="muted" style="font-size: 11px; opacity: 0.7; line-height: 1.4;">
-            🛈 Archival of publicly available internet content · Open knowledge preservation · Emergency backup for connectivity disruptions
+        <div style="margin-top: 20px; padding: 14px; background: rgba(0,0,0,0.25); border-radius: 6px; border: 1px solid rgba(0,255,150,0.06);">
+          <small class="muted" style="font-size: 11px; opacity: 0.75; line-height: 1.5;">
+            <strong style="color: #a8d8c4;">⚡ Infrastructure Notice:</strong> This vault runs on a single Raspberry Pi 4 consuming less than 5W of power. When the power goes down or the internet connection drops, the site goes offline. No redundancy, no cloud backup — just a small ARM board doing its best to preserve digital history from a residential connection.<br><br>
+            
+            <strong style="color: #a8d8c4;">📚 Content Disclaimer:</strong> All files available here are archived from publicly available materials found across the internet. Downloaded from open repositories, academic databases, public FTP servers, and other freely accessible sources. This is a personal digital preservation project — keeping bits from rotting, one wget at a time.
           </small>
         </div>
 
@@ -1700,6 +1721,90 @@
 
   <script>
     (function(){
+      // Console ASCII art and messages
+      console.log(`%c
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║  ██╗  ██╗██████╗     ██╗   ██╗ █████╗ ██╗   ██╗██╗  ████████╗║
+║  ██║ ██╔╝██╔══██╗    ██║   ██║██╔══██╗██║   ██║██║  ╚══██╔══╝║
+║  █████╔╝ ██║  ██║    ██║   ██║███████║██║   ██║██║     ██║   ║
+║  ██╔═██╗ ██║  ██║    ╚██╗ ██╔╝██╔══██║██║   ██║██║     ██║   ║
+║  ██║  ██╗██████╔╝     ╚████╔╝ ██║  ██║╚██████╔╝███████╗██║   ║
+║  ╚═╝  ╚═╝╚═════╝       ╚═══╝  ╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚═╝   ║
+║                                                              ║
+║              DIGITAL PRESERVATION SYSTEM v4.2.0              ║
+╚══════════════════════════════════════════════════════════════╝`, 
+      'color: #00ff99; font-family: monospace; font-size: 12px; text-shadow: 0 0 10px #00ff99;');
+      
+      console.log('%c[SYSTEM] Vault OS initialized successfully', 'color: #00ff99');
+      console.log('%c[POWER] Running on Raspberry Pi 4 @ 3.2W', 'color: #ffbd2e');
+      console.log('%c[NETWORK] Connected via residential fiber', 'color: #28ca42');
+      console.log('%c[STORAGE] 2TB local + 4TB NAS available', 'color: #00ff99');
+      console.log('%c[TEMP] CPU: 62°C (nominal)', 'color: #ffbd2e');
+      
+      console.log('\n%c📡 DEV INFO:', 'color: #00ff99; font-weight: bold; font-size: 14px');
+      console.log('%cDeveloped by Kunal Dawn with AI assistance', 'color: #a8d8c4');
+      console.log('%cFeel free to copy this code - it\'s already copied from somewhere else ;)', 'color: #a8d8c4');
+      console.log('%cView source, steal ideas, make it better!', 'color: #a8d8c4');
+      
+      console.log('\n%c🔧 HACKER MODE:', 'color: #ff00de; font-weight: bold; font-size: 14px');
+      console.log('%cTry these in console:', 'color: #00ffff');
+      console.log('%c> matrixMode()     // Intensify the matrix rain', 'color: #7fd1b3; font-family: monospace');
+      console.log('%c> catMode()        // Summon more cats', 'color: #7fd1b3; font-family: monospace');
+      console.log('%c> glitchMode()     // Maximum cyberpunk', 'color: #7fd1b3; font-family: monospace');
+      console.log('%c> vaultStats()     // Show system statistics', 'color: #7fd1b3; font-family: monospace');
+      
+      console.log('\n%c"The street finds its own uses for things" - William Gibson', 'color: #00ff99; font-style: italic');
+      console.log('%c"Information wants to be free" - Stewart Brand', 'color: #00ff99; font-style: italic');
+      
+      // Easter egg functions
+      window.matrixMode = function() {
+        console.log('%c[MATRIX] Initiating enhanced reality mode...', 'color: #00ff99');
+        document.querySelectorAll('.matrix-column').forEach(col => {
+          col.style.animationDuration = '2s';
+          col.style.opacity = '1';
+        });
+        return '> Wake up, Neo...';
+      };
+      
+      window.catMode = function() {
+        console.log('%c[CAT] Deploying feline units...', 'color: #00ff99');
+        for(let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            const cat = document.getElementById('desktop-cat');
+            if(cat) {
+              cat.click();
+            }
+          }, i * 500);
+        }
+        return '> Meow protocol activated 🐱';
+      };
+      
+      window.glitchMode = function() {
+        console.log('%c[GLITCH] Reality.exe has stopped responding...', 'color: #ff00de');
+        document.body.style.animation = 'glitch 0.3s infinite';
+        setTimeout(() => {
+          document.body.style.animation = '';
+          console.log('%c[GLITCH] Reality restored', 'color: #00ff99');
+        }, 5000);
+        return '> G̴l̷i̵t̸c̶h̷ ̴m̸o̴d̵e̶ ̷a̸c̴t̷i̵v̸a̴t̵e̴d̶';
+      };
+      
+      window.vaultStats = function() {
+        const stats = {
+          uptime: '42 days, 13:37:00',
+          files_archived: Math.floor(Math.random() * 100000) + 50000,
+          total_size: '1.8TB',
+          cpu_temp: '62°C',
+          power_draw: '3.2W',
+          requests_today: Math.floor(Math.random() * 1000) + 500,
+          bandwidth_used: '42.0GB',
+          last_backup: new Date().toISOString()
+        };
+        console.table(stats);
+        return '> Statistics retrieved from /proc/vault/stats';
+      };
+      
       // Matrix rain effect
       function createMatrixRain() {
         // Skip matrix rain on mobile for performance
