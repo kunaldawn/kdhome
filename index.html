@@ -2,11 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>KD's Digital Preservation Vault</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    
     :root{
       --bg:#071013;
       --crt-tint: rgba(14,255,150,0.03);
@@ -15,24 +22,55 @@
       --panel:#071823;
       --glass: rgba(255,255,255,0.03);
     }
-    html,body{height:100%;}
+    html {
+      height: 100%;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
     body{
-      margin:0; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Share Tech Mono', monospace;
-      background: radial-gradient(1200px 400px at 10% 10%, rgba(0,255,150,0.02), transparent), var(--bg);
-      color: #cfeee0; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-      display:flex; align-items:center; justify-content:center; padding:32px;
+      margin:0; 
+      min-height: 100vh;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Share Tech Mono', monospace;
+      background: 
+        radial-gradient(1200px 400px at 10% 10%, rgba(0,255,150,0.05), transparent),
+        radial-gradient(800px 800px at 90% 80%, rgba(0,255,150,0.03), transparent),
+        var(--bg);
+      color: #cfeee0; 
+      -webkit-font-smoothing:antialiased; 
+      -moz-osx-font-smoothing:grayscale;
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      padding:32px;
+      padding-bottom: 72px; /* Account for taskbar */
+      box-sizing: border-box;
+      overflow-x: hidden;
+      overflow-y: auto;
+      position: relative;
     }
 
     .vault {
       width:100%; max-width:1200px; background:linear-gradient(180deg,var(--panel), #031018 140%);
-      border-radius:14px; box-shadow: 0 10px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
-      padding:28px; position:relative; overflow:hidden; border:1px solid rgba(0,255,150,0.06);
+      border-radius:14px; 
+      box-shadow: 
+        0 10px 40px rgba(0,0,0,0.7), 
+        inset 0 1px 0 rgba(255,255,255,0.02),
+        0 0 60px rgba(0,255,150,0.05),
+        0 0 120px rgba(0,255,150,0.02);
+      padding:28px; position:relative; overflow:hidden; border:1px solid rgba(0,255,150,0.08);
+      /* Ensure window controls stay within bounds */
+      min-height: 40px;
     }
 
     .vault::before{
-      content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:overlay; opacity:0.05;
-      background-image: linear-gradient(transparent 50%, rgba(0,0,0,0.06) 52%);
+      content:""; position:absolute; inset:0; pointer-events:none; mix-blend-mode:overlay; opacity:0.08;
+      background-image: linear-gradient(transparent 50%, rgba(0,0,0,0.1) 52%);
       background-size:100% 4px;
+      animation: crtFlicker 0.15s infinite;
+    }
+    @keyframes crtFlicker {
+      0%, 100% { opacity: 0.08; }
+      50% { opacity: 0.06; }
     }
 
     header{display:flex; align-items:center; gap:18px; width:100%;}
@@ -44,7 +82,11 @@
     }
     .badge {
       font-family:'Share Tech Mono', monospace; font-weight:700; letter-spacing:1px; color:var(--neon);
-      font-size:16px; text-shadow:0 2px 20px rgba(0,255,150,0.4);
+      font-size:16px; 
+      text-shadow:
+        0 0 10px rgba(0,255,150,0.8),
+        0 0 20px rgba(0,255,150,0.6),
+        0 0 30px rgba(0,255,150,0.4);
       background: rgba(0,0,0,0.3);
       padding: 8px 12px;
       border-radius: 6px;
@@ -61,38 +103,1551 @@
     .link-list li{padding:12px 10px; border-radius:6px; margin-bottom:8px; transition:transform .18s ease, background .18s ease; background: rgba(0,0,0,0.15); border: 1px solid rgba(0,255,150,0.04);}
     .link-list li:hover{transform:translateX(6px); background:rgba(0,255,150,0.05); border-color: rgba(0,255,150,0.1);}
     .link-list a{color:#d4f0e5; text-decoration:none; display:flex; align-items:flex-start; gap:10px; font-size:13px; line-height:1.4;}
-    .kbd{font-family:'Share Tech Mono', monospace; background:rgba(0,255,150,0.1); padding:3px 8px; border-radius:6px; font-size:11px; color:var(--neon); border: 1px solid rgba(0,255,150,0.2); white-space:nowrap; display:inline-block; min-width:90px; text-align:center;}
+    .kbd{
+      font-family:'Share Tech Mono', monospace; 
+      background:rgba(0,255,150,0.15); 
+      padding:3px 8px; 
+      border-radius:6px; 
+      font-size:11px; 
+      color:var(--neon); 
+      border: 1px solid rgba(0,255,150,0.3); 
+      white-space:nowrap; 
+      display:inline-block; 
+      min-width:90px; 
+      text-align:center;
+      text-shadow: 0 0 10px rgba(0,255,150,0.4);
+      box-shadow: 
+        inset 0 0 10px rgba(0,255,150,0.1),
+        0 0 15px rgba(0,255,150,0.05);
+    }
 
     .panel{padding:22px; border-radius:10px; min-height:260px; background:linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.1)); border: 1px solid rgba(0,255,150,0.06);}
     .header-line{display:flex; justify-content:space-between; align-items:center}
     .tag{font-family:'Share Tech Mono', monospace; color:var(--neon); font-size:13px; text-shadow:0 1px 8px rgba(0,255,150,0.25)}
     .hero{
-      margin-top:16px; background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.15)); padding:20px; border-radius:8px; border:1px solid rgba(0,255,150,0.08);
+      margin-top:16px; background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.15)); padding:20px; border-radius:8px; border:1px solid rgba(0,255,150,0.08); position:relative;
     }
     .ascii{font-family:'Share Tech Mono', monospace; color:var(--neon); font-size:12px; white-space:pre; line-height:1.2; text-shadow:0 1px 10px rgba(0,255,150,0.3); background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;}
 
     .grid-cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px}
-    .card{background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.15)); padding:14px; border-radius:8px; border:1px solid rgba(0,255,150,0.08); transition: all 0.2s ease; text-decoration:none; display:block;}
-    .card:hover{background:linear-gradient(180deg, rgba(0,255,150,0.05), rgba(0,255,150,0.02)); border-color:rgba(0,255,150,0.15); transform:translateY(-2px); box-shadow: 0 4px 12px rgba(0,255,150,0.1);}
-    .card h4{margin:0 0 8px 0; font-size:15px; color:var(--neon); text-shadow:0 1px 8px rgba(0,255,150,0.25);}
+    .card{background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.15)); padding:14px; border-radius:8px; border:1px solid rgba(0,255,150,0.1); transition: all 0.2s ease; text-decoration:none; display:block;}
+    .card:hover{
+      background:linear-gradient(180deg, rgba(0,255,150,0.08), rgba(0,255,150,0.03)); 
+      border-color:rgba(0,255,150,0.25); 
+      transform:translateY(-2px); 
+      box-shadow: 
+        0 4px 12px rgba(0,255,150,0.2),
+        0 0 30px rgba(0,255,150,0.1);
+    }
+    .card h4{margin:0 0 8px 0; font-size:15px; color:var(--neon); text-shadow:0 0 15px rgba(0,255,150,0.5);}
     .muted{color:#b4d4c4; font-size:13px; line-height:1.4;}
 
-    footer{margin-top:18px; display:flex; justify-content:space-between; align-items:center; gap:18px}
-    .cta{background:transparent; padding:8px 12px; border-radius:8px; border:1px solid rgba(0,255,150,0.06); font-family:'Share Tech Mono', monospace}
+    /* Start Menu Styles */
+    .start-menu {
+      position: fixed;
+      bottom: 40px;
+      left: 0;
+      width: 400px;
+      max-width: 90vw;
+      background: linear-gradient(180deg, rgba(0,20,15,0.98), rgba(0,0,0,0.99));
+      border: 1px solid rgba(0,255,150,0.4);
+      border-radius: 8px 8px 0 0;
+      box-shadow: 
+        0 -10px 40px rgba(0,0,0,0.8),
+        0 0 60px rgba(0,255,150,0.1),
+        inset 0 0 30px rgba(0,255,150,0.05);
+      opacity: 0;
+      transform: translateY(100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 999;
+      pointer-events: none;
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+    }
+    
+    .start-menu.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    
+    .start-menu::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: 
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,255,150,0.02) 2px,
+          rgba(0,255,150,0.02) 4px
+        );
+      pointer-events: none;
+    }
+    
+    .start-menu-header {
+      background: linear-gradient(90deg, rgba(0,255,150,0.15), rgba(0,255,150,0.05));
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(0,255,150,0.2);
+    }
+    
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    
+    .user-avatar {
+      font-size: 20px;
+      filter: drop-shadow(0 0 10px rgba(0,255,150,0.5));
+    }
+    
+    .user-name {
+      color: var(--neon);
+      font-size: 14px;
+      text-shadow: 0 0 10px rgba(0,255,150,0.6);
+      letter-spacing: 1px;
+    }
+    
+    .start-menu-content {
+      display: flex;
+      padding: 8px;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .menu-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .menu-column.right {
+      border-left: 1px solid rgba(0,255,150,0.1);
+      padding-left: 8px;
+    }
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #a8d8c4;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .menu-item::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--neon);
+      transform: translateX(-100%);
+      transition: transform 0.2s;
+    }
+    
+    .menu-item:hover {
+      background: rgba(0,255,150,0.1);
+      color: var(--neon);
+      transform: translateX(4px);
+    }
+    
+    .menu-item:hover::before {
+      transform: translateX(0);
+    }
+    
+    .menu-icon {
+      font-size: 16px;
+      filter: drop-shadow(0 0 5px currentColor);
+    }
+    
+    .menu-shortcut {
+      margin-left: auto;
+      font-size: 11px;
+      opacity: 0.6;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    
+    .menu-time {
+      margin-left: auto;
+      font-size: 10px;
+      opacity: 0.5;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    
+    .menu-separator {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,255,150,0.2), transparent);
+      margin: 8px 0;
+    }
+    
+    .menu-section-title {
+      padding: 8px 12px 4px;
+      font-size: 11px;
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.8;
+    }
+    
+    .start-menu-footer {
+      display: flex;
+      gap: 4px;
+      padding: 8px;
+      background: rgba(0,0,0,0.3);
+      border-top: 1px solid rgba(0,255,150,0.2);
+    }
+    
+    .menu-item.power {
+      flex: 1;
+      justify-content: center;
+      padding: 10px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(0,255,150,0.1);
+    }
+    
+    .menu-item.power:hover {
+      background: rgba(255,0,0,0.1);
+      border-color: rgba(255,0,0,0.3);
+      color: #ff6b6b;
+    }
+    
+    .menu-item.recent {
+      font-size: 12px;
+    }
+    
+    /* Scrollbar styling for menu */
+    .start-menu-content::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .start-menu-content::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.3);
+    }
+    
+    .start-menu-content::-webkit-scrollbar-thumb {
+      background: rgba(0,255,150,0.3);
+      border-radius: 3px;
+    }
+    
+    .start-menu-content::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,255,150,0.5);
+    }
+    
+    /* Windows-style taskbar */
+    .taskbar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      background: linear-gradient(180deg, rgba(0,20,15,0.95), rgba(0,0,0,0.98));
+      border-top: 1px solid rgba(0,255,150,0.3);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+    
+    .start-button {
+      height: 32px;
+      padding: 0 16px;
+      background: linear-gradient(180deg, rgba(0,255,150,0.1), rgba(0,255,150,0.05));
+      border: 1px solid rgba(0,255,150,0.3);
+      border-radius: 4px;
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      text-shadow: 0 0 10px rgba(0,255,150,0.5);
+    }
+    
+    .start-button:hover {
+      background: linear-gradient(180deg, rgba(0,255,150,0.2), rgba(0,255,150,0.1));
+      box-shadow: 0 0 15px rgba(0,255,150,0.3);
+    }
+    
+    .taskbar-items {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: 12px;
+    }
+    
+    .taskbar-item {
+      height: 32px;
+      padding: 0 12px;
+      background: rgba(0,255,150,0.05);
+      border: 1px solid rgba(0,255,150,0.2);
+      border-radius: 4px;
+      color: #a8d8c4;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .taskbar-item.active {
+      background: rgba(0,255,150,0.15);
+      border-color: var(--neon);
+      color: var(--neon);
+      box-shadow: 0 0 10px rgba(0,255,150,0.2);
+    }
+    
+    .taskbar-item.minimized {
+      animation: pulse 2s infinite;
+    }
+    
+    .taskbar-item:hover {
+      background: rgba(0,255,150,0.1);
+      transform: translateY(-2px);
+    }
+    
+    .taskbar-item::before {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--neon);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    
+    .taskbar-item.active::before {
+      opacity: 1;
+    }
+    
+    .system-tray {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 8px;
+      border-left: 1px solid rgba(0,255,150,0.1);
+      margin-left: 8px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    
+    /* Minimize animation */
+    @keyframes minimizeToTaskbar {
+      0% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(0.1) translateY(100vh);
+        opacity: 0;
+      }
+    }
+    
+    @keyframes restoreFromTaskbar {
+      0% {
+        transform: scale(0.1) translateY(100vh);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+      }
+    }
+    
+    .vault.minimizing {
+      animation: minimizeToTaskbar 0.5s ease-in-out forwards;
+    }
+    
+    .vault.restoring {
+      animation: restoreFromTaskbar 0.5s ease-in-out forwards;
+    }
 
     .flicker{animation:flicker 7s linear infinite}
     @keyframes flicker{0%{opacity:1} 2%{opacity:.85} 3%{opacity:1} 7%{opacity:.9} 100%{opacity:1}}
+    
+    /* Matrix rain effect */
+    .matrix-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.25;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .matrix-column {
+      position: absolute;
+      top: -100%;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 20px;
+      line-height: 1.3;
+      color: var(--neon);
+      animation: matrix-fall linear infinite;
+      text-shadow: 
+        0 0 10px rgba(0,255,150,0.8),
+        0 0 20px rgba(0,255,150,0.6),
+        0 0 30px rgba(0,255,150,0.4),
+        0 0 40px rgba(0,255,150,0.2);
+      filter: contrast(1.5) brightness(1.2);
+    }
+    @keyframes matrix-fall {
+      0% { 
+        transform: translateY(-100%);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% { 
+        transform: translateY(110vh);
+        opacity: 0;
+      }
+    }
+    
+    /* Glitch effect for headers */
+    @keyframes glitch {
+      0%, 100% { 
+        text-shadow: 0 1px 20px rgba(0,255,150,0.4), 0 0 2px rgba(0,255,150,0.8);
+        transform: translate(0);
+      }
+      20% {
+        text-shadow: -2px 0 #ff00de, 2px 0 #00ffff, 0 1px 20px rgba(0,255,150,0.4);
+        transform: translate(2px, -1px);
+      }
+      40% {
+        text-shadow: 2px 0 #ff00de, -2px 0 #00ffff, 0 1px 20px rgba(0,255,150,0.4);
+        transform: translate(-1px, 1px);
+      }
+    }
+    h1:hover {
+      animation: glitch 0.3s ease-in-out;
+    }
+    
+    /* Scanning line effect */
+    .vault::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, 
+        transparent, 
+        rgba(0,255,150,0.4),
+        var(--neon),
+        rgba(0,255,150,0.4),
+        transparent);
+      opacity: 0.8;
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+      box-shadow: 
+        0 0 20px rgba(0,255,150,0.6),
+        0 0 40px rgba(0,255,150,0.3);
+      filter: blur(0.5px);
+    }
+    @keyframes scan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(100vh); }
+    }
+    
+    /* Typing cursor effect */
+    .tag::after {
+      content: "_";
+      animation: blink 1s infinite;
+      color: var(--neon);
+      font-weight: bold;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    
+    /* Boot sequence animation */
+    @keyframes bootUp {
+      0% { 
+        opacity: 0;
+        transform: translateY(20px);
+        filter: blur(5px);
+      }
+      50% {
+        filter: blur(0);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .panel {
+      animation: bootUp 0.8s ease-out;
+    }
+    
+    /* Data stream effect on badges */
+    @keyframes dataStream {
+      0% { background-position: 0% 50%; }
+      100% { background-position: 100% 50%; }
+    }
+    .badge {
+      background-image: linear-gradient(90deg, 
+        rgba(0,255,150,0.1), 
+        rgba(0,255,150,0.3), 
+        rgba(0,255,150,0.1), 
+        rgba(0,255,150,0.3), 
+        rgba(0,255,150,0.1)
+      );
+      background-size: 200% 100%;
+      animation: dataStream 3s linear infinite;
+    }
+    
+    /* Hover pulse for cards */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0,255,150,0.4); }
+      70% { box-shadow: 0 0 0 10px rgba(0,255,150,0); }
+      100% { box-shadow: 0 0 0 0 rgba(0,255,150,0); }
+    }
+    .card:hover {
+      animation: pulse 1.5s infinite;
+    }
+    
+    /* Terminal prompt animation */
+    .hero::before {
+      content: "> ";
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      animation: blink 1s infinite;
+    }
+    
+    /* Corrupted text effect */
+    @keyframes corrupt {
+      0%, 100% { 
+        clip-path: inset(0 0 0 0);
+        transform: translateX(0);
+      }
+      10% {
+        clip-path: inset(20% 0 30% 0);
+        transform: translateX(-2px);
+      }
+      20% {
+        clip-path: inset(50% 0 20% 0);
+        transform: translateX(2px);
+      }
+      30% {
+        clip-path: inset(10% 0 60% 0);
+        transform: translateX(-1px);
+      }
+    }
+    h2:hover {
+      animation: corrupt 0.5s ease-in-out;
+    }
+    
+    /* Retro grid pattern */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(0,255,150,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,150,0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 1;
+      animation: grid-move 20s linear infinite;
+    }
+    @keyframes grid-move {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
 
+    /* Mobile Responsive Styles */
     @media (max-width:800px){
+      body {
+        padding: 16px;
+        padding-bottom: 60px;
+      }
+      
+      .vault {
+        padding: 16px;
+        border-radius: 10px;
+        max-width: 100%;
+      }
+      
       .grid{grid-template-columns:1fr;}
-      header{flex-direction:column; align-items:flex-start}
+      
+      header{
+        flex-direction:column; 
+        align-items:flex-start;
+        gap: 12px;
+      }
+      
+      .logo {
+        padding: 12px;
+        gap: 10px;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      
+      .badge {
+        font-size: 12px;
+        padding: 6px 10px;
+      }
+      
+      h1 {
+        font-size: 16px;
+      }
+      
+      p.lead {
+        font-size: 12px;
+      }
+      
+      .panel {
+        padding: 16px;
+      }
+      
+      .header-line {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      
+      h2#panel-heading {
+        font-size: 16px !important;
+      }
+      
+      .grid-cards {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      
+      .card {
+        padding: 12px;
+      }
+      
+      .card h4 {
+        font-size: 14px;
+      }
+      
+      .muted {
+        font-size: 11px;
+      }
+      
+      /* Hide decorative elements on mobile */
+      .ascii-border,
+      .terminal-frame,
+      .loading-bar,
+      .floating-icon,
+      .desktop-cat {
+        display: none;
+      }
+      
+      /* Hide window controls on mobile */
+      .window-controls {
+        display: none !important;
+      }
+      
+      .window-btn {
+        width: 10px;
+        height: 10px;
+        border: 1px solid rgba(0,255,150,0.2);
+      }
+      
+      /* Reduce matrix rain on mobile */
+      .matrix-bg {
+        opacity: 0.08;
+      }
+      
+      /* Simplify taskbar on mobile */
+      .taskbar {
+        height: 48px;
+        padding: 0 8px;
+      }
+      
+      .start-button {
+        padding: 0 10px;
+        font-size: 11px;
+        height: 36px;
+      }
+      
+      .taskbar-items {
+        margin-left: 8px;
+      }
+      
+      .taskbar-item {
+        padding: 0 8px;
+        font-size: 10px;
+        height: 36px;
+      }
+      
+      .taskbar-item span:first-child {
+        display: none; /* Hide icon on mobile */
+      }
+      
+      .system-tray {
+        gap: 6px;
+        font-size: 10px;
+      }
+      
+      #bandwidth,
+      #archive-count,
+      .tray-separator {
+        display: none; /* Hide on mobile to save space */
+      }
+      
+      #clock {
+        font-size: 11px !important;
+      }
+      
+      /* Adjust animations for mobile */
+      .vault::after {
+        animation: none; /* Disable scan line on mobile */
+      }
+      
+      body::before {
+        background-size: 30px 30px; /* Smaller grid on mobile */
+      }
+      
+      /* Mobile-specific text sizes */
+      .tag {
+        font-size: 11px;
+      }
+      
+      .hero {
+        padding: 14px;
+        margin-top: 12px;
+      }
+    }
+    
+    @media (max-width:480px){
+      body {
+        padding: 12px;
+        padding-bottom: 55px;
+      }
+      
+      .vault {
+        padding: 12px;
+      }
+      
+      h1 {
+        font-size: 14px;
+        line-height: 1.3;
+      }
+      
+      .badge {
+        font-size: 10px;
+        padding: 4px 8px;
+        letter-spacing: 0.5px;
+      }
+      
+      .taskbar-item span:last-child {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .start-button span:last-child {
+        display: none; /* Only show icon on very small screens */
+      }
+      
+      /* Hide system tray separators on very small screens */
+      .system-tray span:contains('|') {
+        display: none;
+      }
+    }
+    
+    /* Tablet specific adjustments */
+    @media (min-width:481px) and (max-width:1024px){
+      .vault {
+        max-width: 90%;
+      }
+      
+      .grid-cards {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      }
+      
+      .floating-icon {
+        font-size: 24px;
+        opacity: 0.15;
+      }
+      
+      .ascii-cat {
+        font-size: 11px;
+        bottom: 55px;
+      }
+      
+      /* Show window controls on tablets */
+      .window-controls {
+        display: flex;
+        top: 6px;
+        right: 6px;
+        gap: 6px;
+      }
+      
+      .window-btn {
+        width: 10px;
+        height: 10px;
+      }
+    }
+    
+    /* Landscape mobile adjustments */
+    @media (max-height:500px) and (orientation:landscape){
+      body {
+        padding: 8px;
+        padding-bottom: 50px;
+      }
+      
+      .vault {
+        padding: 12px;
+      }
+      
+      .panel {
+        min-height: auto;
+      }
+      
+      .hero {
+        margin-top: 8px;
+        padding: 10px;
+      }
+      
+      .taskbar {
+        height: 40px;
+      }
+    }
+    
+    /* High DPI screen adjustments */
+    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+      .vault::before {
+        background-size: 100% 2px; /* Sharper scanlines on retina */
+      }
+      
+      body::before {
+        background-size: 25px 25px; /* Sharper grid on retina */
+      }
     }
 
     .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(0,0,0,0.18);font-size:12px}
+    /* Advanced animated desktop cat */
+    .desktop-cat {
+      position: fixed;
+      bottom: 50px;
+      right: 30px;
+      width: 60px;
+      height: 50px;
+      z-index: 1000;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      filter: drop-shadow(0 0 10px rgba(0,255,150,0.6));
+    }
+    
+    .cat-sprite {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-origin: center bottom;
+    }
+    
+    .cat-body {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      line-height: 1;
+      color: var(--neon);
+      text-shadow: 
+        0 0 10px rgba(0,255,150,0.8),
+        0 0 20px rgba(0,255,150,0.4);
+      white-space: pre;
+      transition: all 0.2s ease;
+    }
+    
+    .cat-body.walking {
+      animation: catBounce 0.4s ease-in-out infinite;
+    }
+    
+    .cat-body.sitting {
+      animation: catBreathe 3s ease-in-out infinite;
+    }
+    
+    .cat-body.sleeping {
+      animation: catSleep 4s ease-in-out infinite;
+    }
+    
+    .cat-body.playing {
+      animation: catPlay 0.6s ease-in-out infinite;
+    }
+    
+    .cat-body.cleaning {
+      animation: catClean 2s ease-in-out infinite;
+    }
+    
+    @keyframes catBounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(-3px); }
+    }
+    
+    @keyframes catBreathe {
+      0%, 100% { transform: translateX(-50%) scale(1); }
+      50% { transform: translateX(-50%) scale(1.05); }
+    }
+    
+    @keyframes catSleep {
+      0%, 100% { 
+        transform: translateX(-50%) rotate(-5deg);
+        opacity: 0.7;
+      }
+      50% { 
+        transform: translateX(-50%) rotate(-5deg) scale(0.95);
+        opacity: 0.6;
+      }
+    }
+    
+    @keyframes catPlay {
+      0% { transform: translateX(-50%) rotate(-10deg); }
+      25% { transform: translateX(-50%) rotate(10deg) translateY(-5px); }
+      50% { transform: translateX(-50%) rotate(-10deg); }
+      75% { transform: translateX(-50%) rotate(10deg) translateY(-8px); }
+      100% { transform: translateX(-50%) rotate(0deg); }
+    }
+    
+    @keyframes catClean {
+      0%, 100% { transform: translateX(-50%) rotate(0deg); }
+      25% { transform: translateX(-50%) rotate(-15deg) translateX(-5px); }
+      75% { transform: translateX(-50%) rotate(15deg) translateX(5px); }
+    }
+    
+    .desktop-cat.moving-left {
+      animation: moveLeft 8s linear;
+    }
+    
+    .desktop-cat.moving-right {
+      animation: moveRight 8s linear;
+    }
+    
+    .desktop-cat.wandering {
+      animation: wander 20s ease-in-out infinite;
+    }
+    
+    @keyframes moveLeft {
+      from { right: 30px; }
+      to { right: calc(100% - 90px); }
+    }
+    
+    @keyframes moveRight {
+      from { right: calc(100% - 90px); }
+      to { right: 30px; }
+    }
+    
+    @keyframes wander {
+      0%, 100% { 
+        right: 30px;
+        bottom: 50px;
+      }
+      25% { 
+        right: 200px;
+        bottom: 100px;
+      }
+      50% { 
+        right: 150px;
+        bottom: 150px;
+      }
+      75% { 
+        right: 80px;
+        bottom: 80px;
+      }
+    }
+    
+    .cat-bubble {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.8);
+      border: 1px solid var(--neon);
+      border-radius: 8px;
+      padding: 4px 8px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      color: var(--neon);
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      margin-bottom: 10px;
+    }
+    
+    .cat-bubble.show {
+      opacity: 1;
+      animation: bubblePop 0.3s ease-out;
+    }
+    
+    @keyframes bubblePop {
+      0% { transform: translateX(-50%) scale(0.8); }
+      50% { transform: translateX(-50%) scale(1.1); }
+      100% { transform: translateX(-50%) scale(1); }
+    }
+    
+    .cat-bubble::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 4px solid var(--neon);
+    }
+    
+    .paw-print {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle, var(--neon) 30%, transparent 70%);
+      border-radius: 50%;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 999;
+      animation: fadePaw 2s ease-out forwards;
+    }
+    
+    @keyframes fadePaw {
+      0% { 
+        opacity: 0.6;
+        transform: scale(1);
+      }
+      100% { 
+        opacity: 0;
+        transform: scale(0.5);
+      }
+    }
+    
+    /* Retro window decorations */
+    .window-controls {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 8px;
+      z-index: 10;
+    }
+    .window-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,255,150,0.3);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .window-btn.close { background: #ff5f57; }
+    .window-btn.minimize { background: #ffbd2e; }
+    .window-btn.maximize { background: #28ca42; }
+    .window-btn:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 10px currentColor;
+    }
+    
+    /* Remove old status bar styles as we're using taskbar now */
+    
+    /* Retro loading bars */
+    .loading-bar {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(0,255,150,0.2);
+      border-radius: 4px;
+      overflow: hidden;
+      opacity: 0;
+      animation: showLoader 0.5s ease-out 0.5s forwards;
+      display: none; /* Hidden by default */
+    }
+    @keyframes showLoader {
+      to { opacity: 1; }
+    }
+    .loading-fill {
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--neon), transparent);
+      background-size: 200% 100%;
+      animation: loadProgress 2s ease-out forwards, shimmer 0.5s linear infinite;
+    }
+    @keyframes loadProgress {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    
+    /* Retro computer terminal frame */
+    .terminal-frame {
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border: 2px solid rgba(0,255,150,0.1);
+      border-radius: 16px;
+      pointer-events: none;
+      background: 
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(0,255,150,0.01) 2px,
+          rgba(0,255,150,0.01) 4px
+        );
+    }
+    
+    /* Old school marquee */
+    .news-ticker {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border-top: 1px solid rgba(0,255,150,0.1);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ticker-content {
+      display: flex;
+      animation: ticker 30s linear infinite;
+      white-space: nowrap;
+    }
+    @keyframes ticker {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
+    
+    /* Floating icons */
+    .floating-icon {
+      position: fixed;
+      font-size: 36px;
+      opacity: 0.25;
+      color: var(--neon);
+      pointer-events: none;
+      animation: float 20s infinite ease-in-out;
+      text-shadow: 
+        0 0 20px rgba(0,255,150,0.8),
+        0 0 40px rgba(0,255,150,0.4);
+      filter: blur(0.5px);
+      mix-blend-mode: screen;
+    }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      25% { transform: translate(100px, -100px) rotate(90deg); }
+      50% { transform: translate(-50px, -200px) rotate(180deg); }
+      75% { transform: translate(-100px, -100px) rotate(270deg); }
+    }
+    
+    /* Retro cursor trail */
+    .cursor-trail {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      background: var(--neon);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+      filter: blur(2px);
+      z-index: 9999;
+    }
+    
+    /* ASCII art decorations */
+    .ascii-border {
+      position: absolute;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 8px;
+      color: rgba(0,255,150,0.1);
+      line-height: 1;
+      white-space: pre;
+      pointer-events: none;
+    }
+    .ascii-border.top-left {
+      top: 5px;
+      left: 5px;
+    }
+    .ascii-border.bottom-right {
+      bottom: 5px;
+      right: 5px;
+      transform: rotate(180deg);
+    }
+    /* Terminal popup */
+    .terminal-popup {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 600px;
+      max-width: 90vw;
+      background: rgba(0,0,0,0.95);
+      border: 1px solid var(--neon);
+      border-radius: 8px;
+      box-shadow: 0 0 40px rgba(0,255,150,0.3);
+      z-index: 10000;
+      animation: popIn 0.3s ease-out;
+    }
+    
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: rgba(0,255,150,0.1);
+      border-bottom: 1px solid rgba(0,255,150,0.3);
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon);
+    }
+    
+    .terminal-header button {
+      background: transparent;
+      border: 1px solid var(--neon);
+      color: var(--neon);
+      padding: 2px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    
+    .terminal-header button:hover {
+      background: rgba(255,0,0,0.2);
+      border-color: #ff6b6b;
+      color: #ff6b6b;
+    }
+    
+    .terminal-body {
+      padding: 15px;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon);
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .terminal-cursor {
+      animation: blink 1s infinite;
+    }
+    
+    /* Diagnostic overlay */
+    .diagnostic-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      backdrop-filter: blur(5px);
+    }
+    
+    .diagnostic-window {
+      background: linear-gradient(180deg, rgba(0,20,15,0.98), rgba(0,0,0,0.99));
+      border: 1px solid var(--neon);
+      border-radius: 8px;
+      padding: 20px;
+      width: 500px;
+      max-width: 90vw;
+      animation: popIn 0.3s ease-out;
+    }
+    
+    .diagnostic-window h3 {
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      margin: 0 0 15px 0;
+      text-shadow: 0 0 10px rgba(0,255,150,0.5);
+    }
+    
+    .diagnostic-progress {
+      height: 20px;
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(0,255,150,0.3);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 15px;
+    }
+    
+    .diagnostic-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--neon), rgba(0,255,150,0.6));
+      animation: progress 3.5s ease-out forwards;
+    }
+    
+    @keyframes progress {
+      from { width: 0%; }
+      to { width: 100%; }
+    }
+    
+    #diagnostic-output {
+      font-family: 'Share Tech Mono', monospace;
+      color: #a8d8c4;
+      font-size: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    
+    /* Lock screen */
+    .lock-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0,10,8,0.98), rgba(0,0,0,0.99));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      animation: fadeIn 0.3s ease-out;
+    }
+    
+    .lock-content {
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon);
+    }
+    
+    .lock-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 20px rgba(0,255,150,0.5));
+      animation: pulse 2s infinite;
+    }
+    
+    .lock-time {
+      font-size: 48px;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(0,255,150,0.5);
+    }
+    
+    .lock-date {
+      font-size: 18px;
+      margin-bottom: 10px;
+      opacity: 0.8;
+    }
+    
+    .lock-user {
+      font-size: 14px;
+      margin-bottom: 30px;
+      opacity: 0.6;
+    }
+    
+    .unlock-btn {
+      background: linear-gradient(180deg, rgba(0,255,150,0.2), rgba(0,255,150,0.1));
+      border: 1px solid var(--neon);
+      color: var(--neon);
+      padding: 12px 40px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.3s;
+    }
+    
+    .unlock-btn:hover {
+      background: linear-gradient(180deg, rgba(0,255,150,0.3), rgba(0,255,150,0.2));
+      box-shadow: 0 0 20px rgba(0,255,150,0.4);
+      transform: translateY(-2px);
+    }
+    
+    @keyframes popIn {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* Start button active state */
+    .start-button.active {
+      background: linear-gradient(180deg, rgba(0,255,150,0.25), rgba(0,255,150,0.15));
+      box-shadow: 
+        0 0 20px rgba(0,255,150,0.4),
+        inset 0 0 10px rgba(0,255,150,0.2);
+    }
+    
+    /* Global CRT glow effect */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 200%;
+      height: 200%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle at center, 
+        transparent 30%, 
+        rgba(0,255,150,0.02) 70%, 
+        rgba(0,255,150,0.05) 100%);
+      pointer-events: none;
+      z-index: 2;
+      animation: globalPulse 4s ease-in-out infinite;
+    }
+    @keyframes globalPulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
   </style>
 </head>
 <body>
+  <!-- Advanced Desktop Cat -->
+  <div class="desktop-cat" id="desktop-cat">
+    <div class="cat-sprite">
+      <div class="cat-bubble" id="cat-bubble"></div>
+      <div class="cat-body" id="cat-body">
+   /\_/\  
+  ( o.o ) 
+   > ^ <  
+      </div>
+    </div>
+  </div>
+  
+  <!-- Floating retro icons -->
+  <div class="floating-icon" style="top: 10%; left: 5%;">💾</div>
+  <div class="floating-icon" style="top: 30%; right: 10%; animation-delay: 5s;">📼</div>
+  <div class="floating-icon" style="bottom: 20%; left: 8%; animation-delay: 10s;">🖥️</div>
+  <div class="floating-icon" style="top: 50%; right: 5%; animation-delay: 15s;">📟</div>
+  
+  <!-- Start Menu -->
+  <div class="start-menu" id="startMenu">
+    <div class="start-menu-header">
+      <div class="user-info">
+        <span class="user-avatar">👤</span>
+        <span class="user-name">vault</span>
+      </div>
+    </div>
+    <div class="start-menu-content">
+      <div class="menu-column left">
+        <div class="menu-item" onclick="openTerminal()">
+          <span class="menu-icon">⌨️</span>
+          <span>Terminal</span>
+          <span class="menu-shortcut">Ctrl+T</span>
+        </div>
+        <div class="menu-item" onclick="openVaultWindow()">
+          <span class="menu-icon">📁</span>
+          <span>Vault</span>
+        </div>
+      </div>
+      <div class="menu-column right">
+        <div class="menu-section-title">Quick Access</div>
+        <div class="menu-item" onclick="window.open('https://wiki.kunaldawn.com', '_blank')">
+          <span class="menu-icon">🌐</span>
+          <span>Wiki Archive</span>
+        </div>
+        <div class="menu-item" onclick="window.open('https://archive.kunaldawn.com', '_blank')">
+          <span class="menu-icon">💿</span>
+          <span>Data Vault</span>
+        </div>
+        <div class="menu-item" onclick="window.open('https://pdfarchive.kunaldawn.com', '_blank')">
+          <span class="menu-icon">📚</span>
+          <span>PDF Archive</span>
+        </div>
+      </div>
+    </div>
+    <div class="start-menu-footer">
+      <div class="menu-item power" onclick="showShutdownDialog()">
+        <span class="menu-icon">⏻</span>
+        <span>Shutdown</span>
+      </div>
+      <div class="menu-item power" onclick="showRestartDialog()">
+        <span class="menu-icon">↻</span>
+        <span>Restart</span>
+      </div>
+      <div class="menu-item power" onclick="lockScreen()">
+        <span class="menu-icon">🔒</span>
+        <span>Lock</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Windows-style Taskbar -->
+  <div class="taskbar">
+    <button class="start-button" onclick="toggleStartMenu()">
+      <span style="font-size: 16px;">⊞</span>
+      <span>START</span>
+    </button>
+    
+    <div class="taskbar-items">
+      <div class="taskbar-item active" id="vault-window" onclick="restoreWindow()">
+        <span>📁</span>
+        <span>Vault</span>
+      </div>
+    </div>
+    
+    <div class="system-tray">
+      <span id="bandwidth" style="color: #7fd1b3; font-size: 11px;">1.44 MB/s</span>
+      <span class="tray-separator" style="color: #7fd1b3;">|</span>
+      <span id="archive-count" style="color: #7fd1b3; font-size: 11px;">0 files</span>
+      <span class="tray-separator" style="color: #7fd1b3;">|</span>
+      <span id="clock" style="color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 12px;">00:00:00</span>
+    </div>
+  </div>
+  
   <div class="vault" role="main" aria-label="KD's Digital Preservation Vault">
+    <!-- Terminal frame -->
+    <div class="terminal-frame"></div>
+    
+    <!-- Window controls -->
+    <div class="window-controls">
+      <div class="window-btn close" title="Exit"></div>
+      <div class="window-btn minimize" title="Minimize"></div>
+      <div class="window-btn maximize" title="Maximize"></div>
+    </div>
+    
+    <!-- ASCII borders -->
+    <div class="ascii-border top-left">╔═══╗
+║ ▓ ║
+╚═══╝</div>
+    <div class="ascii-border bottom-right">╔═══╗
+║ ▓ ║
+╚═══╝</div>
+    
+    <!-- Loading bar -->
+    <div class="loading-bar">
+      <div class="loading-fill"></div>
+    </div>
     <header>
       <div class="logo" style="width:100%;">
         <div class="badge">██ KD's DIGITAL PRESERVATION VAULT ██</div>
@@ -131,12 +1686,13 @@
           </div>
 
         </div>
-
-        <footer>
-          <div>
-            <small class="muted">Disclaimer: This is an archival of publicly available content from the internet for download. Created for the purpose of open knowledge sharing and preservation. Essential backup for internet outages, war, and unforeseen disruptions to global connectivity. No warranty, no guarantees - just preserving human knowledge for future generations.</small>
-          </div>
-        </footer>
+        
+        <!-- Disclaimer info -->
+        <div style="margin-top: 20px; padding: 12px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(0,255,150,0.05);">
+          <small class="muted" style="font-size: 11px; opacity: 0.7; line-height: 1.4;">
+            🛈 Archival of publicly available internet content · Open knowledge preservation · Emergency backup for connectivity disruptions
+          </small>
+        </div>
 
       </section>
     </div>
@@ -144,28 +1700,736 @@
 
   <script>
     (function(){
-      let glow=true;
-      window.toggleTheme = function(){
-        const root=document.documentElement.style;
-        glow = !glow;
-        if(!glow){
-          root.setProperty('--neon','#66ffbb');
-          document.querySelector('.vault').style.boxShadow='0 6px 18px rgba(0,0,0,0.6)';
-          document.body.style.background='linear-gradient(180deg, #071013, #00060a)';
-        } else {
-          root.setProperty('--neon','#00ff99');
-          document.querySelector('.vault').style.boxShadow='0 10px 40px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.02)';
-          document.body.style.background='radial-gradient(1200px 400px at 10% 10%, rgba(0,255,150,0.02), transparent), var(--bg)';
+      // Matrix rain effect
+      function createMatrixRain() {
+        // Skip matrix rain on mobile for performance
+        if(window.innerWidth < 768) {
+          return;
+        }
+        
+        const matrixBg = document.createElement('div');
+        matrixBg.className = 'matrix-bg';
+        document.body.appendChild(matrixBg);
+        
+        const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン10ABCD3F6789';
+        const columns = Math.floor(window.innerWidth / 35);
+        
+        for(let i = 0; i < columns; i++) {
+          const column = document.createElement('div');
+          column.className = 'matrix-column';
+          column.style.left = `${i * 35}px`;
+          column.style.animationDuration = `${Math.random() * 10 + 8}s`;
+          column.style.animationDelay = `${Math.random() * 8}s`;
+          column.style.opacity = `${Math.random() * 0.5 + 0.5}`;
+          
+          let text = '';
+          for(let j = 0; j < 60; j++) {
+            const char = chars[Math.floor(Math.random() * chars.length)];
+            const brightness = Math.random();
+            if(brightness > 0.95) {
+              // Bright white trailing character
+              text += `<span style="color:#ffffff;filter:brightness(2);text-shadow:0 0 25px #00ff99, 0 0 35px #00ff99">${char}</span><br>`;
+            } else if(brightness > 0.8) {
+              // Medium bright character
+              text += `<span style="filter:brightness(1.5);text-shadow:0 0 15px rgba(0,255,150,0.8)">${char}</span><br>`;
+            } else {
+              // Normal character
+              text += char + '<br>';
+            }
+          }
+          column.innerHTML = text;
+          matrixBg.appendChild(column);
         }
       }
-
-      function quickFlicker(){
-        document.querySelectorAll('.flicker').forEach(el=>{
-          el.style.opacity='0';
-          setTimeout(()=>el.style.opacity='1', 120);
-        })
+      
+      // Initialize matrix rain
+      createMatrixRain();
+      
+      // Random glitch effect
+      function randomGlitch() {
+        const elements = document.querySelectorAll('h1, h2, .badge');
+        const randomEl = elements[Math.floor(Math.random() * elements.length)];
+        randomEl.style.animation = 'glitch 0.2s ease-in-out';
+        setTimeout(() => {
+          randomEl.style.animation = '';
+        }, 200);
       }
-      setTimeout(quickFlicker,120);
+      
+      // Trigger random glitches
+      setInterval(randomGlitch, 8000);
+      
+      // Boot sequence for cards
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px'
+      };
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+          if(entry.isIntersecting) {
+            setTimeout(() => {
+              entry.target.style.animation = 'bootUp 0.6s ease-out forwards';
+            }, index * 100);
+          }
+        });
+      }, observerOptions);
+      
+      document.querySelectorAll('.card').forEach(card => {
+        observer.observe(card);
+      });
+      
+      // Terminal typing effect
+      function typeWriter(element, text, speed = 50) {
+        let i = 0;
+        element.textContent = '';
+        function type() {
+          if (i < text.length) {
+            element.textContent += text.charAt(i);
+            i++;
+            setTimeout(type, speed);
+          }
+        }
+        type();
+      }
+      
+      // Apply typing effect to tag on load
+      window.addEventListener('load', () => {
+        const tag = document.querySelector('.tag');
+        if(tag) {
+          const originalText = tag.textContent;
+          typeWriter(tag, originalText, 30);
+        }
+      });
+
+      // Enhanced hover effects with sound simulation
+      document.querySelectorAll('.card, .kbd').forEach(el => {
+        el.addEventListener('mouseenter', () => {
+          el.style.transition = 'all 0.1s ease';
+          el.style.filter = 'brightness(1.2)';
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.filter = 'brightness(1)';
+        });
+      });
+      
+      // Clock update
+      function updateClock() {
+        const now = new Date();
+        const time = now.toTimeString().split(' ')[0];
+        const clock = document.getElementById('clock');
+        if(clock) clock.textContent = time;
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+      
+      // Archive counter animation
+      let archiveCount = 0;
+      function updateArchiveCount() {
+        archiveCount += Math.floor(Math.random() * 3) + 1;
+        const counter = document.getElementById('archive-count');
+        if(counter) counter.textContent = `${archiveCount.toLocaleString()} files`;
+      }
+      setInterval(updateArchiveCount, 3000);
+      
+      // Bandwidth fluctuation
+      function updateBandwidth() {
+        const speeds = ['1.44 MB/s', '2.88 MB/s', '56 KB/s', '128 KB/s', '512 KB/s'];
+        const bandwidth = document.getElementById('bandwidth');
+        if(bandwidth) bandwidth.textContent = speeds[Math.floor(Math.random() * speeds.length)];
+      }
+      setInterval(updateBandwidth, 5000);
+      
+      // Advanced Desktop Cat System
+      class DesktopCat {
+        constructor() {
+          this.cat = document.getElementById('desktop-cat');
+          this.body = document.getElementById('cat-body');
+          this.bubble = document.getElementById('cat-bubble');
+          
+          this.states = {
+            idle: { frames: [
+              ' /\\_/\\  \n( o.o ) \n > ^ <  ',
+              ' /\\_/\\  \n( -.- ) \n > ^ <  '
+            ]},
+            walking: { frames: [
+              ' /\\_/\\  \n( o.o ) \n > ^ <  ',
+              ' /\\_/\\  \n( o.o ) \n  > ^ < '
+            ]},
+            sitting: { frames: [
+              ' /\\_/\\  \n( -.o ) \n(> ^ <)'
+            ]},
+            sleeping: { frames: [
+              ' /\\_/\\  \n( -.- ) \nC(> ^ <)',
+              ' /\\_/\\  \n( -.~ ) \nC(> ^ <)'
+            ]},
+            playing: { frames: [
+              ' /\\_/\\  \n( ^.^ ) \n > ^ <  ',
+              '  /\\_/\\ \n( >.< ) \n > ^ <  ',
+              ' /\\_/\\  \n( o.O ) \n > ^ <  '
+            ]},
+            cleaning: { frames: [
+              ' /\\_/\\  \n( o.o ) \n > ^ <~ ',
+              ' /\\_/\\  \n( -.o ) \n > ^~<  '
+            ]},
+            happy: { frames: [
+              ' /\\_/\\  \n( ^.^ ) \n > ^ <  '
+            ]}
+          };
+          
+          this.messages = [
+            'Meow!', 'Purr~', '*yawn*', 'Archiving bits...', 
+            'Found a bug!', 'Nyan~', 'ZzZ...', '*stretch*',
+            '01101101 01100101 01101111 01110111', 'sudo feed me',
+            'chmod +x /dev/tuna', 'cat /etc/treats', '404: Fish not found'
+          ];
+          
+          this.currentState = 'idle';
+          this.frameIndex = 0;
+          this.isMoving = false;
+          this.direction = 1;
+          
+          this.init();
+        }
+        
+        init() {
+          // Start behavior cycle
+          this.behaviorLoop();
+          
+          // Click interaction
+          this.cat.addEventListener('click', () => this.interact());
+          
+          // Follow mouse occasionally
+          let mouseX = 0, mouseY = 0;
+          document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+          });
+          
+          // Random mouse following
+          setInterval(() => {
+            if(Math.random() < 0.1 && !this.isMoving) {
+              this.followPoint(mouseX, mouseY);
+            }
+          }, 5000);
+          
+          // Leave paw prints while moving
+          this.cat.addEventListener('transitionstart', () => {
+            this.leavePawPrints();
+          });
+        }
+        
+        setState(state) {
+          this.currentState = state;
+          this.frameIndex = 0;
+          this.body.className = `cat-body ${state}`;
+          this.animate();
+        }
+        
+        animate() {
+          const state = this.states[this.currentState];
+          if(!state) return;
+          
+          const frames = state.frames;
+          this.body.textContent = frames[this.frameIndex % frames.length];
+          
+          // Flip cat based on direction
+          this.cat.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+        }
+        
+        behaviorLoop() {
+          const behaviors = [
+            () => this.idle(),
+            () => this.walk(),
+            () => this.sit(),
+            () => this.sleep(),
+            () => this.play(),
+            () => this.clean(),
+            () => this.wander()
+          ];
+          
+          const randomBehavior = behaviors[Math.floor(Math.random() * behaviors.length)];
+          randomBehavior();
+          
+          // Schedule next behavior
+          const delay = Math.random() * 8000 + 4000;
+          setTimeout(() => this.behaviorLoop(), delay);
+        }
+        
+        idle() {
+          this.setState('idle');
+          this.animateFrames(2000);
+        }
+        
+        walk() {
+          if(this.isMoving) return;
+          this.isMoving = true;
+          this.setState('walking');
+          
+          const distance = Math.random() * 300 + 100;
+          const currentRight = parseInt(this.cat.style.right || 30);
+          const newRight = Math.max(30, Math.min(window.innerWidth - 100, currentRight + (this.direction * distance)));
+          
+          this.cat.style.transition = 'right 3s linear';
+          this.cat.style.right = newRight + 'px';
+          
+          this.animateFrames(200);
+          
+          setTimeout(() => {
+            this.isMoving = false;
+            this.direction *= -1;
+          }, 3000);
+        }
+        
+        sit() {
+          this.setState('sitting');
+          this.animateFrames(3000);
+        }
+        
+        sleep() {
+          this.setState('sleeping');
+          this.showMessage('ZzZ...');
+          this.animateFrames(1000);
+          setTimeout(() => this.hideMessage(), 4000);
+        }
+        
+        play() {
+          this.setState('playing');
+          this.animateFrames(300);
+          
+          // Jump around
+          let jumps = 0;
+          const jumpInterval = setInterval(() => {
+            const jumpHeight = Math.random() * 20 + 10;
+            this.cat.style.transition = 'bottom 0.3s ease-out';
+            this.cat.style.bottom = (50 + jumpHeight) + 'px';
+            
+            setTimeout(() => {
+              this.cat.style.bottom = '50px';
+            }, 150);
+            
+            jumps++;
+            if(jumps >= 3) clearInterval(jumpInterval);
+          }, 600);
+        }
+        
+        clean() {
+          this.setState('cleaning');
+          this.animateFrames(500);
+        }
+        
+        wander() {
+          if(this.isMoving) return;
+          this.isMoving = true;
+          this.setState('walking');
+          
+          const targetX = Math.random() * (window.innerWidth - 100) + 30;
+          const targetY = Math.random() * 200 + 50;
+          
+          this.cat.style.transition = 'all 5s ease-in-out';
+          this.cat.style.right = targetX + 'px';
+          this.cat.style.bottom = targetY + 'px';
+          
+          this.animateFrames(200);
+          
+          setTimeout(() => {
+            this.isMoving = false;
+          }, 5000);
+        }
+        
+        followPoint(x, y) {
+          if(this.isMoving) return;
+          this.isMoving = true;
+          this.setState('walking');
+          
+          const catRect = this.cat.getBoundingClientRect();
+          const deltaX = x - catRect.left;
+          this.direction = deltaX > 0 ? -1 : 1;
+          
+          const targetX = window.innerWidth - x - 30;
+          const targetY = window.innerHeight - y - 30;
+          
+          this.cat.style.transition = 'all 2s ease-out';
+          this.cat.style.right = Math.max(30, Math.min(window.innerWidth - 100, targetX)) + 'px';
+          this.cat.style.bottom = Math.max(50, Math.min(300, targetY)) + 'px';
+          
+          this.animateFrames(200);
+          
+          setTimeout(() => {
+            this.isMoving = false;
+            this.setState('sitting');
+            this.showMessage('Caught it!');
+            setTimeout(() => this.hideMessage(), 2000);
+          }, 2000);
+        }
+        
+        interact() {
+          this.setState('happy');
+          const message = this.messages[Math.floor(Math.random() * this.messages.length)];
+          this.showMessage(message);
+          
+          // Special animation for interaction
+          this.cat.style.transition = 'transform 0.3s ease';
+          this.cat.style.transform = 'scale(1.2) rotate(10deg)';
+          
+          setTimeout(() => {
+            this.cat.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+            this.hideMessage();
+            this.setState('idle');
+          }, 2000);
+        }
+        
+        showMessage(text) {
+          this.bubble.textContent = text;
+          this.bubble.classList.add('show');
+        }
+        
+        hideMessage() {
+          this.bubble.classList.remove('show');
+        }
+        
+        animateFrames(interval) {
+          const animateInterval = setInterval(() => {
+            if(this.states[this.currentState]) {
+              this.frameIndex++;
+              this.animate();
+            }
+          }, interval);
+          
+          setTimeout(() => clearInterval(animateInterval), interval * 10);
+        }
+        
+        leavePawPrints() {
+          if(Math.random() > 0.3) return;
+          
+          const catRect = this.cat.getBoundingClientRect();
+          const paw = document.createElement('div');
+          paw.className = 'paw-print';
+          paw.style.left = (catRect.left + catRect.width / 2) + 'px';
+          paw.style.bottom = '45px';
+          document.body.appendChild(paw);
+          
+          setTimeout(() => paw.remove(), 2000);
+        }
+      }
+      
+      // Initialize the desktop cat
+      if(document.getElementById('desktop-cat')) {
+        const desktopCat = new DesktopCat();
+      }
+      
+      // Window controls functionality
+      document.querySelector('.window-btn.close')?.addEventListener('click', () => {
+        const vault = document.querySelector('.vault');
+        const taskbarItem = document.getElementById('vault-window');
+        
+        vault.style.transition = 'opacity 0.3s, transform 0.3s';
+        vault.style.opacity = '0';
+        vault.style.transform = 'scale(0.95)';
+        
+        setTimeout(() => {
+          vault.style.display = 'none';
+          vault.style.opacity = '1';
+          vault.style.transform = 'scale(1)';
+          taskbarItem.style.display = 'none';
+        }, 300);
+      });
+      
+      document.querySelector('.window-btn.minimize')?.addEventListener('click', () => {
+        const vault = document.querySelector('.vault');
+        const taskbarItem = document.getElementById('vault-window');
+        
+        vault.classList.add('minimizing');
+        taskbarItem.classList.add('minimized');
+        taskbarItem.classList.remove('active');
+        
+        setTimeout(() => {
+          vault.style.display = 'none';
+          vault.classList.remove('minimizing');
+        }, 500);
+      });
+      
+      // Restore/Minimize window function
+      window.restoreWindow = function() {
+        const vault = document.querySelector('.vault');
+        const taskbarItem = document.getElementById('vault-window');
+        
+        // If window is closed (not in DOM or hidden by close button)
+        if(vault.style.display === 'none' && !taskbarItem.classList.contains('minimized')) {
+          vault.style.display = 'block';
+          vault.classList.add('restoring');
+          taskbarItem.style.display = 'flex';
+          taskbarItem.classList.remove('minimized');
+          taskbarItem.classList.add('active');
+          
+          setTimeout(() => {
+            vault.classList.remove('restoring');
+          }, 500);
+        } 
+        // If window is minimized, restore it
+        else if(taskbarItem.classList.contains('minimized')) {
+          vault.style.display = 'block';
+          vault.classList.add('restoring');
+          taskbarItem.classList.remove('minimized');
+          taskbarItem.classList.add('active');
+          
+          setTimeout(() => {
+            vault.classList.remove('restoring');
+          }, 500);
+        } 
+        // If window is active and visible, minimize it
+        else if(taskbarItem.classList.contains('active') && vault.style.display !== 'none') {
+          vault.classList.add('minimizing');
+          taskbarItem.classList.add('minimized');
+          taskbarItem.classList.remove('active');
+          
+          setTimeout(() => {
+            vault.style.display = 'none';
+            vault.classList.remove('minimizing');
+          }, 500);
+        }
+      };
+      
+      // Start menu functionality
+      window.toggleStartMenu = function() {
+        const menu = document.getElementById('startMenu');
+        const startButton = document.querySelector('.start-button');
+        
+        if(menu.classList.contains('show')) {
+          menu.classList.remove('show');
+          startButton.classList.remove('active');
+        } else {
+          menu.classList.add('show');
+          startButton.classList.add('active');
+        }
+      };
+      
+      // Click outside to close menu
+      document.addEventListener('click', (e) => {
+        const menu = document.getElementById('startMenu');
+        const startButton = document.querySelector('.start-button');
+        
+        if(!menu.contains(e.target) && !startButton.contains(e.target)) {
+          menu.classList.remove('show');
+          startButton.classList.remove('active');
+        }
+      });
+      
+      // Terminal popup
+      window.openTerminal = function() {
+        const terminal = document.createElement('div');
+        terminal.className = 'terminal-popup';
+        terminal.innerHTML = `
+          <div class="terminal-header">
+            <span>Terminal - root@vault</span>
+            <button onclick="this.parentElement.parentElement.remove()">✕</button>
+          </div>
+          <div class="terminal-body">
+            <pre>
+root@vault:~$ uname -a
+Linux vault 6.14.0-29-generic #1 SMP x86_64 GNU/Linux
+
+root@vault:~$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1       2.0T  1.8T  200G  90% /
+/dev/sdb1       4.0T  3.6T  400G  90% /archive
+
+root@vault:~$ uptime
+ 19:31:55 up 42 days, 13:37,  1 user,  load average: 0.42, 0.69, 0.88
+
+root@vault:~$ <span class="terminal-cursor">█</span>
+            </pre>
+          </div>
+        `;
+        document.body.appendChild(terminal);
+        toggleStartMenu();
+      };
+      
+      // Open Vault window
+      window.openVaultWindow = function() {
+        const vault = document.querySelector('.vault');
+        const taskbarItem = document.getElementById('vault-window');
+        
+        if(vault.style.display === 'none') {
+          vault.style.display = 'block';
+          vault.classList.add('restoring');
+          taskbarItem.style.display = 'flex';
+          taskbarItem.classList.remove('minimized');
+          taskbarItem.classList.add('active');
+          
+          setTimeout(() => {
+            vault.classList.remove('restoring');
+          }, 500);
+        }
+        toggleStartMenu();
+      };
+      
+      // Power options
+      window.showShutdownDialog = function() {
+        if(confirm('Are you sure you want to shutdown the vault?')) {
+          document.body.style.transition = 'opacity 1s';
+          document.body.style.opacity = '0';
+          setTimeout(() => {
+            document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:monospace;color:#00ff99;font-size:20px;">SYSTEM HALTED</div>';
+            document.body.style.opacity = '1';
+          }, 1000);
+        }
+        toggleStartMenu();
+      };
+      
+      window.showRestartDialog = function() {
+        if(confirm('Restart the vault system?')) {
+          location.reload();
+        }
+        toggleStartMenu();
+      };
+      
+      window.lockScreen = function() {
+        const lockScreen = document.createElement('div');
+        lockScreen.className = 'lock-screen';
+        lockScreen.innerHTML = `
+          <div class="lock-content">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-time">${new Date().toLocaleTimeString()}</div>
+            <div class="lock-date">${new Date().toLocaleDateString()}</div>
+            <div class="lock-user">root@vault</div>
+            <button class="unlock-btn" onclick="this.parentElement.parentElement.remove()">
+              Unlock
+            </button>
+          </div>
+        `;
+        document.body.appendChild(lockScreen);
+        toggleStartMenu();
+      };
+      
+      // Maximize/Restore window
+      let isMaximized = false;
+      let previousStyles = {};
+      
+      document.querySelector('.window-btn.maximize')?.addEventListener('click', () => {
+        const vault = document.querySelector('.vault');
+        
+        if (!isMaximized) {
+          // Store previous styles
+          previousStyles = {
+            width: vault.style.width || '',
+            maxWidth: vault.style.maxWidth || '',
+            height: vault.style.height || '',
+            margin: vault.style.margin || '',
+            borderRadius: vault.style.borderRadius || '',
+            top: vault.style.top || '',
+            left: vault.style.left || '',
+            right: vault.style.right || '',
+            bottom: vault.style.bottom || '',
+            position: vault.style.position || ''
+          };
+          
+          // Maximize
+          vault.style.transition = 'all 0.3s ease';
+          vault.style.position = 'fixed';
+          vault.style.top = '0';
+          vault.style.left = '0';
+          vault.style.right = '0';
+          vault.style.bottom = '40px'; // Leave space for taskbar
+          vault.style.width = '100%';
+          vault.style.maxWidth = '100%';
+          vault.style.height = 'calc(100vh - 40px)';
+          vault.style.margin = '0';
+          vault.style.borderRadius = '0';
+          vault.style.transform = 'none';
+          
+          isMaximized = true;
+        } else {
+          // Restore
+          vault.style.transition = 'all 0.3s ease';
+          vault.style.position = previousStyles.position;
+          vault.style.top = previousStyles.top;
+          vault.style.left = previousStyles.left;
+          vault.style.right = previousStyles.right;
+          vault.style.bottom = previousStyles.bottom;
+          vault.style.width = previousStyles.width;
+          vault.style.maxWidth = previousStyles.maxWidth;
+          vault.style.height = previousStyles.height;
+          vault.style.margin = previousStyles.margin;
+          vault.style.borderRadius = previousStyles.borderRadius;
+          
+          // Clear inline styles to restore CSS defaults
+          setTimeout(() => {
+            if (!isMaximized) {
+              vault.style.position = '';
+              vault.style.top = '';
+              vault.style.left = '';
+              vault.style.right = '';
+              vault.style.bottom = '';
+              vault.style.width = '';
+              vault.style.maxWidth = '';
+              vault.style.height = '';
+              vault.style.margin = '';
+              vault.style.borderRadius = '';
+            }
+          }, 300);
+          
+          isMaximized = false;
+        }
+      });
+      
+      // Loading bar removed - not needed
+      
+      // Cursor trail effect (desktop only)
+      if(window.innerWidth > 768 && !('ontouchstart' in window)) {
+        const trails = [];
+        for(let i = 0; i < 5; i++) {
+          const trail = document.createElement('div');
+          trail.className = 'cursor-trail';
+          document.body.appendChild(trail);
+          trails.push(trail);
+        }
+        
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+          mouseX = e.clientX;
+          mouseY = e.clientY;
+        });
+        
+        let trailIndex = 0;
+        setInterval(() => {
+          const trail = trails[trailIndex];
+          trail.style.left = mouseX + 'px';
+          trail.style.top = mouseY + 'px';
+          trail.style.opacity = '0.5';
+          setTimeout(() => {
+            trail.style.opacity = '0';
+          }, 100);
+          trailIndex = (trailIndex + 1) % trails.length;
+        }, 50);
+      }
+      
+      // Handle orientation change
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+        }, 100);
+      });
+      
+      // Touch-friendly card interactions
+      document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('touchstart', () => {
+          card.style.transform = 'scale(0.98)';
+        });
+        card.addEventListener('touchend', () => {
+          card.style.transform = '';
+        });
+      });
+      
+      // Status connection flicker
+      setInterval(() => {
+        const status = document.getElementById('status-text');
+        if(status && Math.random() > 0.95) {
+          status.textContent = 'RECONNECTING...';
+          setTimeout(() => {
+            status.textContent = 'CONNECTED';
+          }, 1000);
+        }
+      }, 5000);
 
     })();
   </script>
