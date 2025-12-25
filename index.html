@@ -35,6 +35,8 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#071013">
+  <link rel="canonical" href="https://kunaldawn.com/">
 
   <!-- Language declaration to prevent Chrome from detecting Japanese -->
   <meta http-equiv="content-language" content="en">
@@ -53,7 +55,8 @@
   <meta property="og:title" content="Kunal Dawn - KD's Homebrew Archive">
   <meta property="og:description"
     content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
-  <meta property="og:image" content="/og-image.png">
+  <meta property="og:site_name" content="Kunal Dawn's Archive">
+  <meta property="og:image" content="https://kunaldawn.com/og-image.png">
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image">
@@ -61,7 +64,22 @@
   <meta property="twitter:title" content="Kunal Dawn - KD's Homebrew Archive">
   <meta property="twitter:description"
     content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
-  <meta property="twitter:image" content="/twitter-image.png">
+  <meta property="twitter:image" content="https://kunaldawn.com/twitter-image.png">
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "url": "https://kunaldawn.com/",
+      "name": "Kunal Dawn's Homebrew Archive",
+      "author": {
+        "@type": "Person",
+        "name": "Kunal Dawn"
+      },
+      "description": "A personal digital preservation vault and archive for technical documentation, historical data, and more."
+    }
+  </script>
 
   <title>Kunal Dawn - KD's Homebrew Archive</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1994,6 +2012,121 @@
 
       50% {
         opacity: 1;
+      }
+    }
+
+    /* Large Monitor Adjustments */
+    @media (min-width: 1440px) {
+      body {
+        font-size: 18px;
+        max-width: 1600px;
+        /* Allow wider layout on large screens */
+        margin: 0 auto;
+      }
+
+      h1 {
+        font-size: 28px;
+      }
+
+      p.lead {
+        font-size: 16px;
+      }
+
+      .badge {
+        font-size: 18px;
+        padding: 10px 16px;
+      }
+
+      .link-list a {
+        font-size: 16px;
+        gap: 14px;
+      }
+
+      .card h4 {
+        font-size: 18px;
+      }
+
+      .muted {
+        font-size: 15px;
+      }
+
+      .taskbar-item {
+        font-size: 14px;
+        height: 38px;
+      }
+
+      .start-button {
+        font-size: 15px;
+        height: 38px;
+      }
+
+      nav h3 {
+        font-size: 16px;
+      }
+
+      /* Scale up the vault container slightly */
+      .vault {
+        max-width: 1400px;
+        padding: 40px;
+      }
+    }
+
+    /* Mobile Text Size Adjustments */
+    @media (max-width: 768px) {
+      body {
+        font-size: 16px;
+        /* Ensure readable base size */
+      }
+
+      .link-list a {
+        font-size: 16px;
+        padding: 14px;
+        /* Larger touch targets */
+      }
+
+      .card h4 {
+        font-size: 18px;
+      }
+
+      .muted {
+        font-size: 14px;
+      }
+
+      nav h3 {
+        font-size: 16px;
+        margin-bottom: 16px;
+      }
+
+      /* Increase touch targets for menu items */
+      .menu-item {
+        padding: 14px 16px;
+        font-size: 15px;
+      }
+
+      /* Better start menu on mobile */
+      .start-menu {
+        width: 100vw;
+        max-width: 100%;
+        left: 0;
+        right: 0;
+        bottom: 48px;
+        /* Touch taskbar height */
+        border-radius: 12px 12px 0 0;
+      }
+
+      .start-menu-content {
+        max-height: 50vh;
+      }
+
+      /* Make popups more readable on mobile */
+      .diagnostic-window,
+      .terminal-popup {
+        width: 95%;
+        font-size: 14px;
+      }
+
+      .terminal-body {
+        font-size: 14px;
       }
     }
   </style>
