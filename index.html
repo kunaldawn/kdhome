@@ -20,6 +20,15 @@
 -->
 <html lang="en" xml:lang="en">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZTB29002E"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-HZTB29002E');
+  </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
   <meta name="mobile-web-app-capable" content="yes">
@@ -549,12 +558,14 @@
       line-height: 1.3;
       color: var(--neon);
       animation: matrix-fall linear infinite;
-      text-shadow: 
+      text-shadow:
         0 0 10px rgba(0,255,150,0.8),
         0 0 20px rgba(0,255,150,0.6),
         0 0 30px rgba(0,255,150,0.4),
         0 0 40px rgba(0,255,150,0.2);
       filter: contrast(1.5) brightness(1.2);
+      opacity: 0;
+      transform: translateY(-100%);
     }
     @keyframes matrix-fall {
       0% { 
@@ -1645,25 +1656,37 @@
         </div>
         <div class="menu-item" onclick="window.open('https://archive.kunaldawn.com', '_blank')">
           <span class="menu-icon">💿</span>
-          <span>Data Vault</span>
+          <span>Data Archive</span>
         </div>
         <div class="menu-item" onclick="window.open('https://pdfarchive.kunaldawn.com', '_blank')">
           <span class="menu-icon">📚</span>
           <span>PDF Archive</span>
         </div>
+        <div class="menu-item" onclick="window.open('https://monitor.kunaldawn.com', '_blank')">
+          <span class="menu-icon">📊</span>
+          <span>Monitoring</span>
+        </div>
+        <div class="menu-item" onclick="window.open('https://code.kunaldawn.com', '_blank')">
+          <span class="menu-icon">💻</span>
+          <span>Vscode</span>
+        </div>
+        <div class="menu-item" onclick="window.open('https://proxy.kunaldawn.com', '_blank')">
+          <span class="menu-icon">🔗</span>
+          <span>Proxy</span>
+        </div>
       </div>
     </div>
     <div class="start-menu-footer">
       <div class="menu-item power" onclick="showShutdownDialog()">
-        <span class="menu-icon">⏻</span>
+        <span class="menu-icon">⏼</span>
         <span>Shutdown</span>
       </div>
       <div class="menu-item power" onclick="showRestartDialog()">
-        <span class="menu-icon">↻</span>
+        <span class="menu-icon">⟲</span>
         <span>Restart</span>
       </div>
       <div class="menu-item power" onclick="lockScreen()">
-        <span class="menu-icon">🔒</span>
+        <span class="menu-icon">⚿</span>
         <span>Lock</span>
       </div>
     </div>
@@ -1672,7 +1695,7 @@
   <!-- Windows-style Taskbar -->
   <div class="taskbar">
     <button class="start-button" onclick="toggleStartMenu()">
-      <span style="font-size: 16px;">⊞</span>
+      <span style="font-size: 16px;">🐧</span>
       <span>START</span>
     </button>
     
@@ -1742,7 +1765,7 @@
             </a>
 
             <a class="card" href="https://archive.kunaldawn.com" target="_blank" rel="noopener">
-              <h4>Data Vault</h4>
+              <h4>Data Archive</h4>
               <div class="muted">Source dumps, old software builds, sound of silicon past</div>
             </a>
 
@@ -1750,6 +1773,7 @@
               <h4>PDF Archive</h4>
               <div class="muted">Scanned manuals, zines, research papers, geek ephemera</div>
             </a>
+
           </div>
 
         </div>
@@ -2088,8 +2112,8 @@
           const frames = state.frames;
           this.body.textContent = frames[this.frameIndex % frames.length];
           
-          // Flip cat based on direction
-          this.cat.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+          // Flip cat body based on direction (not the bubble)
+          this.body.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
         }
         
         behaviorLoop() {
@@ -2228,7 +2252,7 @@
           this.cat.style.transform = 'scale(1.2) rotate(10deg)';
           
           setTimeout(() => {
-            this.cat.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+            this.body.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
             this.hideMessage();
             this.setState('idle');
           }, 2000);
