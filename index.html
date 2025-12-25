@@ -41,8 +41,7 @@
   <meta name="language" content="English">
 
   <!-- SEO Meta Tags -->
-  <meta name="description"
-    content="KD's Digital Preservation Vault - A personal archive preserving digital history. Featuring wiki archives, data vaults, PDF collections, and technical documentation.">
+  <meta name="description" content="Kunal Dawn - KD's Homebrew Archive">
   <meta name="keywords"
     content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
   <meta name="author" content="Kunal Dawn">
@@ -51,20 +50,20 @@
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://kunaldawn.com/">
-  <meta property="og:title" content="KD's Digital Preservation Vault">
+  <meta property="og:title" content="Kunal Dawn - KD's Homebrew Archive">
   <meta property="og:description"
-    content="Preserve • Share • Rebuild — A personal digital preservation project keeping bits from rotting, one wget at a time.">
+    content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
   <meta property="og:image" content="/og-image.png">
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://kunaldawn.com/">
-  <meta property="twitter:title" content="KD's Digital Preservation Vault">
+  <meta property="twitter:title" content="Kunal Dawn - KD's Homebrew Archive">
   <meta property="twitter:description"
-    content="Preserve • Share • Rebuild — A personal digital preservation project keeping bits from rotting, one wget at a time.">
+    content="digital archive, data preservation, wiki archive, PDF archive, technical documentation, open source, digital history, knowledge preservation">
   <meta property="twitter:image" content="/twitter-image.png">
 
-  <title>KD's Digital Preservation Vault - Digital Artifact Archive & Knowledge Preservation</title>
+  <title>Kunal Dawn - KD's Homebrew Archive</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap"
     rel="stylesheet">
@@ -1291,7 +1290,8 @@
       position: fixed;
       bottom: 50px;
       right: 30px;
-      width: 60px;
+      width: auto;
+      min-width: 60px;
       height: 50px;
       z-index: 1000;
       cursor: pointer;
@@ -2093,7 +2093,7 @@
       </div>
     </div>
 
-    <div class="vault" role="main" aria-label="KD's Digital Preservation Vault">
+    <div class="vault" role="main" aria-label="KD's Home">
       <!-- Terminal frame -->
       <div class="terminal-frame"></div>
 
@@ -2118,9 +2118,9 @@
       </div>
       <header>
         <div class="logo" style="width:100%;">
-          <div class="badge">██ KD's DIGITAL ARTIFACT ARCHIVE ██</div>
+          <div class="badge">██ KUNAL DAWN ██</div>
           <div>
-            <h1>Digital Artifact Archive & Knowledge Preservation</h1>
+            <h1>KD's Homebrew Digital Archive</h1>
             <p class="lead">Preserve • Share • Rebuild</p>
           </div>
         </div>
@@ -2130,8 +2130,8 @@
         <section class="panel" aria-labelledby="panel-heading">
           <div class="header-line">
             <div>
-              <div class="tag">// Maintained by humans who refuse to let bits rot //</div>
-              <h2 id="panel-heading" style="margin:8px 0 0;font-size:20px;color:#cfeee0;">Featured Collections</h2>
+              <div class="tag">// Maintained by kunaldawn //</div>
+              <h2 id="panel-heading" style="margin:8px 0 0;font-size:20px;color:#cfeee0;">Featured Archives</h2>
             </div>
           </div>
 
@@ -2144,7 +2144,7 @@
 
               <a class="card" href="https://archive.kunaldawn.com" target="_blank" rel="noopener">
                 <h4>Data Archive</h4>
-                <div class="muted">Source dumps, old software builds, sound of silicon past</div>
+                <div class="muted">Source dumps, old software builds, contents of silicon past</div>
               </a>
 
               <a class="card" href="https://pdfarchive.kunaldawn.com" target="_blank" rel="noopener">
@@ -2410,6 +2410,7 @@
             this.cat = document.getElementById('desktop-cat');
             this.body = document.getElementById('cat-body');
             this.bubble = document.getElementById('cat-bubble');
+            this.animationInterval = null;
 
             this.states = {
               idle: {
@@ -2422,6 +2423,12 @@
                 frames: [
                   ' /\\_/\\  \n( o.o ) \n > ^ <  ',
                   ' /\\_/\\  \n( o.o ) \n  > ^ < '
+                ]
+              },
+              running: {
+                frames: [
+                  ' /\\_/\\  \n( >.< ) \n > ^ <  ',
+                  ' /\\_/\\  \n( >.< ) \n  > ^ < ' // Rapid movement
                 ]
               },
               sitting: {
@@ -2452,6 +2459,46 @@
                 frames: [
                   ' /\\_/\\  \n( ^.^ ) \n > ^ <  '
                 ]
+              },
+              surprised: {
+                frames: [
+                  ' /\\_/\\  \n( O.O ) \n > ^ <  '
+                ]
+              },
+              love: {
+                frames: [
+                  ' /\\_/\\  \n( ♥.♥ ) \n > ^ <  ',
+                  ' /\\_/\\  \n( ♥.♥ ) \n(> ^ <) '
+                ]
+              },
+              coding: {
+                frames: [
+                  ' /\\_/\\  \n( o.o )_\n > ^ <[ ]', // Typin' on keyboard
+                  ' /\\_/\\  \n( o.o ) \n > ^ <[ ]'
+                ]
+              },
+              hacking: {
+                frames: [
+                  ' /\\_/\\  \n( ⌐■_■) \n > ^ <  ' // Matrix shades
+                ]
+              },
+              debugging: {
+                frames: [
+                  ' /\\_/\\  \n( o.O )?\n > ^ <  ',
+                  ' /\\_/\\  \n( O.o )?\n > ^ <  '
+                ]
+              },
+              gamer: { // Intense gaming
+                frames: [
+                  ' /\\_/\\  \n( +.+ ) \n > ^ <[]',
+                  ' /\\_/\\  \n( +.+ ) \n  > ^ <[]'
+                ]
+              },
+              glitch: {
+                frames: [
+                  ' /\\_/\\  \n( x.x ) \n > ^ <  ',
+                  ' /\\_/\\  \n( @.@ ) \n > ^ <  '
+                ]
               }
             };
 
@@ -2459,13 +2506,22 @@
               'Meow!', 'Purr~', '*yawn*', 'Archiving bits...',
               'Found a bug!', 'Nyan~', 'ZzZ...', '*stretch*',
               '01101101 01100101 01101111 01110111', 'sudo feed me',
-              'chmod +x /dev/tuna', 'cat /etc/treats', '404: Fish not found'
+              'chmod +x /dev/tuna', 'cat /etc/treats', '404: Fish not found',
+              'Compiling fur...', 'git push origin master-cat', 'Refactoring nap time'
             ];
 
             this.currentState = 'idle';
             this.frameIndex = 0;
             this.isMoving = false;
             this.direction = 1;
+
+            // Interaction tracking
+            this.clickCount = 0;
+            this.clickTimer = null;
+            this.lastMouseX = 0;
+            this.lastMouseY = 0;
+            this.lastMouseTime = Date.now();
+            this.stateTimer = null;
 
             this.init();
           }
@@ -2474,20 +2530,21 @@
             // Start behavior cycle
             this.behaviorLoop();
 
-            // Click interaction
-            this.cat.addEventListener('click', () => this.interact());
+            // Click interaction with petting logic
+            this.cat.addEventListener('click', () => this.handleInteraction());
 
-            // Follow mouse occasionally
-            let mouseX = 0, mouseY = 0;
+            // Mouse tracking for "Spook" mechanic
             document.addEventListener('mousemove', (e) => {
-              mouseX = e.clientX;
-              mouseY = e.clientY;
+              this.checkSpook(e.clientX, e.clientY);
+              this.lastMouseX = e.clientX;
+              this.lastMouseY = e.clientY;
+              this.lastMouseTime = Date.now();
             });
 
             // Random mouse following
             setInterval(() => {
-              if (Math.random() < 0.1 && !this.isMoving) {
-                this.followPoint(mouseX, mouseY);
+              if (Math.random() < 0.1 && !this.isMoving && this.currentState === 'idle') {
+                this.followPoint(this.lastMouseX, this.lastMouseY);
               }
             }, 5000);
 
@@ -2501,7 +2558,30 @@
             this.currentState = state;
             this.frameIndex = 0;
             this.body.className = `cat-body ${state}`;
+
+            // Special styling for specific states
+            if (state === 'hacking') {
+              this.body.style.color = '#00ff00'; // Matrix green
+              this.body.style.textShadow = '0 0 5px #00ff00';
+            } else if (state === 'glitch') {
+              this.body.style.color = '#ff00de'; // Glitch pink
+              this.body.style.textShadow = '2px 0 #00ffff';
+            } else if (state === 'love') {
+              this.body.style.color = '#ff6b6b'; // Love red
+              this.body.style.textShadow = '0 0 10px #ff6b6b';
+            } else {
+              this.body.style.color = ''; // Reset
+              this.body.style.textShadow = '';
+            }
+
             this.animate();
+          }
+
+          clearStateTimer() {
+            if (this.stateTimer) {
+              clearTimeout(this.stateTimer);
+              this.stateTimer = null;
+            }
           }
 
           animate() {
@@ -2516,27 +2596,76 @@
           }
 
           behaviorLoop() {
+            if (this.isMoving) {
+              // Try again later if busy
+              setTimeout(() => this.behaviorLoop(), 2000);
+              return;
+            }
+
             const behaviors = [
-              () => this.idle(),
-              () => this.walk(),
-              () => this.sit(),
-              () => this.sleep(),
-              () => this.play(),
-              () => this.clean(),
-              () => this.wander()
+              { weight: 15, action: () => this.idle() },
+              { weight: 15, action: () => this.walk() },
+              { weight: 10, action: () => this.sit() },
+              { weight: 8, action: () => this.sleep() },
+              { weight: 8, action: () => this.play() },
+              { weight: 8, action: () => this.clean() },
+              { weight: 8, action: () => this.wander() },
+              // Increased weights for geeky states
+              { weight: 12, action: () => this.coding() }, // Make typing more common
+              { weight: 10, action: () => this.hacking() },
+              { weight: 10, action: () => this.debugging() },
+              { weight: 10, action: () => this.gamer() },
+              { weight: 8, action: () => this.glitching() }
             ];
 
-            const randomBehavior = behaviors[Math.floor(Math.random() * behaviors.length)];
-            randomBehavior();
+            // Weighted random selection
+            const totalWeight = behaviors.reduce((acc, b) => acc + b.weight, 0);
+            let random = Math.random() * totalWeight;
 
-            // Schedule next behavior
-            const delay = Math.random() * 8000 + 4000;
+            let selectedAction = behaviors[0].action;
+            for (const behavior of behaviors) {
+              random -= behavior.weight;
+              if (random <= 0) {
+                selectedAction = behavior.action;
+                break;
+              }
+            }
+
+            selectedAction();
+
+            // Schedule next behavior - FASTER PACED
+            const delay = Math.random() * 4000 + 2000; // 2-6 seconds
             setTimeout(() => this.behaviorLoop(), delay);
           }
 
+          cycleAll() {
+            const allStates = Object.keys(this.states);
+            let i = 0;
+            console.log('%c[CAT DEBUG] Starting animation cycle...', 'color: #00ff99');
+
+            this.debugInterval = setInterval(() => {
+              if (i >= allStates.length) {
+                clearInterval(this.debugInterval);
+                this.setState('idle');
+                console.log('%c[CAT DEBUG] Cycle complete.', 'color: #00ff99');
+                return;
+              }
+
+              const state = allStates[i];
+              console.log(`%c[CAT DEBUG] Testing state: ${state}`, 'color: #7fd1b3');
+              this.setState(state);
+              this.isMoving = false; // Force transition
+
+              i++;
+            }, 3000);
+          }
+
+          // --- Standard States ---
+
           idle() {
+            if (this.isMoving) return;
             this.setState('idle');
-            this.animateFrames(2000);
+            this.animateFrames(2000, 3000);
           }
 
           walk() {
@@ -2547,33 +2676,37 @@
             const distance = Math.random() * 300 + 100;
             const currentRight = parseInt(this.cat.style.right || 30);
             const newRight = Math.max(30, Math.min(window.innerWidth - 100, currentRight + (this.direction * distance)));
+            const duration = 3000;
 
-            this.cat.style.transition = 'right 3s linear';
+            this.cat.style.transition = `right ${duration}ms linear`;
             this.cat.style.right = newRight + 'px';
 
-            this.animateFrames(200);
+            this.animateFrames(200, duration);
 
             setTimeout(() => {
               this.isMoving = false;
               this.direction *= -1;
-            }, 3000);
+            }, duration);
           }
 
           sit() {
+            if (this.isMoving) return;
             this.setState('sitting');
-            this.animateFrames(3000);
+            this.animateFrames(3000, 4000);
           }
 
           sleep() {
+            if (this.isMoving) return;
             this.setState('sleeping');
             this.showMessage('ZzZ...');
-            this.animateFrames(1000);
+            this.animateFrames(1000, 4000);
             setTimeout(() => this.hideMessage(), 4000);
           }
 
           play() {
+            if (this.isMoving) return;
             this.setState('playing');
-            this.animateFrames(300);
+            this.animateFrames(300, 3000);
 
             // Jump around
             let jumps = 0;
@@ -2592,9 +2725,56 @@
           }
 
           clean() {
+            if (this.isMoving) return;
             this.setState('cleaning');
-            this.animateFrames(500);
+            this.animateFrames(500, 3000);
           }
+
+          // --- Geeky States ---
+
+          coding() {
+            if (this.isMoving) return;
+            this.setState('coding');
+            this.showMessage('git commit -m "wip"');
+            this.animateFrames(150, 5000); // Fast typing
+            setTimeout(() => this.hideMessage(), 3000);
+          }
+
+          hacking() {
+            if (this.isMoving) return;
+            this.setState('hacking');
+            this.showMessage("I'm in.");
+            this.animateFrames(1000, 4000);
+            setTimeout(() => this.hideMessage(), 2000);
+          }
+
+          debugging() {
+            if (this.isMoving) return;
+            this.setState('debugging');
+            this.showMessage("Why is this null?");
+            this.animateFrames(1000, 4000);
+            setTimeout(() => this.hideMessage(), 3000);
+          }
+
+          gamer() {
+            if (this.isMoving) return;
+            this.setState('gamer');
+            this.animateFrames(100, 4000); // Intense button mashing
+          }
+
+          glitching() {
+            if (this.isMoving) return;
+            this.setState('glitch');
+            this.animateFrames(50, 2000); // Crazy fast
+            this.showMessage('E-RR_0R');
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle'); // Recover
+            }, 2000);
+          }
+
+          // --- Movement Logic ---
 
           wander() {
             if (this.isMoving) return;
@@ -2602,17 +2782,21 @@
             this.setState('walking');
 
             const targetX = Math.random() * (window.innerWidth - 100) + 30;
-            const targetY = Math.random() * 200 + 50;
+            const currentRight = parseInt(this.cat.style.right || 30);
+            this.direction = targetX > currentRight ? 1 : -1;
 
-            this.cat.style.transition = 'all 5s ease-in-out';
+            const targetY = Math.random() * 200 + 50;
+            const duration = 5000;
+
+            this.cat.style.transition = `all ${duration}ms ease-in-out`;
             this.cat.style.right = targetX + 'px';
             this.cat.style.bottom = targetY + 'px';
 
-            this.animateFrames(200);
+            this.animateFrames(200, duration);
 
             setTimeout(() => {
               this.isMoving = false;
-            }, 5000);
+            }, duration);
           }
 
           followPoint(x, y) {
@@ -2626,22 +2810,97 @@
 
             const targetX = window.innerWidth - x - 30;
             const targetY = window.innerHeight - y - 30;
+            const duration = 2000;
 
-            this.cat.style.transition = 'all 2s ease-out';
+            this.cat.style.transition = `all ${duration}ms ease-out`;
             this.cat.style.right = Math.max(30, Math.min(window.innerWidth - 100, targetX)) + 'px';
             this.cat.style.bottom = Math.max(50, Math.min(300, targetY)) + 'px';
 
-            this.animateFrames(200);
+            this.animateFrames(200, duration);
 
             setTimeout(() => {
               this.isMoving = false;
               this.setState('sitting');
               this.showMessage('Caught it!');
               setTimeout(() => this.hideMessage(), 2000);
-            }, 2000);
+            }, duration);
+          }
+
+          // --- Interaction Logic ---
+
+          handleInteraction() {
+            this.clickCount++;
+
+            // Reset click count after 1 second of inactivity
+            if (this.clickTimer) clearTimeout(this.clickTimer);
+            this.clickTimer = setTimeout(() => {
+              this.clickCount = 0;
+            }, 800);
+
+            if (this.clickCount >= 3) {
+              this.pet();
+              this.clickCount = 0;
+            } else {
+              this.interact();
+            }
+          }
+
+          pet() {
+            this.setState('love');
+            this.showMessage('Purrrrrr <3');
+
+            // Spawn hearts
+            for (let i = 0; i < 5; i++) {
+              setTimeout(() => this.spawnHeart(), i * 200);
+            }
+
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+            }, 3000);
+          }
+
+          spawnHeart() {
+            const heart = document.createElement('div');
+            heart.textContent = '♥';
+            heart.style.position = 'absolute';
+            heart.style.color = '#ff6b6b';
+            heart.style.left = '50%';
+            heart.style.bottom = '100%';
+            heart.style.fontSize = '14px';
+            heart.style.pointerEvents = 'none';
+            heart.style.animation = 'floatUp 1s ease-out forwards';
+
+            // Append to cat wrapper
+            const wrapper = document.querySelector('.cat-sprite');
+            if (wrapper) {
+              wrapper.appendChild(heart);
+              setTimeout(() => heart.remove(), 1000);
+            }
+          }
+
+          spawnSpookEmote() {
+            const emote = document.createElement('div');
+            emote.textContent = '!';
+            emote.style.position = 'absolute';
+            emote.style.color = '#ffbd2e';
+            emote.style.left = '50%';
+            emote.style.bottom = '100%';
+            emote.style.fontSize = '24px';
+            emote.style.fontWeight = 'bold';
+            emote.style.pointerEvents = 'none';
+            emote.style.animation = 'floatUp 0.5s ease-out forwards';
+
+            const wrapper = document.querySelector('.cat-sprite');
+            if (wrapper) {
+              wrapper.appendChild(emote);
+              setTimeout(() => emote.remove(), 500);
+            }
           }
 
           interact() {
+            // Standard single click interaction
             this.setState('happy');
             const message = this.messages[Math.floor(Math.random() * this.messages.length)];
             this.showMessage(message);
@@ -2650,11 +2909,89 @@
             this.cat.style.transition = 'transform 0.3s ease';
             this.cat.style.transform = 'scale(1.2) rotate(10deg)';
 
-            setTimeout(() => {
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.cat.style.transform = 'none'; // Reset
               this.body.style.transform = this.direction < 0 ? 'scaleX(-1)' : 'scaleX(1)';
               this.hideMessage();
               this.setState('idle');
-            }, 2000);
+            }, 1000);
+          }
+
+          checkSpook(mx, my) {
+            if (this.isMoving) return;
+
+            const now = Date.now();
+            const dt = now - this.lastMouseTime;
+            if (dt === 0) return;
+
+            // Calculate mouse speed
+            const dx = mx - this.lastMouseX;
+            const dy = my - this.lastMouseY;
+            const speed = Math.sqrt(dx * dx + dy * dy) / dt; // pixels per ms
+
+            // If mouse is fast and near cat
+            const catRect = this.cat.getBoundingClientRect();
+            const catX = catRect.left + catRect.width / 2;
+            const catY = catRect.top + catRect.height / 2;
+            const dist = Math.sqrt(Math.pow(mx - catX, 2) + Math.pow(my - catY, 2));
+
+            if (speed > 2.5 && dist < 150) { // Thresholds
+              this.spook((dx > 0) ? -1 : 1); // Run away from mouse
+            }
+          }
+
+          spook(runDir) {
+            if (this.isMoving) return;
+
+            this.spawnSpookEmote();
+            this.setState('surprised');
+            this.isMoving = true;
+
+            // Wait a split second then run
+            setTimeout(() => {
+              this.setState('running');
+              this.direction = runDir; // Face running direction
+
+              const currentRight = parseInt(this.cat.style.right || 30);
+              const runDist = 400;
+              // If runDir is 1 (right), we decrease 'right' value (move right?) -> No
+              // right CSS: larger value = move left. 
+              // If runDir = 1, we want to run RIGHT? 
+              // Let's standardise: direction 1 = Face Right. 
+              // To move right, 'right' value decreases. 
+
+              // Wait, earlier logic: 
+              // newRight = currentRight + (this.direction * distance)
+              // If direction=1, right increases -> moves LEFT. 
+              // So direction=1 means Facing Left in that logic? 
+              // Let's look at init: scaleX(1). 
+              // ASCII art: > ^ < . Beak points left? No, it's a nose.
+              // Typically scaleX(1) is normal. 
+              // frames: ( o.o ) 
+              // Let's assume direction 1 is "Moving Left" (increasing right value).
+
+              // If mouse moves Right (dx > 0), runDir = -1. 
+              // If runDir = -1, we want to move Right (decreasing right value).
+
+              let newRight = currentRight + (this.direction * runDist);
+              newRight = Math.max(30, Math.min(window.innerWidth - 100, newRight));
+
+              const duration = 1500; // Fast run
+              this.cat.style.transition = `right ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+              this.cat.style.right = newRight + 'px';
+
+              this.animateFrames(100, duration); // Fast frames
+
+              this.clearStateTimer();
+              this.stateTimer = setTimeout(() => {
+                this.isMoving = false;
+                this.setState('surprised'); // Catch breath
+                this.stateTimer = setTimeout(() => this.setState('idle'), 1000);
+              }, duration);
+
+
+            }, 200);
           }
 
           showMessage(text) {
@@ -2666,15 +3003,24 @@
             this.bubble.classList.remove('show');
           }
 
-          animateFrames(interval) {
-            const animateInterval = setInterval(() => {
+          animateFrames(interval, duration = 0) {
+            // Clear existing interval
+            if (this.animationInterval) clearInterval(this.animationInterval);
+
+            // Start new animation loop
+            this.animationInterval = setInterval(() => {
               if (this.states[this.currentState]) {
                 this.frameIndex++;
                 this.animate();
               }
             }, interval);
 
-            setTimeout(() => clearInterval(animateInterval), interval * 10);
+            // Stop after duration if specified
+            if (duration > 0) {
+              setTimeout(() => {
+                if (this.animationInterval) clearInterval(this.animationInterval);
+              }, duration);
+            }
           }
 
           leavePawPrints() {
@@ -2694,6 +3040,7 @@
         // Initialize the desktop cat
         if (document.getElementById('desktop-cat')) {
           const desktopCat = new DesktopCat();
+          window.debugCat = () => desktopCat.cycleAll();
         }
 
         // Window controls functionality
@@ -2839,7 +3186,11 @@ root@vault:~$ <span class="terminal-cursor">█</span>
               vault.classList.remove('restoring');
             }, 500);
           }
-          toggleStartMenu();
+          // Only close start menu if it's open, don't toggle (which would open it)
+          const menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show')) {
+            toggleStartMenu();
+          }
         };
 
         // Power options
