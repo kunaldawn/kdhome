@@ -2484,6 +2484,9 @@
       .diagnostic-window,
       .terminal-popup {
         width: 95%;
+        left: 2.5%;
+        right: 2.5%;
+        top: 10%;
         font-size: 14px;
       }
 
@@ -3973,9 +3976,8 @@
           let isDragging = false;
           let startX, startY, origLeft, origTop;
 
-          handleEl.addEventListener('mousedown', (e) => {
+          function dragStart(clientX, clientY, e) {
             if (e.target.closest('.window-btn')) return;
-            // Don't drag maximized windows
             if (windowEl.classList.contains('maximized')) return;
             isDragging = true;
 
@@ -3997,37 +3999,53 @@
 
             origLeft = rect.left;
             origTop = rect.top;
-            startX = e.clientX;
-            startY = e.clientY;
+            startX = clientX;
+            startY = clientY;
 
             handleEl.classList.add('dragging');
             e.preventDefault();
-          });
+          }
 
-          document.addEventListener('mousemove', (e) => {
+          function dragMove(clientX, clientY, e) {
             if (!isDragging) return;
             const w = windowEl.offsetWidth;
             const h = windowEl.offsetHeight;
             const maxLeft = window.innerWidth - Math.min(w, window.innerWidth);
             const maxTop = window.innerHeight - TASKBAR_H - Math.min(40, h);
 
-            let newLeft = origLeft + (e.clientX - startX);
-            let newTop = origTop + (e.clientY - startY);
+            let newLeft = origLeft + (clientX - startX);
+            let newTop = origTop + (clientY - startY);
 
-            // Clamp to desktop bounds
             newLeft = Math.max(0, Math.min(newLeft, maxLeft));
             newTop = Math.max(0, Math.min(newTop, maxTop));
 
             windowEl.style.left = newLeft + 'px';
             windowEl.style.top = newTop + 'px';
             e.preventDefault();
-          });
+          }
 
-          document.addEventListener('mouseup', () => {
+          function dragEnd() {
             if (!isDragging) return;
             isDragging = false;
             handleEl.classList.remove('dragging');
-          });
+          }
+
+          // Mouse events
+          handleEl.addEventListener('mousedown', (e) => dragStart(e.clientX, e.clientY, e));
+          document.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY, e));
+          document.addEventListener('mouseup', dragEnd);
+
+          // Touch events
+          handleEl.addEventListener('touchstart', (e) => {
+            const t = e.touches[0];
+            dragStart(t.clientX, t.clientY, e);
+          }, { passive: false });
+          document.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const t = e.touches[0];
+            dragMove(t.clientX, t.clientY, e);
+          }, { passive: false });
+          document.addEventListener('touchend', dragEnd);
         }
 
         // On resize, clamp all positioned windows back into view
@@ -5008,6 +5026,10 @@
         if (!player) initPlayer();
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       });
+      // ─── Minimize on mobile by default ───
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        minimizeChiptunes();
+      }
     })();
     </script>
 </body>
