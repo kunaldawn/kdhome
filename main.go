@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -37,7 +36,6 @@ type SystemStats struct {
 	LoadAvg     string     `json:"load_avg"`
 	CPUModel    string     `json:"cpu_model"`
 	CPUCores    int        `json:"cpu_cores"`
-	CPUTempC    float64    `json:"cpu_temp_c"`
 	MemTotalMB  float64    `json:"mem_total_mb"`
 	MemUsedMB   float64    `json:"mem_used_mb"`
 	MemAvailMB  float64    `json:"mem_avail_mb"`
@@ -50,19 +48,11 @@ var (
 	cachedJSON []byte
 	statsMu    sync.RWMutex
 	procPath   = "/proc"
-	sysPath    = "/sys"
-	hostRoot   = ""
 )
 
 func init() {
 	if _, err := os.Stat("/host/proc/uptime"); err == nil {
 		procPath = "/host/proc"
-	}
-	if _, err := os.Stat("/host/sys/class/thermal"); err == nil {
-		sysPath = "/host/sys"
-	}
-	if _, err := os.Stat("/host/rootfs"); err == nil {
-		hostRoot = "/host/rootfs"
 	}
 }
 
@@ -141,21 +131,6 @@ func getCPUInfo() (string, int) {
 	return model, cores
 }
 
-func getCPUTemp() float64 {
-	for i := 0; i < 10; i++ {
-		path := filepath.Join(sysPath, fmt.Sprintf("class/thermal/thermal_zone%d/temp", i))
-		content, err := readFile(path)
-		if err != nil {
-			continue
-		}
-		temp, err := strconv.ParseFloat(content, 64)
-		if err != nil {
-			continue
-		}
-		return math.Round(temp/100) / 10
-	}
-	return 0
-}
 
 func getMemInfo() (total, used, avail, pct float64) {
 	content, err := readFile(filepath.Join(procPath, "meminfo"))
@@ -183,26 +158,45 @@ func getMemInfo() (total, used, avail, pct float64) {
 }
 
 func getDisks() []DiskInfo {
-	content, err := readFile(filepath.Join(procPath, "mounts"))
+	// Read partition sizes from /proc/partitions (works without mount access)
+	partContent, err := readFile(filepath.Join(procPath, "partitions"))
+	if err != nil {
+		return nil
+	}
+	// Map partition name -> size in bytes
+	partSizes := make(map[string]float64)
+	for _, line := range strings.Split(partContent, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+		blocks, err := strconv.ParseFloat(fields[2], 64)
+		if err != nil {
+			continue
+		}
+		partSizes[fields[3]] = blocks * 1024 // /proc/partitions uses 1K blocks
+	}
+
+	// Read mounts to map devices to mount points and filesystem types
+	mountContent, err := readFile(filepath.Join(procPath, "mounts"))
 	if err != nil {
 		return nil
 	}
 	seen := make(map[string]bool)
 	var disks []DiskInfo
 
-	for _, line := range strings.Split(content, "\n") {
+	for _, line := range strings.Split(mountContent, "\n") {
 		parts := strings.Fields(line)
 		if len(parts) < 3 {
 			continue
 		}
 		device := parts[0]
-		mountPoint := parts[1]
 		fsType := parts[2]
 
 		if !strings.HasPrefix(device, "/dev/") {
 			continue
 		}
-		if strings.Contains(device, "loop") {
+		if strings.Contains(device, "loop") || strings.Contains(device, "ram") {
 			continue
 		}
 		if seen[device] {
@@ -210,44 +204,21 @@ func getDisks() []DiskInfo {
 		}
 		seen[device] = true
 
-		var stat syscall.Statfs_t
-		statPath := mountPoint
-		if hostRoot != "" {
-			statPath = hostRoot + mountPoint
-		}
-		if err := syscall.Statfs(statPath, &stat); err != nil {
-			continue
-		}
-
-		totalBytes := float64(stat.Blocks) * float64(stat.Bsize)
-		freeBytes := float64(stat.Bfree) * float64(stat.Bsize)
-		availBytes := float64(stat.Bavail) * float64(stat.Bsize)
-		usedBytes := totalBytes - freeBytes
-
-		totalGB := totalBytes / (1 << 30)
-		if totalGB < 0.1 {
-			continue
-		}
-
-		usePct := 0.0
-		if totalBytes > 0 {
-			usePct = (usedBytes / totalBytes) * 100
-		}
-
-		// Extract drive name from device path (e.g. /dev/sda1 -> sda1)
+		// Extract partition name (e.g. /dev/sda1 -> sda1)
 		driveName := device
 		if idx := strings.LastIndex(device, "/"); idx >= 0 {
 			driveName = device[idx+1:]
 		}
 
+		totalBytes, ok := partSizes[driveName]
+		if !ok || totalBytes < 0.1*(1<<30) {
+			continue
+		}
+
 		disks = append(disks, DiskInfo{
-			Name:       driveName,
-			MountPoint: mountPoint,
-			FSType:     fsType,
-			TotalGB:    math.Round(totalGB*100) / 100,
-			UsedGB:     math.Round(usedBytes/(1<<30)*100) / 100,
-			AvailGB:    math.Round(availBytes/(1<<30)*100) / 100,
-			UsePct:     math.Round(usePct*10) / 10,
+			Name:    driveName,
+			FSType:  fsType,
+			TotalGB: math.Round(totalBytes/(1<<30)*100) / 100,
 		})
 	}
 	return disks
@@ -257,7 +228,6 @@ func collectStats() *SystemStats {
 	uptime := getUptime()
 	loadAvg := getLoadAvg()
 	cpuModel, cpuCores := getCPUInfo()
-	cpuTemp := getCPUTemp()
 	memTotal, memUsed, memAvail, memPct := getMemInfo()
 	disks := getDisks()
 
@@ -266,7 +236,6 @@ func collectStats() *SystemStats {
 		LoadAvg:     loadAvg,
 		CPUModel:    cpuModel,
 		CPUCores:    cpuCores,
-		CPUTempC:    cpuTemp,
 		MemTotalMB:  math.Round(memTotal*10) / 10,
 		MemUsedMB:   math.Round(memUsed*10) / 10,
 		MemAvailMB:  math.Round(memAvail*10) / 10,

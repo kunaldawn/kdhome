@@ -4106,22 +4106,19 @@
           addPrompt(host); addText('neofetch\n');
           addLabel('  Hostname:  '); addText(host + '\n');
           addLabel('  CPU:       '); addText(esc(stats.cpu_model) + ' (' + (stats.cpu_cores || '?') + ' cores)\n');
-          addLabel('  Temp:      '); addText(stats.cpu_temp_c ? stats.cpu_temp_c + '°C' : 'N/A'); addText('\n');
           addLabel('  Memory:    '); addText(memUsed + ' / ' + memTotal + ' (' + (stats.mem_use_pct || 0) + '%)\n');
           addLabel('  Uptime:    '); addText(esc(stats.uptime) + '\n');
           addLabel('  Load:      '); addText(esc(stats.load_avg) + '\n');
           addText('\n');
 
           addPrompt(host); addText('df -h\n');
-          addText('Drive           Size  Used Avail Use%\n');
+          addText('Drive           Size   Type\n');
           if (stats.disks && stats.disks.length) {
             stats.disks.forEach(d => {
               const name = esc(d.name || 'unknown').padEnd(15);
-              const total = formatBytes(d.total_gb).padStart(5);
-              const used = formatBytes(d.used_gb).padStart(5);
-              const avail = formatBytes(d.avail_gb).padStart(5);
-              const pct = ((d.use_pct || 0).toFixed(0) + '%').padStart(4);
-              addText(name + ' ' + total + ' ' + used + ' ' + avail + ' ' + pct + '\n');
+              const total = formatBytes(d.total_gb).padStart(6);
+              const fstype = esc(d.fs_type || '').padStart(6);
+              addText(name + ' ' + total + ' ' + fstype + '\n');
             });
           } else {
             addText('(no data)\n');
