@@ -1401,6 +1401,44 @@
 
     .music-window.hidden { display: none; }
 
+    .music-window.maximized {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 44px !important;
+      width: 100% !important;
+      border-radius: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .music-window.maximized .music-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .music-window.maximized .music-viz-wrap {
+      flex: 1;
+      height: auto;
+    }
+
+    .music-window.maximized .music-viz {
+      height: 100%;
+    }
+
+    .music-window.maximized .music-viz-canvas {
+      height: 100%;
+    }
+
+    .music-window.maximized .music-playlist {
+      max-height: none;
+    }
+
+    .music-window.maximized .music-playlist.show {
+      max-height: 200px;
+    }
+
     /* Track display */
     .music-display {
       padding: 8px 10px;
@@ -2536,6 +2574,7 @@
         <div class="vault-titlebar-controls">
           <div class="window-btn close" onclick="closeChiptunes()" title="Close"></div>
           <div class="window-btn minimize" onclick="minimizeChiptunes()" title="Minimize"></div>
+          <div class="window-btn maximize" onclick="maximizeChiptunes()" title="Maximize"></div>
         </div>
         <span class="vault-titlebar-title">chiptunes@kd:~/music</span>
       </div>
@@ -3992,6 +4031,7 @@
         // On resize, clamp all positioned windows back into view
         window.addEventListener('resize', () => {
           document.querySelectorAll('.vault, .terminal-popup, .music-window').forEach(clampWindowBounds);
+          if (window._chipSizeCanvas) window._chipSizeCanvas();
         });
 
         // Make vault draggable
@@ -4416,6 +4456,7 @@
           stopViz();
           seekSlider.value = 0; timeCur.textContent = '0:00';
         }
+        if (chipMaximized) { win.classList.remove('maximized'); chipMaximized = false; }
         win.classList.add('hidden');
         chipTaskbar.style.display = 'none';
       };
@@ -4427,6 +4468,7 @@
       };
 
       window.openChiptunes = function() {
+        if (chipMaximized) { win.classList.remove('maximized'); chipMaximized = false; }
         win.classList.remove('hidden');
         win.style.display = '';
         chipTaskbar.style.display = '';
@@ -4434,6 +4476,38 @@
         chipTaskbar.classList.add('active');
         var menu = document.getElementById('startMenu');
         if (menu && menu.classList.contains('show')) toggleStartMenu();
+      };
+
+      var chipMaximized = false;
+      var chipPrevStyles = {};
+
+      window.maximizeChiptunes = function() {
+        if (!chipMaximized) {
+          // Save current position
+          chipPrevStyles = {
+            left: win.style.left, top: win.style.top,
+            right: win.style.right, bottom: win.style.bottom,
+            width: win.style.width, position: win.style.position,
+            margin: win.style.margin, transform: win.style.transform
+          };
+          win.classList.add('maximized');
+          chipMaximized = true;
+          // Resize canvas for the bigger viz area
+          setTimeout(sizeCanvas, 50);
+        } else {
+          win.classList.remove('maximized');
+          // Restore previous position or defaults
+          win.style.left = chipPrevStyles.left || '';
+          win.style.top = chipPrevStyles.top || '';
+          win.style.right = chipPrevStyles.right || '';
+          win.style.bottom = chipPrevStyles.bottom || '';
+          win.style.width = chipPrevStyles.width || '';
+          win.style.position = chipPrevStyles.position || '';
+          win.style.margin = chipPrevStyles.margin || '';
+          win.style.transform = chipPrevStyles.transform || '';
+          chipMaximized = false;
+          setTimeout(sizeCanvas, 50);
+        }
       };
 
       window.toggleChiptunes = function() {
@@ -4617,10 +4691,11 @@
 
         if (mode === 'BARS') {
           analyser.getByteFrequencyData(freqData);
+          var barMaxH = vizContainer.offsetHeight || 32;
           var binStep = Math.max(1, Math.floor((freqData.length - 1) / NUM_BARS));
           for (var i = 0; i < NUM_BARS; i++) {
             var val = freqData[Math.min(1 + i * binStep, freqData.length - 1)] / 255;
-            vizBars[i].style.height = (2 + val * 30) + 'px';
+            vizBars[i].style.height = (2 + val * (barMaxH - 2)) + 'px';
             vizBars[i].style.opacity = (0.25 + val * 0.75).toString();
           }
         } else {
@@ -4709,11 +4784,12 @@
             // ─── 3D terrain wireframe ───
             analyser.getByteFrequencyData(freqData);
             var rows = 8, cols = 32;
-            vizCtx.strokeStyle = 'rgba(0,255,153,0.4)'; vizCtx.lineWidth = 1 * dpr;
+            vizCtx.lineWidth = 1 * dpr;
             for (var r = 0; r < rows; r++) {
               vizCtx.beginPath();
               var yBase = ch * 0.2 + (r / rows) * ch * 0.7;
               var perspective = 0.3 + (r / rows) * 0.7;
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.1 + perspective * 0.5) + ')';
               for (var c = 0; c <= cols; c++) {
                 var idx = Math.floor((c / cols) * freqData.length);
                 var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
@@ -4721,10 +4797,8 @@
                 var y = yBase - val * ch * 0.3 * perspective;
                 c === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
-              vizCtx.globalAlpha = 0.2 + perspective * 0.6;
               vizCtx.stroke();
             }
-            vizCtx.globalAlpha = 1;
 
           } else if (mode === 'BINARY') {
             // ─── Binary rain columns ───
@@ -4750,8 +4824,9 @@
             var bars = 24, barW = cw / bars;
             for (var i = 0; i < bars; i++) {
               var val = freqData[Math.floor((i / bars) * freqData.length)] / 255;
+              if (val < 0.03) continue;
               var h = val * ch * 0.9;
-              var grad = vizCtx.createLinearGradient(0, ch, 0, ch - h);
+              var grad = vizCtx.createLinearGradient(0, ch, 0, ch - Math.max(1, h));
               grad.addColorStop(0, 'rgba(0,255,153,' + (0.6 + val * 0.4) + ')');
               grad.addColorStop(0.4, 'rgba(0,200,100,' + (0.3 + val * 0.3) + ')');
               grad.addColorStop(1, 'rgba(0,100,60,0)');
@@ -4774,6 +4849,239 @@
                 vizCtx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
               }
             }
+
+          } else if (mode === 'HELIX') {
+            // ─── DNA double helix ───
+            analyser.getByteFrequencyData(freqData);
+            var t = performance.now() / 400;
+            var segs = 40;
+            vizCtx.lineWidth = 1.5 * dpr;
+            for (var strand = 0; strand < 2; strand++) {
+              vizCtx.beginPath();
+              vizCtx.strokeStyle = strand === 0 ? 'rgba(0,255,153,0.7)' : 'rgba(0,180,100,0.5)';
+              for (var i = 0; i <= segs; i++) {
+                var p = i / segs;
+                var idx = Math.floor(p * (freqData.length - 1));
+                var val = freqData[idx] / 255;
+                var x = p * cw;
+                var wave = Math.sin(p * Math.PI * 4 + t + strand * Math.PI) * (ch * 0.3 + val * ch * 0.15);
+                var y = ch / 2 + wave;
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.stroke();
+            }
+            // Cross-links
+            for (var i = 0; i < 12; i++) {
+              var p = (i + 0.5) / 12;
+              var idx = Math.floor(p * (freqData.length - 1));
+              var val = freqData[idx] / 255;
+              if (val < 0.1) continue;
+              var x = p * cw;
+              var y1 = ch / 2 + Math.sin(p * Math.PI * 4 + t) * ch * 0.3;
+              var y2 = ch / 2 + Math.sin(p * Math.PI * 4 + t + Math.PI) * ch * 0.3;
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + (val * 0.4) + ')';
+              vizCtx.beginPath(); vizCtx.moveTo(x, y1); vizCtx.lineTo(x, y2); vizCtx.stroke();
+            }
+
+          } else if (mode === 'STARS') {
+            // ─── Starfield warp ───
+            analyser.getByteFrequencyData(freqData);
+            var avg = 0;
+            for (var i = 0; i < freqData.length; i++) avg += freqData[i];
+            avg = avg / freqData.length / 255;
+            var cx = cw / 2, cy = ch / 2;
+            var t = performance.now() / 50;
+            var count = 60;
+            for (var i = 0; i < count; i++) {
+              var seed = i * 127.1 + 311.7;
+              var angle = (seed * 2.31) % (Math.PI * 2);
+              var speed = 0.3 + avg * 2;
+              var dist = ((t * speed + seed * 0.7) % 1.0);
+              var x = cx + Math.cos(angle) * dist * cw * 0.6;
+              var y = cy + Math.sin(angle) * dist * ch * 0.6;
+              var r = (0.5 + dist * 2) * dpr;
+              var a = dist * (0.3 + avg * 0.7);
+              vizCtx.beginPath(); vizCtx.arc(x, y, r, 0, 6.28);
+              vizCtx.fillStyle = 'rgba(0,255,153,' + a + ')'; vizCtx.fill();
+            }
+
+          } else if (mode === 'GLITCH') {
+            // ─── Glitch blocks ───
+            analyser.getByteFrequencyData(freqData);
+            var t = Math.floor(performance.now() / 80);
+            var chL = Math.max(1, Math.floor(ch / dpr));
+            var cwL = Math.max(1, Math.floor(cw / dpr * 0.6));
+            for (var i = 0; i < 12; i++) {
+              var idx = Math.floor((i / 12) * freqData.length);
+              var val = freqData[idx] / 255;
+              if (val < 0.08) continue;
+              var bh = (2 + val * 8) * dpr;
+              var by = ((t * 3 + i * 37) % chL) * dpr;
+              var bx = ((t * 7 + i * 53) % cwL) * dpr;
+              var bw = (10 + val * 40) * dpr;
+              vizCtx.fillStyle = i % 3 === 0 ? 'rgba(255,0,222,' + val * 0.6 + ')' :
+                                 i % 3 === 1 ? 'rgba(0,255,255,' + val * 0.5 + ')' :
+                                                'rgba(0,255,153,' + val * 0.7 + ')';
+              vizCtx.fillRect(bx, by, bw, bh);
+            }
+
+          } else if (mode === 'WAVE3D') {
+            // ─── Layered sine waves ───
+            analyser.getByteFrequencyData(freqData);
+            var t = performance.now() / 300;
+            var layers = 5;
+            for (var l = 0; l < layers; l++) {
+              var a = 0.15 + (l / layers) * 0.35;
+              vizCtx.beginPath();
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + a + ')';
+              vizCtx.lineWidth = (1 + l * 0.3) * dpr;
+              for (var x = 0; x <= cw; x += 2 * dpr) {
+                var p = x / cw;
+                var idx = Math.floor(p * (freqData.length - 1));
+                var val = freqData[idx] / 255;
+                var freq = 2 + l;
+                var amp = ch * 0.15 * (1 + val * 1.5);
+                var y = ch / 2 + Math.sin(p * Math.PI * freq + t + l * 0.8) * amp * (0.5 + l / layers * 0.5);
+                x === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.stroke();
+            }
+
+          } else if (mode === 'PIXEL') {
+            // ─── Pixel art blocks ───
+            analyser.getByteFrequencyData(freqData);
+            var px = 6 * dpr, cols = Math.floor(cw / px), rows = Math.floor(ch / px);
+            for (var c = 0; c < cols; c++) {
+              var idx = Math.floor((c / cols) * freqData.length);
+              var val = freqData[idx] / 255;
+              var lit = Math.floor(val * rows);
+              for (var r = 0; r < lit; r++) {
+                var bright = (r / rows);
+                vizCtx.fillStyle = 'rgba(0,' + Math.floor(180 + bright * 75) + ',' + Math.floor(100 + bright * 55) + ',' + (0.3 + val * 0.5) + ')';
+                vizCtx.fillRect(c * px, ch - (r + 1) * px, px - 1 * dpr, px - 1 * dpr);
+              }
+            }
+
+          } else if (mode === 'RADAR') {
+            // ─── Radar sweep ───
+            analyser.getByteFrequencyData(freqData);
+            var cx = cw / 2, cy = ch / 2, maxR = ch * 0.45;
+            var sweepAngle = (performance.now() / 600) % (Math.PI * 2);
+            // Sweep line
+            vizCtx.beginPath();
+            vizCtx.moveTo(cx, cy);
+            vizCtx.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR);
+            vizCtx.strokeStyle = 'rgba(0,255,153,0.6)'; vizCtx.lineWidth = 1.5 * dpr; vizCtx.stroke();
+            // Rings
+            for (var r = 1; r <= 3; r++) {
+              vizCtx.beginPath(); vizCtx.arc(cx, cy, maxR * r / 3, 0, 6.28);
+              vizCtx.strokeStyle = 'rgba(0,255,153,0.1)'; vizCtx.lineWidth = 1 * dpr; vizCtx.stroke();
+            }
+            // Blips from frequency
+            for (var i = 0; i < 24; i++) {
+              var val = freqData[Math.floor((i / 24) * freqData.length)] / 255;
+              if (val < 0.15) continue;
+              var angle = (i / 24) * Math.PI * 2;
+              var dist = val * maxR * 0.9;
+              var fade = Math.max(0, 1 - Math.abs(((angle - sweepAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI) / Math.PI);
+              vizCtx.beginPath(); vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, (1.5 + val * 2) * dpr, 0, 6.28);
+              vizCtx.fillStyle = 'rgba(0,255,153,' + (fade * val * 0.8) + ')'; vizCtx.fill();
+            }
+
+          } else if (mode === 'DIAMOND') {
+            // ─── Diamond / gem facets ───
+            analyser.getByteFrequencyData(freqData);
+            var cx = cw / 2, cy = ch / 2;
+            var segs = 8;
+            for (var ring = 3; ring >= 1; ring--) {
+              vizCtx.beginPath();
+              var baseR = ch * 0.1 * ring;
+              for (var i = 0; i <= segs; i++) {
+                var angle = (i / segs) * Math.PI * 2 - Math.PI / 2;
+                var idx = Math.floor(((i % segs) / segs * 0.8 + (ring - 1) * 0.07) * (freqData.length - 1));
+                var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
+                var r = baseR + val * ch * 0.12;
+                var x = cx + Math.cos(angle) * r;
+                var y = cy + Math.sin(angle) * r;
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.closePath();
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.2 + (4 - ring) * 0.2) + ')';
+              vizCtx.lineWidth = (1 + (4 - ring) * 0.5) * dpr; vizCtx.stroke();
+            }
+
+          } else if (mode === 'SINE') {
+            // ─── Dual sine interference ───
+            analyser.getByteTimeDomainData(waveData);
+            analyser.getByteFrequencyData(freqData);
+            var avg = 0;
+            for (var i = 0; i < 32; i++) avg += freqData[i];
+            avg = avg / 32 / 255;
+            var t = performance.now() / 200;
+            for (var pass = 0; pass < 2; pass++) {
+              vizCtx.beginPath();
+              vizCtx.strokeStyle = pass === 0 ? 'rgba(0,255,153,0.6)' : 'rgba(0,200,255,0.4)';
+              vizCtx.lineWidth = 1.5 * dpr;
+              for (var x = 0; x <= cw; x += 2 * dpr) {
+                var p = x / cw;
+                var w = waveData[Math.floor(p * (waveData.length - 1))] / 128.0 - 1;
+                var y = ch / 2 + w * ch * 0.3 + Math.sin(p * 8 + t + pass * 2) * ch * 0.08 * avg;
+                x === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.stroke();
+            }
+
+          } else if (mode === 'CITY') {
+            // ─── Neon city skyline ───
+            analyser.getByteFrequencyData(freqData);
+            var buildings = 20, bw = cw / buildings;
+            for (var i = 0; i < buildings; i++) {
+              var idx = Math.floor((i / buildings) * freqData.length);
+              var val = freqData[idx] / 255;
+              var h = ch * 0.15 + val * ch * 0.75;
+              var x = i * bw;
+              // Building body (visible against dark bg)
+              vizCtx.fillStyle = 'rgba(0,40,30,' + (0.7 + val * 0.3) + ')';
+              vizCtx.fillRect(x + 1, ch - h, bw - 2, h);
+              // Neon edge
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.2 + val * 0.5) + ')';
+              vizCtx.lineWidth = 1 * dpr;
+              vizCtx.strokeRect(x + 1, ch - h, bw - 2, h);
+              // Windows
+              var winH = 3 * dpr, winGap = 5 * dpr;
+              for (var wy = ch - h + winGap; wy < ch - winGap; wy += winGap) {
+                if (Math.sin(i * 7 + wy * 0.1) > 0) {
+                  vizCtx.fillStyle = 'rgba(0,255,153,' + (val * 0.4) + ')';
+                  vizCtx.fillRect(x + 3 * dpr, wy, bw - 6 * dpr, winH);
+                }
+              }
+            }
+
+          } else if (mode === 'HEX') {
+            // ─── Hex grid pulsing ───
+            analyser.getByteFrequencyData(freqData);
+            var hexR = 8 * dpr;
+            var hexW = hexR * 1.732, hexH = hexR * 2;
+            var cols = Math.ceil(cw / hexW) + 1, rows = Math.ceil(ch / (hexH * 0.75)) + 1;
+            for (var r = 0; r < rows; r++) {
+              for (var c = 0; c < cols; c++) {
+                var x = c * hexW + (r % 2) * hexW * 0.5;
+                var y = r * hexH * 0.75;
+                var fIdx = Math.floor(((r * cols + c) / (rows * cols)) * freqData.length);
+                var val = freqData[Math.min(fIdx, freqData.length - 1)] / 255;
+                if (val < 0.05) continue;
+                vizCtx.beginPath();
+                for (var s = 0; s < 6; s++) {
+                  var a = Math.PI / 3 * s - Math.PI / 6;
+                  var hx = x + Math.cos(a) * hexR * (0.5 + val * 0.5);
+                  var hy = y + Math.sin(a) * hexR * (0.5 + val * 0.5);
+                  s === 0 ? vizCtx.moveTo(hx, hy) : vizCtx.lineTo(hx, hy);
+                }
+                vizCtx.closePath();
+                vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.1 + val * 0.5) + ')';
+                vizCtx.lineWidth = 1 * dpr; vizCtx.stroke();
+              }
+            }
           }
         }
 
@@ -4791,6 +5099,7 @@
         }
       }
 
+      window._chipSizeCanvas = sizeCanvas;
       function sizeCanvas() {
         if (vizCanvas.offsetWidth > 0) {
           vizCanvas.width = vizCanvas.offsetWidth * (window.devicePixelRatio || 1);
