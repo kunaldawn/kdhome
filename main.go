@@ -343,14 +343,68 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
-				"script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "+
+				"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; "+
 				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
 				"font-src 'self' https://fonts.gstatic.com; "+
 				"img-src 'self' data:; "+
+				"media-src 'self' blob:; "+
+				"worker-src 'self' blob:; "+
 				"connect-src 'self' https://www.google-analytics.com https://analytics.google.com; "+
 				"frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
+}
+
+// ─── Playlist Scanner ───
+
+type PlaylistTrack struct {
+	URL  string `json:"url"`
+	Name string `json:"name"`
+}
+
+var trackerExts = map[string]bool{
+	".mod": true, ".xm": true, ".s3m": true, ".it": true,
+	".mptm": true, ".stm": true, ".med": true, ".mtm": true,
+}
+
+func playlistHandler(staticDir string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		musicDir := filepath.Join(staticDir, "music")
+		entries, err := os.ReadDir(musicDir)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte("[]"))
+			return
+		}
+
+		var tracks []PlaylistTrack
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			ext := strings.ToLower(filepath.Ext(e.Name()))
+			if !trackerExts[ext] {
+				continue
+			}
+			name := strings.TrimSuffix(e.Name(), filepath.Ext(e.Name()))
+			// Clean up name: replace underscores/hyphens with spaces, title case
+			name = strings.ReplaceAll(name, "_", " ")
+			name = strings.ReplaceAll(name, "-", " ")
+			tracks = append(tracks, PlaylistTrack{
+				URL:  "/music/" + e.Name(),
+				Name: name,
+			})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		json.NewEncoder(w).Encode(tracks)
+	}
 }
 
 func statsHandler(w http.ResponseWriter, r *http.Request) {
@@ -414,6 +468,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/stats", statsHandler)
 	mux.HandleFunc("/api/visit", visitHandler)
+	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
 	mux.Handle("/", http.FileServer(noDirFS{http.Dir(staticDir)}))
 
 	srv := &http.Server{

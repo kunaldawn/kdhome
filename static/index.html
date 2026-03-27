@@ -1384,6 +1384,276 @@
       font-size: 12px
     }
 
+    /* ═══ Chiptune floating music player ═══ */
+    .music-window {
+      position: fixed;
+      bottom: 54px;
+      right: 12px;
+      width: 280px;
+      z-index: 998;
+      font-family: 'Share Tech Mono', monospace;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 255, 150, 0.15);
+      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 255, 150, 0.04);
+    }
+
+    .music-window.hidden { display: none; }
+
+    /* Track display */
+    .music-display {
+      padding: 8px 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border-bottom: 1px solid rgba(0, 255, 150, 0.08);
+    }
+
+    .music-track-name {
+      font-size: 11px;
+      color: var(--neon);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 8px rgba(0, 255, 150, 0.4);
+    }
+
+    .music-viz-wrap {
+      position: relative;
+      height: 32px;
+      margin-top: 6px;
+      cursor: pointer;
+    }
+
+    .music-viz-wrap::after {
+      content: attr(data-mode);
+      position: absolute;
+      top: 1px;
+      right: 2px;
+      font-size: 7px;
+      color: rgba(0, 255, 150, 0.3);
+      font-family: 'Share Tech Mono', monospace;
+      pointer-events: none;
+    }
+
+    .music-viz {
+      display: flex;
+      align-items: flex-end;
+      gap: 1px;
+      height: 32px;
+    }
+
+    .music-viz-bar {
+      flex: 1;
+      background: var(--neon);
+      opacity: 0.4;
+      border-radius: 1px 1px 0 0;
+      min-height: 2px;
+    }
+
+    .music-viz-canvas {
+      width: 100%;
+      height: 32px;
+      display: none;
+    }
+
+    /* Controls */
+    .music-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(0, 255, 150, 0.08);
+    }
+
+    .music-btn {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(0, 255, 150, 0.2);
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+
+    .music-btn:hover {
+      background: rgba(0, 255, 150, 0.1);
+      border-color: rgba(0, 255, 150, 0.5);
+    }
+
+    .music-btn.play-btn {
+      padding: 4px 16px;
+      font-size: 15px;
+    }
+
+    .music-btn.play-btn.idle-pulse {
+      animation: playPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes playPulse {
+      0%, 100% {
+        border-color: rgba(0, 255, 150, 0.2);
+        box-shadow: 0 0 0 0 rgba(0, 255, 150, 0);
+        text-shadow: none;
+      }
+      50% {
+        border-color: rgba(0, 255, 150, 0.6);
+        box-shadow: 0 0 12px 2px rgba(0, 255, 150, 0.2);
+        text-shadow: 0 0 8px rgba(0, 255, 150, 0.6);
+      }
+    }
+
+    .music-btn.playing {
+      border-color: rgba(0, 255, 150, 0.5);
+      text-shadow: 0 0 6px rgba(0, 255, 150, 0.5);
+      animation: none;
+    }
+
+    /* Shared slider row */
+    .music-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-bottom: 1px solid rgba(0, 255, 150, 0.08);
+    }
+
+    .music-slider-label {
+      font-size: 9px;
+      color: #7fd1b3;
+      font-family: 'Share Tech Mono', monospace;
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* Shared slider track */
+    .music-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      flex: 1;
+      height: 3px;
+      background: rgba(0, 255, 150, 0.12);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .music-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--neon);
+      box-shadow: 0 0 4px rgba(0, 255, 150, 0.4);
+      cursor: pointer;
+    }
+
+    .music-slider::-moz-range-thumb {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--neon);
+      border: none;
+      box-shadow: 0 0 4px rgba(0, 255, 150, 0.4);
+      cursor: pointer;
+    }
+
+    .music-slider::-moz-range-track {
+      height: 3px;
+      background: rgba(0, 255, 150, 0.12);
+      border-radius: 2px;
+    }
+
+    /* Playlist */
+    .music-playlist {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .music-playlist.show {
+      max-height: 200px;
+    }
+
+    .music-playlist-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      font-size: 9px;
+      color: var(--neon);
+      opacity: 0.7;
+      letter-spacing: 1px;
+      border-bottom: 1px solid rgba(0, 255, 150, 0.06);
+    }
+
+    .music-playlist-list {
+      max-height: 170px;
+      overflow-y: auto;
+    }
+
+    .music-playlist-list::-webkit-scrollbar { width: 4px; }
+    .music-playlist-list::-webkit-scrollbar-track { background: transparent; }
+    .music-playlist-list::-webkit-scrollbar-thumb { background: rgba(0, 255, 150, 0.2); border-radius: 2px; }
+
+    .playlist-item {
+      padding: 5px 10px;
+      font-size: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      color: #a8d8c4;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .playlist-item:hover { background: rgba(0, 255, 150, 0.06); color: var(--neon); }
+    .playlist-item.active { color: var(--neon); background: rgba(0, 255, 150, 0.04); }
+    .playlist-item.active::before { content: '\25B6'; font-size: 7px; text-shadow: 0 0 4px rgba(0, 255, 150, 0.6); }
+    .playlist-item:not(.active)::before { content: '\00B7'; font-size: 12px; opacity: 0.3; }
+
+    /* Playlist toggle button */
+    .music-pl-toggle {
+      width: 100%;
+      background: none;
+      border: none;
+      border-top: 1px solid rgba(0, 255, 150, 0.06);
+      color: #7fd1b3;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 9px;
+      padding: 5px;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: color 0.15s;
+    }
+    .music-pl-toggle:hover { color: var(--neon); }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .music-window {
+        width: 240px;
+        right: 8px;
+        bottom: 52px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .music-window {
+        width: calc(100vw - 16px);
+        right: 8px;
+        left: 8px;
+        bottom: 54px;
+      }
+    }
+
     /* Info accordion */
     .info-accordion {
       display: flex;
@@ -2223,6 +2493,10 @@
             <span class="menu-icon">📁</span>
             <span>Vault</span>
           </div>
+          <div class="menu-item" onclick="openChiptunes()">
+            <span class="menu-icon">🎵</span>
+            <span>Chiptunes</span>
+          </div>
         </div>
         <div class="menu-column right">
           <div class="menu-section-title">Quick Access</div>
@@ -2256,6 +2530,47 @@
       </div>
     </div>
 
+    <!-- Chiptune music player -->
+    <div class="music-window" id="music-window">
+      <div class="vault-titlebar" id="music-titlebar">
+        <div class="vault-titlebar-controls">
+          <div class="window-btn close" onclick="closeChiptunes()" title="Close"></div>
+          <div class="window-btn minimize" onclick="minimizeChiptunes()" title="Minimize"></div>
+        </div>
+        <span class="vault-titlebar-title">chiptunes@kd:~/music</span>
+      </div>
+      <div class="music-display">
+        <div class="music-track-name" id="music-info">Drop the needle...</div>
+        <div class="music-viz-wrap" id="music-viz-wrap" data-mode="BARS" title="Click to change visualization">
+          <div class="music-viz" id="music-viz"></div>
+          <canvas class="music-viz-canvas" id="music-viz-canvas"></canvas>
+        </div>
+      </div>
+      <div class="music-controls">
+        <button class="music-btn" id="music-prev" title="Previous">&#9664;</button>
+        <button class="music-btn play-btn idle-pulse" id="music-toggle" title="Play">&#9654;</button>
+        <button class="music-btn" id="music-next" title="Next">&#9654;</button>
+      </div>
+      <div class="music-slider-row">
+        <span class="music-slider-label" id="music-time-cur">0:00</span>
+        <input type="range" class="music-slider" id="music-seek" min="0" max="1000" value="0">
+        <span class="music-slider-label" id="music-time-dur">0:00</span>
+      </div>
+      <div class="music-slider-row">
+        <span class="music-slider-label">VOL</span>
+        <input type="range" class="music-slider" id="music-volume" min="0" max="100" value="70">
+        <span class="music-slider-label" id="music-vol-pct">70%</span>
+      </div>
+      <div class="music-playlist" id="music-playlist">
+        <div class="music-playlist-header">
+          <span>PLAYLIST <span id="music-track-count" style="opacity:0.5"></span></span>
+          <span style="cursor:pointer" id="music-shuffle" title="Shuffle playlist">&#8645;</span>
+        </div>
+        <div class="music-playlist-list" id="playlist-list"></div>
+      </div>
+      <button class="music-pl-toggle" id="music-pl-toggle">&#9660; PLAYLIST</button>
+    </div>
+
     <!-- Windows-style Taskbar -->
     <div class="taskbar">
       <button class="start-button" onclick="toggleStartMenu()">
@@ -2267,6 +2582,10 @@
         <div class="taskbar-item active" id="vault-window" onclick="restoreWindow()">
           <span>📁</span>
           <span>Vault</span>
+        </div>
+        <div class="taskbar-item active" id="chiptunes-taskbar" onclick="toggleChiptunes()">
+          <span>🎵</span>
+          <span>Chiptunes</span>
         </div>
       </div>
 
@@ -2335,9 +2654,9 @@
             <div class="info-section" data-section="purpose">
               <div class="info-header" onclick="toggleSection('purpose')">
                 <span style="color: var(--neon); font-size: 12px; font-family: 'Share Tech Mono', monospace; letter-spacing: 0.5px;">// Purpose</span>
-                <span class="info-toggle" style="color: var(--neon); font-size: 14px; font-family: 'Share Tech Mono', monospace;">[-]</span>
+                <span class="info-toggle" style="color: var(--neon); font-size: 14px; font-family: 'Share Tech Mono', monospace;">[+]</span>
               </div>
-              <div class="info-body show">
+              <div class="info-body">
                 <small class="muted" style="font-size: 11px; opacity: 0.8; line-height: 1.6;">
                   I homebrew everything — beer, electronics, software, ideas, and apparently, internet
                   archives. Some people collect stamps; I collect knowledge. This is one of my hobbies, and
@@ -3480,7 +3799,7 @@
         }
 
         // Window controls functionality
-        document.querySelector('.window-btn.close')?.addEventListener('click', () => {
+        document.querySelector('.vault .window-btn.close')?.addEventListener('click', () => {
           const vault = document.querySelector('.vault');
           const taskbarItem = document.getElementById('vault-window');
 
@@ -3499,7 +3818,7 @@
           }, 300);
         });
 
-        document.querySelector('.window-btn.minimize')?.addEventListener('click', () => {
+        document.querySelector('.vault .window-btn.minimize')?.addEventListener('click', () => {
           const vault = document.querySelector('.vault');
           const taskbarItem = document.getElementById('vault-window');
 
@@ -3582,7 +3901,36 @@
         });
 
         // --- Draggable windows ---
-        function makeDraggable(windowEl, handleEl) {
+        // Taskbar height for bounds calculation
+        const TASKBAR_H = 44;
+
+        // Clamp a window's position inside the visible desktop
+        function clampWindowBounds(el) {
+          if (!el || el.style.display === 'none' || el.classList.contains('hidden')) return;
+          const rect = el.getBoundingClientRect();
+          if (!rect.width || !rect.height) return; // not laid out
+          // Only clamp windows that have been positioned with inline left/top
+          if (!el.style.left && !el.style.position) return;
+
+          const maxLeft = window.innerWidth - Math.min(rect.width, window.innerWidth);
+          const maxTop = window.innerHeight - TASKBAR_H - Math.min(40, rect.height); // at least 40px visible
+
+          let left = rect.left;
+          let top = rect.top;
+          let changed = false;
+
+          if (left < 0) { left = 0; changed = true; }
+          if (left > maxLeft) { left = Math.max(0, maxLeft); changed = true; }
+          if (top < 0) { top = 0; changed = true; }
+          if (top > maxTop) { top = Math.max(0, maxTop); changed = true; }
+
+          if (changed) {
+            el.style.left = left + 'px';
+            el.style.top = top + 'px';
+          }
+        }
+
+        window.makeDraggable = function makeDraggable(windowEl, handleEl) {
           let isDragging = false;
           let startX, startY, origLeft, origTop;
 
@@ -3617,10 +3965,20 @@
 
           document.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
-            const newLeft = origLeft + (e.clientX - startX);
-            const newTop = origTop + (e.clientY - startY);
+            const w = windowEl.offsetWidth;
+            const h = windowEl.offsetHeight;
+            const maxLeft = window.innerWidth - Math.min(w, window.innerWidth);
+            const maxTop = window.innerHeight - TASKBAR_H - Math.min(40, h);
+
+            let newLeft = origLeft + (e.clientX - startX);
+            let newTop = origTop + (e.clientY - startY);
+
+            // Clamp to desktop bounds
+            newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+            newTop = Math.max(0, Math.min(newTop, maxTop));
+
             windowEl.style.left = newLeft + 'px';
-            windowEl.style.top = Math.max(0, newTop) + 'px';
+            windowEl.style.top = newTop + 'px';
             e.preventDefault();
           });
 
@@ -3630,6 +3988,11 @@
             handleEl.classList.remove('dragging');
           });
         }
+
+        // On resize, clamp all positioned windows back into view
+        window.addEventListener('resize', () => {
+          document.querySelectorAll('.vault, .terminal-popup, .music-window').forEach(clampWindowBounds);
+        });
 
         // Make vault draggable
         const vaultTitlebar = document.querySelector('.vault .vault-titlebar');
@@ -3653,7 +4016,7 @@
           function addPrompt(host) {
             const s = document.createElement('span');
             s.style.color = '#a8d8c4';
-            s.textContent = 'root@' + esc(host) + ':~$ ';
+            s.textContent = esc(host) + ':~$ ';
             pre.appendChild(s);
           }
           function addLabel(text) {
@@ -3873,7 +4236,7 @@
         };
 
         // Maximize/Restore window
-        document.querySelector('.window-btn.maximize')?.addEventListener('click', () => {
+        document.querySelector('.vault .window-btn.maximize')?.addEventListener('click', () => {
           const vault = document.querySelector('.vault');
 
           if (!isMaximized) {
@@ -3969,6 +4332,513 @@
         });
 
       })();
+    </script>
+
+    <!-- Tracker music player (libopenmpt + chiptune2.js) -->
+    <script>
+      window['libopenmpt'] = {};
+      libopenmpt.locateFile = function(filename) { return '/music/' + filename; };
+    </script>
+    <script src="/music/libopenmpt.js"></script>
+    <script src="/music/chiptune2.js"></script>
+    <script>
+    (function() {
+      var playlist = [];
+      var currentTrack = 0;
+      var player = null;
+      var isPlaying = false;
+      var analyser = null;
+      var gainNode = null;
+      var freqData = null;
+      var vizBars = [];
+      var vizRAF = null;
+
+      var win = document.getElementById('music-window');
+      var btn = document.getElementById('music-toggle');
+      var btnPrev = document.getElementById('music-prev');
+      var btnNext = document.getElementById('music-next');
+      var info = document.getElementById('music-info');
+      var vizContainer = document.getElementById('music-viz');
+      var plPanel = document.getElementById('music-playlist');
+      var plList = document.getElementById('playlist-list');
+      var plToggle = document.getElementById('music-pl-toggle');
+      var plCount = document.getElementById('music-track-count');
+      var titlebar = document.getElementById('music-titlebar');
+      var volSlider = document.getElementById('music-volume');
+      var volPct = document.getElementById('music-vol-pct');
+      var seekSlider = document.getElementById('music-seek');
+      var timeCur = document.getElementById('music-time-cur');
+      var timeDur = document.getElementById('music-time-dur');
+      var isSeeking = false;
+      var isStopped = false; // true after explicit stop, prevents onEnded auto-advance
+      var chipTaskbar = document.getElementById('chiptunes-taskbar');
+
+      var vizWrap = document.getElementById('music-viz-wrap');
+      var vizCanvas = document.getElementById('music-viz-canvas');
+      var vizCtx = vizCanvas.getContext('2d');
+      var vizModes = ['BARS','SCOPE','MIRROR','DOTS','MATRIX','RING','TERRAIN','BINARY','FLAME','GRID','HELIX','STARS','GLITCH','WAVE3D','PIXEL','RADAR','DIAMOND','SINE','CITY','HEX'];
+      var vizModeIdx = 0;
+      var waveData = null; // for oscilloscope modes
+
+      var NUM_BARS = 24;
+      for (var i = 0; i < NUM_BARS; i++) {
+        var bar = document.createElement('div');
+        bar.className = 'music-viz-bar';
+        vizContainer.appendChild(bar);
+        vizBars.push(bar);
+      }
+
+      // Click viz to cycle modes
+      vizWrap.addEventListener('click', function() {
+        vizModeIdx = (vizModeIdx + 1) % vizModes.length;
+        var mode = vizModes[vizModeIdx];
+        vizWrap.setAttribute('data-mode', mode);
+        if (mode === 'BARS') {
+          vizContainer.style.display = 'flex';
+          vizCanvas.style.display = 'none';
+        } else {
+          vizContainer.style.display = 'none';
+          vizCanvas.style.display = 'block';
+          sizeCanvas();
+        }
+      });
+
+      // ─── Draggable titlebar ───
+      makeDraggable(win, titlebar);
+
+      // ─── Window management ───
+      window.closeChiptunes = function() {
+        if (player) {
+          isStopped = true;
+          try { player.stop(); } catch(e) {}
+          isPlaying = false;
+          btn.textContent = '\u25B6'; btn.classList.remove('playing'); btn.classList.add('idle-pulse');
+          stopViz();
+          seekSlider.value = 0; timeCur.textContent = '0:00';
+        }
+        win.classList.add('hidden');
+        chipTaskbar.style.display = 'none';
+      };
+
+      window.minimizeChiptunes = function() {
+        win.style.display = 'none';
+        chipTaskbar.classList.add('minimized');
+        chipTaskbar.classList.remove('active');
+      };
+
+      window.openChiptunes = function() {
+        win.classList.remove('hidden');
+        win.style.display = '';
+        chipTaskbar.style.display = '';
+        chipTaskbar.classList.remove('minimized');
+        chipTaskbar.classList.add('active');
+        var menu = document.getElementById('startMenu');
+        if (menu && menu.classList.contains('show')) toggleStartMenu();
+      };
+
+      window.toggleChiptunes = function() {
+        if (win.style.display === 'none') {
+          // Restore from minimized
+          win.style.display = '';
+          chipTaskbar.classList.remove('minimized');
+          chipTaskbar.classList.add('active');
+        } else if (chipTaskbar.classList.contains('active')) {
+          // Minimize
+          minimizeChiptunes();
+        }
+      };
+
+      // ─── Volume ───
+      volSlider.addEventListener('input', function() {
+        var val = volSlider.value / 100;
+        if (gainNode) gainNode.gain.value = val;
+        volPct.textContent = volSlider.value + '%';
+      });
+
+      // ─── Seek ───
+      function formatTime(secs) {
+        if (!secs || !isFinite(secs)) return '0:00';
+        var m = Math.floor(secs / 60);
+        var s = Math.floor(secs % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+      }
+
+      seekSlider.addEventListener('mousedown', function() { isSeeking = true; });
+      seekSlider.addEventListener('touchstart', function() { isSeeking = true; });
+      seekSlider.addEventListener('input', function() {
+        if (!player || !player.currentPlayingNode) return;
+        try {
+          var dur = player.duration();
+          var pos = (seekSlider.value / 1000) * dur;
+          timeCur.textContent = formatTime(pos);
+        } catch(e) {}
+      });
+      seekSlider.addEventListener('change', function() {
+        isSeeking = false;
+        if (!player || !player.currentPlayingNode) return;
+        try {
+          var dur = player.duration();
+          var pos = (seekSlider.value / 1000) * dur;
+          libopenmpt._openmpt_module_set_position_seconds(player.currentPlayingNode.modulePtr, pos);
+        } catch(e) {}
+      });
+      seekSlider.addEventListener('mouseup', function() { isSeeking = false; });
+      seekSlider.addEventListener('touchend', function() { isSeeking = false; });
+
+      // ─── Playlist toggle ───
+      plToggle.addEventListener('click', function() {
+        plPanel.classList.toggle('show');
+        plToggle.innerHTML = plPanel.classList.contains('show') ? '&#9650; PLAYLIST' : '&#9660; PLAYLIST';
+      });
+
+      // ─── Shuffle ───
+      document.getElementById('music-shuffle').addEventListener('click', function() {
+        // Fisher-Yates shuffle
+        for (var i = playlist.length - 1; i > 0; i--) {
+          var j = Math.floor(Math.random() * (i + 1));
+          var tmp = playlist[i]; playlist[i] = playlist[j]; playlist[j] = tmp;
+        }
+        currentTrack = 0;
+        renderPlaylist();
+      });
+
+      // ─── Fetch playlist from server ───
+      fetch('/api/playlist')
+        .then(function(r) { return r.json(); })
+        .then(function(tracks) {
+          if (tracks && tracks.length) {
+            playlist = tracks;
+            if (plCount) plCount.textContent = tracks.length + ' tracks';
+            updateInfo();
+            renderPlaylist();
+          }
+        })
+        .catch(function() {
+          playlist = [{ url: '/music/elysium.mod', name: 'Elysium' }];
+          updateInfo();
+        });
+
+      function renderPlaylist() {
+        plList.textContent = '';
+        playlist.forEach(function(track, idx) {
+          var item = document.createElement('div');
+          item.className = 'playlist-item' + (idx === currentTrack ? ' active' : '');
+          var num = document.createElement('span');
+          num.style.cssText = 'opacity:0.3;min-width:20px;font-size:9px;';
+          num.textContent = (idx + 1 < 10 ? '0' : '') + (idx + 1);
+          item.appendChild(num);
+          item.appendChild(document.createTextNode(track.name || track.url.split('/').pop()));
+          item.addEventListener('click', function() { playTrack(idx); });
+          plList.appendChild(item);
+        });
+      }
+
+      // ─── Player ───
+      function initPlayer() {
+        if (player) return;
+        try {
+          var config = new ChiptuneJsConfig(-1);
+          player = new ChiptuneJsPlayer(config);
+          gainNode = player.context.createGain();
+          gainNode.gain.value = volSlider.value / 100;
+          analyser = player.context.createAnalyser();
+          analyser.fftSize = 256;
+          analyser.smoothingTimeConstant = 0.4;
+          freqData = new Uint8Array(analyser.frequencyBinCount);
+          waveData = new Uint8Array(analyser.fftSize);
+          player.onEnded(function() {
+            if (isStopped) return; // don't auto-advance after explicit stop
+            currentTrack = (currentTrack + 1) % playlist.length;
+            loadAndPlay();
+          });
+          player.onError(function(e) {
+            if (info) info.textContent = 'Load error';
+          });
+        } catch(e) {}
+      }
+
+      function loadAndPlay() {
+        if (!player || !playlist.length) return;
+        isStopped = false;
+        var track = playlist[currentTrack];
+        if (info) info.textContent = 'Loading...';
+        player.load(track.url, function(buffer) {
+          player.play(buffer);
+          if (player.currentPlayingNode && gainNode && analyser) {
+            try {
+              player.currentPlayingNode.disconnect();
+              player.currentPlayingNode.connect(gainNode);
+              gainNode.connect(analyser);
+              analyser.connect(player.context.destination);
+            } catch(e) {}
+          }
+          isPlaying = true;
+          btn.textContent = '\u23F8'; btn.classList.add('playing'); btn.classList.remove('idle-pulse');
+          updateInfo(); renderPlaylist(); startViz();
+        });
+      }
+
+      function playTrack(idx) {
+        currentTrack = idx;
+        if (!player) initPlayer();
+        if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
+      }
+
+      function updateInfo() {
+        if (!info || !playlist.length) return;
+        var track = playlist[currentTrack];
+        var name = track ? (track.name || track.url.split('/').pop()) : 'MOD player';
+        try {
+          if (player && player.currentPlayingNode) {
+            var meta = player.metadata();
+            if (meta && meta.title && meta.title.trim()) name = meta.title;
+          }
+        } catch(e) {}
+        info.textContent = name;
+      }
+
+      // ─── Real FFT Visualization ───
+      function vizLoop() {
+        vizRAF = requestAnimationFrame(vizLoop);
+        var off = !isPlaying || !analyser || document.hidden
+          || win.style.display === 'none' || win.classList.contains('hidden');
+
+        var mode = vizModes[vizModeIdx];
+
+        if (off) {
+          if (mode === 'BARS') {
+            for (var i = 0; i < NUM_BARS; i++) { vizBars[i].style.height = '2px'; vizBars[i].style.opacity = '0.2'; }
+          } else {
+            var cw = vizCanvas.width, ch = vizCanvas.height;
+            vizCtx.clearRect(0, 0, cw, ch);
+          }
+          return;
+        }
+
+        if (mode === 'BARS') {
+          analyser.getByteFrequencyData(freqData);
+          var binStep = Math.max(1, Math.floor((freqData.length - 1) / NUM_BARS));
+          for (var i = 0; i < NUM_BARS; i++) {
+            var val = freqData[Math.min(1 + i * binStep, freqData.length - 1)] / 255;
+            vizBars[i].style.height = (2 + val * 30) + 'px';
+            vizBars[i].style.opacity = (0.25 + val * 0.75).toString();
+          }
+        } else {
+          var cw = vizCanvas.width, ch = vizCanvas.height;
+          var dpr = window.devicePixelRatio || 1;
+          vizCtx.clearRect(0, 0, cw, ch);
+
+          if (mode === 'SCOPE') {
+            // ─── Oscilloscope ───
+            analyser.getByteTimeDomainData(waveData);
+            vizCtx.beginPath();
+            vizCtx.strokeStyle = '#00ff99';
+            vizCtx.lineWidth = 1.5 * dpr;
+            vizCtx.shadowColor = '#00ff99'; vizCtx.shadowBlur = 4;
+            var sliceW = cw / waveData.length;
+            for (var i = 0; i < waveData.length; i++) {
+              var y = (waveData[i] / 128.0) * ch / 2;
+              i === 0 ? vizCtx.moveTo(0, y) : vizCtx.lineTo(i * sliceW, y);
+            }
+            vizCtx.stroke(); vizCtx.shadowBlur = 0;
+
+          } else if (mode === 'MIRROR') {
+            // ─── Mirrored spectrum ───
+            analyser.getByteFrequencyData(freqData);
+            var bars = 32, barW = cw / bars;
+            for (var i = 0; i < bars; i++) {
+              var val = freqData[Math.floor((i / bars) * freqData.length)] / 255;
+              var h = val * ch * 0.48;
+              vizCtx.fillStyle = 'rgba(0,255,153,' + (0.3 + val * 0.7) + ')';
+              vizCtx.fillRect(i * barW, ch / 2 - h, barW - 1, h);
+              vizCtx.fillRect(i * barW, ch / 2, barW - 1, h);
+            }
+
+          } else if (mode === 'DOTS') {
+            // ─── Dot scatter ───
+            analyser.getByteFrequencyData(freqData);
+            for (var i = 0; i < freqData.length; i++) {
+              var val = freqData[i] / 255;
+              if (val < 0.05) continue;
+              vizCtx.beginPath();
+              vizCtx.arc((i / freqData.length) * cw, ch - val * ch, (1 + val * 2.5) * dpr, 0, 6.28);
+              vizCtx.fillStyle = 'rgba(0,255,153,' + (0.2 + val * 0.8) + ')';
+              vizCtx.fill();
+            }
+
+          } else if (mode === 'MATRIX') {
+            // ─── Falling matrix characters ───
+            analyser.getByteFrequencyData(freqData);
+            var cols = 20, colW = cw / cols;
+            var chars = '01ABCDEF<>/\\{}';
+            vizCtx.font = (9 * dpr) + 'px Share Tech Mono, monospace';
+            var t = performance.now() / 80;
+            for (var i = 0; i < cols; i++) {
+              var val = freqData[Math.floor((i / cols) * freqData.length)] / 255;
+              var rows = Math.floor(val * 4) + 1;
+              for (var j = 0; j < rows; j++) {
+                var y = ((t + i * 7 + j * 11) % (ch / dpr + 14)) * dpr;
+                vizCtx.fillStyle = 'rgba(0,255,153,' + (0.15 + val * 0.5 - j * 0.1) + ')';
+                vizCtx.fillText(chars[Math.floor((t + i + j) % chars.length)], i * colW + 2 * dpr, y);
+              }
+            }
+
+          } else if (mode === 'RING') {
+            // ─── Radial frequency ring ───
+            analyser.getByteFrequencyData(freqData);
+            var cx = cw / 2, cy = ch / 2, baseR = ch * 0.25;
+            var segs = 48, step = Math.floor(freqData.length / segs);
+            vizCtx.beginPath();
+            for (var i = 0; i <= segs; i++) {
+              var val = freqData[Math.min(i * step, freqData.length - 1)] / 255;
+              var angle = (i / segs) * Math.PI * 2 - Math.PI / 2;
+              var r = baseR + val * ch * 0.25;
+              var x = cx + Math.cos(angle) * r;
+              var y = cy + Math.sin(angle) * r;
+              i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+            }
+            vizCtx.closePath();
+            vizCtx.strokeStyle = '#00ff99'; vizCtx.lineWidth = 1.5 * dpr;
+            vizCtx.shadowColor = '#00ff99'; vizCtx.shadowBlur = 6;
+            vizCtx.stroke(); vizCtx.shadowBlur = 0;
+            // Center dot
+            vizCtx.beginPath(); vizCtx.arc(cx, cy, 2 * dpr, 0, 6.28);
+            vizCtx.fillStyle = 'rgba(0,255,153,0.5)'; vizCtx.fill();
+
+          } else if (mode === 'TERRAIN') {
+            // ─── 3D terrain wireframe ───
+            analyser.getByteFrequencyData(freqData);
+            var rows = 8, cols = 32;
+            vizCtx.strokeStyle = 'rgba(0,255,153,0.4)'; vizCtx.lineWidth = 1 * dpr;
+            for (var r = 0; r < rows; r++) {
+              vizCtx.beginPath();
+              var yBase = ch * 0.2 + (r / rows) * ch * 0.7;
+              var perspective = 0.3 + (r / rows) * 0.7;
+              for (var c = 0; c <= cols; c++) {
+                var idx = Math.floor((c / cols) * freqData.length);
+                var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
+                var x = (c / cols) * cw;
+                var y = yBase - val * ch * 0.3 * perspective;
+                c === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.globalAlpha = 0.2 + perspective * 0.6;
+              vizCtx.stroke();
+            }
+            vizCtx.globalAlpha = 1;
+
+          } else if (mode === 'BINARY') {
+            // ─── Binary rain columns ───
+            analyser.getByteFrequencyData(freqData);
+            var cols = 16, colW = cw / cols;
+            vizCtx.font = (7 * dpr) + 'px Share Tech Mono, monospace';
+            var t = performance.now() / 100;
+            for (var i = 0; i < cols; i++) {
+              var val = freqData[Math.floor((i / cols) * freqData.length)] / 255;
+              var bits = Math.floor(val * 6) + 1;
+              for (var j = 0; j < bits; j++) {
+                var bit = ((Math.floor(t + i * 3 + j * 7)) & 1).toString();
+                var y = ((t * 1.5 + i * 5 + j * 13) % (ch / dpr + 10)) * dpr;
+                var a = Math.max(0, 0.8 - j * 0.12);
+                vizCtx.fillStyle = j === 0 ? 'rgba(255,255,255,' + a + ')' : 'rgba(0,255,153,' + a + ')';
+                vizCtx.fillText(bit, i * colW + 3 * dpr, y);
+              }
+            }
+
+          } else if (mode === 'FLAME') {
+            // ─── Flame / heat bars rising ───
+            analyser.getByteFrequencyData(freqData);
+            var bars = 24, barW = cw / bars;
+            for (var i = 0; i < bars; i++) {
+              var val = freqData[Math.floor((i / bars) * freqData.length)] / 255;
+              var h = val * ch * 0.9;
+              var grad = vizCtx.createLinearGradient(0, ch, 0, ch - h);
+              grad.addColorStop(0, 'rgba(0,255,153,' + (0.6 + val * 0.4) + ')');
+              grad.addColorStop(0.4, 'rgba(0,200,100,' + (0.3 + val * 0.3) + ')');
+              grad.addColorStop(1, 'rgba(0,100,60,0)');
+              vizCtx.fillStyle = grad;
+              vizCtx.fillRect(i * barW + 1, ch - h, barW - 2, h);
+            }
+
+          } else if (mode === 'GRID') {
+            // ─── Frequency grid / heatmap ───
+            analyser.getByteFrequencyData(freqData);
+            var cols = 16, rows = 4;
+            var cellW = cw / cols, cellH = ch / rows;
+            for (var r = 0; r < rows; r++) {
+              for (var c = 0; c < cols; c++) {
+                var idx = Math.floor(((r * cols + c) / (rows * cols)) * freqData.length);
+                var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
+                if (val < 0.02) continue;
+                var bright = Math.floor(val * 255);
+                vizCtx.fillStyle = 'rgba(0,' + bright + ',' + Math.floor(bright * 0.6) + ',' + (0.15 + val * 0.6) + ')';
+                vizCtx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
+              }
+            }
+          }
+        }
+
+        // Seek position
+        if (!isSeeking && player && player.currentPlayingNode) {
+          try {
+            var cur = player.getCurrentTime();
+            var dur = player.duration();
+            if (dur > 0) {
+              seekSlider.value = Math.floor((cur / dur) * 1000);
+              timeCur.textContent = formatTime(cur);
+              timeDur.textContent = formatTime(dur);
+            }
+          } catch(e) {}
+        }
+      }
+
+      function sizeCanvas() {
+        if (vizCanvas.offsetWidth > 0) {
+          vizCanvas.width = vizCanvas.offsetWidth * (window.devicePixelRatio || 1);
+          vizCanvas.height = vizCanvas.offsetHeight * (window.devicePixelRatio || 1);
+        }
+      }
+
+      function startViz() { if (vizRAF) cancelAnimationFrame(vizRAF); sizeCanvas(); vizLoop(); }
+      function stopViz() {
+        if (vizRAF) { cancelAnimationFrame(vizRAF); vizRAF = null; }
+        for (var i = 0; i < NUM_BARS; i++) { vizBars[i].style.height = '2px'; vizBars[i].style.opacity = '0.2'; }
+        // Clear canvas too
+        if (vizCanvas.width > 0) vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
+      }
+
+      // ─── Controls ───
+      btn.addEventListener('click', function() {
+        if (!playlist.length) return;
+        if (!player) { initPlayer(); if (player) loadAndPlay(); return; }
+
+        if (isPlaying) {
+          // Pause
+          player.togglePause(); isPlaying = false;
+          btn.textContent = '\u25B6'; btn.classList.remove('playing'); btn.classList.add('idle-pulse'); stopViz();
+        } else if (player.currentPlayingNode) {
+          // Unpause existing track
+          player.togglePause(); isPlaying = true;
+          btn.textContent = '\u23F8'; btn.classList.add('playing'); btn.classList.remove('idle-pulse'); startViz();
+        } else {
+          // No track loaded (after close/stop) — start fresh
+          loadAndPlay();
+        }
+      });
+
+      btnPrev.addEventListener('click', function() {
+        if (!playlist.length) return;
+        currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
+        if (!player) initPlayer();
+        if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
+      });
+
+      btnNext.addEventListener('click', function() {
+        if (!playlist.length) return;
+        currentTrack = (currentTrack + 1) % playlist.length;
+        if (!player) initPlayer();
+        if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
+      });
+    })();
     </script>
 </body>
 
