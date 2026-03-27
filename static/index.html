@@ -3975,6 +3975,8 @@
 
           handleEl.addEventListener('mousedown', (e) => {
             if (e.target.closest('.window-btn')) return;
+            // Don't drag maximized windows
+            if (windowEl.classList.contains('maximized')) return;
             isDragging = true;
 
             const rect = windowEl.getBoundingClientRect();
@@ -4416,7 +4418,7 @@
       var vizWrap = document.getElementById('music-viz-wrap');
       var vizCanvas = document.getElementById('music-viz-canvas');
       var vizCtx = vizCanvas.getContext('2d');
-      var vizModes = ['BARS','SCOPE','MIRROR','DOTS','MATRIX','RING','TERRAIN','BINARY','FLAME','GRID','HELIX','STARS','GLITCH','WAVE3D','PIXEL','RADAR','DIAMOND','SINE','CITY','HEX'];
+      var vizModes = ['BARS','SCOPE','MIRROR','DOTS','RING','FLAME','GRID','HELIX','STARS','WAVE3D','PIXEL','SINE','HEX'];
       var vizModeIdx = 0;
       var waveData = null; // for oscilloscope modes
 
@@ -4439,7 +4441,7 @@
         } else {
           vizContainer.style.display = 'none';
           vizCanvas.style.display = 'block';
-          sizeCanvas();
+          requestAnimationFrame(sizeCanvas);
         }
       });
 
@@ -4567,12 +4569,20 @@
 
       // ─── Shuffle ───
       document.getElementById('music-shuffle').addEventListener('click', function() {
+        // Remember current playing track
+        var currentUrl = playlist[currentTrack] ? playlist[currentTrack].url : null;
         // Fisher-Yates shuffle
         for (var i = playlist.length - 1; i > 0; i--) {
           var j = Math.floor(Math.random() * (i + 1));
           var tmp = playlist[i]; playlist[i] = playlist[j]; playlist[j] = tmp;
         }
+        // Find the currently playing track in the shuffled list
         currentTrack = 0;
+        if (currentUrl) {
+          for (var i = 0; i < playlist.length; i++) {
+            if (playlist[i].url === currentUrl) { currentTrack = i; break; }
+          }
+        }
         renderPlaylist();
       });
 
@@ -4741,23 +4751,6 @@
               vizCtx.fill();
             }
 
-          } else if (mode === 'MATRIX') {
-            // ─── Falling matrix characters ───
-            analyser.getByteFrequencyData(freqData);
-            var cols = 20, colW = cw / cols;
-            var chars = '01ABCDEF<>/\\{}';
-            vizCtx.font = (9 * dpr) + 'px Share Tech Mono, monospace';
-            var t = performance.now() / 80;
-            for (var i = 0; i < cols; i++) {
-              var val = freqData[Math.floor((i / cols) * freqData.length)] / 255;
-              var rows = Math.floor(val * 4) + 1;
-              for (var j = 0; j < rows; j++) {
-                var y = ((t + i * 7 + j * 11) % (ch / dpr + 14)) * dpr;
-                vizCtx.fillStyle = 'rgba(0,255,153,' + (0.15 + val * 0.5 - j * 0.1) + ')';
-                vizCtx.fillText(chars[Math.floor((t + i + j) % chars.length)], i * colW + 2 * dpr, y);
-              }
-            }
-
           } else if (mode === 'RING') {
             // ─── Radial frequency ring ───
             analyser.getByteFrequencyData(freqData);
@@ -4779,44 +4772,6 @@
             // Center dot
             vizCtx.beginPath(); vizCtx.arc(cx, cy, 2 * dpr, 0, 6.28);
             vizCtx.fillStyle = 'rgba(0,255,153,0.5)'; vizCtx.fill();
-
-          } else if (mode === 'TERRAIN') {
-            // ─── 3D terrain wireframe ───
-            analyser.getByteFrequencyData(freqData);
-            var rows = 8, cols = 32;
-            vizCtx.lineWidth = 1 * dpr;
-            for (var r = 0; r < rows; r++) {
-              vizCtx.beginPath();
-              var yBase = ch * 0.2 + (r / rows) * ch * 0.7;
-              var perspective = 0.3 + (r / rows) * 0.7;
-              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.1 + perspective * 0.5) + ')';
-              for (var c = 0; c <= cols; c++) {
-                var idx = Math.floor((c / cols) * freqData.length);
-                var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
-                var x = (c / cols) * cw;
-                var y = yBase - val * ch * 0.3 * perspective;
-                c === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
-              }
-              vizCtx.stroke();
-            }
-
-          } else if (mode === 'BINARY') {
-            // ─── Binary rain columns ───
-            analyser.getByteFrequencyData(freqData);
-            var cols = 16, colW = cw / cols;
-            vizCtx.font = (7 * dpr) + 'px Share Tech Mono, monospace';
-            var t = performance.now() / 100;
-            for (var i = 0; i < cols; i++) {
-              var val = freqData[Math.floor((i / cols) * freqData.length)] / 255;
-              var bits = Math.floor(val * 6) + 1;
-              for (var j = 0; j < bits; j++) {
-                var bit = ((Math.floor(t + i * 3 + j * 7)) & 1).toString();
-                var y = ((t * 1.5 + i * 5 + j * 13) % (ch / dpr + 10)) * dpr;
-                var a = Math.max(0, 0.8 - j * 0.12);
-                vizCtx.fillStyle = j === 0 ? 'rgba(255,255,255,' + a + ')' : 'rgba(0,255,153,' + a + ')';
-                vizCtx.fillText(bit, i * colW + 3 * dpr, y);
-              }
-            }
 
           } else if (mode === 'FLAME') {
             // ─── Flame / heat bars rising ───
@@ -4905,26 +4860,6 @@
               vizCtx.fillStyle = 'rgba(0,255,153,' + a + ')'; vizCtx.fill();
             }
 
-          } else if (mode === 'GLITCH') {
-            // ─── Glitch blocks ───
-            analyser.getByteFrequencyData(freqData);
-            var t = Math.floor(performance.now() / 80);
-            var chL = Math.max(1, Math.floor(ch / dpr));
-            var cwL = Math.max(1, Math.floor(cw / dpr * 0.6));
-            for (var i = 0; i < 12; i++) {
-              var idx = Math.floor((i / 12) * freqData.length);
-              var val = freqData[idx] / 255;
-              if (val < 0.08) continue;
-              var bh = (2 + val * 8) * dpr;
-              var by = ((t * 3 + i * 37) % chL) * dpr;
-              var bx = ((t * 7 + i * 53) % cwL) * dpr;
-              var bw = (10 + val * 40) * dpr;
-              vizCtx.fillStyle = i % 3 === 0 ? 'rgba(255,0,222,' + val * 0.6 + ')' :
-                                 i % 3 === 1 ? 'rgba(0,255,255,' + val * 0.5 + ')' :
-                                                'rgba(0,255,153,' + val * 0.7 + ')';
-              vizCtx.fillRect(bx, by, bw, bh);
-            }
-
           } else if (mode === 'WAVE3D') {
             // ─── Layered sine waves ───
             analyser.getByteFrequencyData(freqData);
@@ -4962,54 +4897,6 @@
               }
             }
 
-          } else if (mode === 'RADAR') {
-            // ─── Radar sweep ───
-            analyser.getByteFrequencyData(freqData);
-            var cx = cw / 2, cy = ch / 2, maxR = ch * 0.45;
-            var sweepAngle = (performance.now() / 600) % (Math.PI * 2);
-            // Sweep line
-            vizCtx.beginPath();
-            vizCtx.moveTo(cx, cy);
-            vizCtx.lineTo(cx + Math.cos(sweepAngle) * maxR, cy + Math.sin(sweepAngle) * maxR);
-            vizCtx.strokeStyle = 'rgba(0,255,153,0.6)'; vizCtx.lineWidth = 1.5 * dpr; vizCtx.stroke();
-            // Rings
-            for (var r = 1; r <= 3; r++) {
-              vizCtx.beginPath(); vizCtx.arc(cx, cy, maxR * r / 3, 0, 6.28);
-              vizCtx.strokeStyle = 'rgba(0,255,153,0.1)'; vizCtx.lineWidth = 1 * dpr; vizCtx.stroke();
-            }
-            // Blips from frequency
-            for (var i = 0; i < 24; i++) {
-              var val = freqData[Math.floor((i / 24) * freqData.length)] / 255;
-              if (val < 0.15) continue;
-              var angle = (i / 24) * Math.PI * 2;
-              var dist = val * maxR * 0.9;
-              var fade = Math.max(0, 1 - Math.abs(((angle - sweepAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI) / Math.PI);
-              vizCtx.beginPath(); vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, (1.5 + val * 2) * dpr, 0, 6.28);
-              vizCtx.fillStyle = 'rgba(0,255,153,' + (fade * val * 0.8) + ')'; vizCtx.fill();
-            }
-
-          } else if (mode === 'DIAMOND') {
-            // ─── Diamond / gem facets ───
-            analyser.getByteFrequencyData(freqData);
-            var cx = cw / 2, cy = ch / 2;
-            var segs = 8;
-            for (var ring = 3; ring >= 1; ring--) {
-              vizCtx.beginPath();
-              var baseR = ch * 0.1 * ring;
-              for (var i = 0; i <= segs; i++) {
-                var angle = (i / segs) * Math.PI * 2 - Math.PI / 2;
-                var idx = Math.floor(((i % segs) / segs * 0.8 + (ring - 1) * 0.07) * (freqData.length - 1));
-                var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
-                var r = baseR + val * ch * 0.12;
-                var x = cx + Math.cos(angle) * r;
-                var y = cy + Math.sin(angle) * r;
-                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
-              }
-              vizCtx.closePath();
-              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.2 + (4 - ring) * 0.2) + ')';
-              vizCtx.lineWidth = (1 + (4 - ring) * 0.5) * dpr; vizCtx.stroke();
-            }
-
           } else if (mode === 'SINE') {
             // ─── Dual sine interference ───
             analyser.getByteTimeDomainData(waveData);
@@ -5029,32 +4916,6 @@
                 x === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
               vizCtx.stroke();
-            }
-
-          } else if (mode === 'CITY') {
-            // ─── Neon city skyline ───
-            analyser.getByteFrequencyData(freqData);
-            var buildings = 20, bw = cw / buildings;
-            for (var i = 0; i < buildings; i++) {
-              var idx = Math.floor((i / buildings) * freqData.length);
-              var val = freqData[idx] / 255;
-              var h = ch * 0.15 + val * ch * 0.75;
-              var x = i * bw;
-              // Building body (visible against dark bg)
-              vizCtx.fillStyle = 'rgba(0,40,30,' + (0.7 + val * 0.3) + ')';
-              vizCtx.fillRect(x + 1, ch - h, bw - 2, h);
-              // Neon edge
-              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.2 + val * 0.5) + ')';
-              vizCtx.lineWidth = 1 * dpr;
-              vizCtx.strokeRect(x + 1, ch - h, bw - 2, h);
-              // Windows
-              var winH = 3 * dpr, winGap = 5 * dpr;
-              for (var wy = ch - h + winGap; wy < ch - winGap; wy += winGap) {
-                if (Math.sin(i * 7 + wy * 0.1) > 0) {
-                  vizCtx.fillStyle = 'rgba(0,255,153,' + (val * 0.4) + ')';
-                  vizCtx.fillRect(x + 3 * dpr, wy, bw - 6 * dpr, winH);
-                }
-              }
             }
 
           } else if (mode === 'HEX') {
