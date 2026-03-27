@@ -4113,15 +4113,15 @@
           addText('\n');
 
           addPrompt(host); addText('df -h\n');
-          addText('Mount Point     Size  Used Avail Use%\n');
+          addText('Drive           Size  Used Avail Use%\n');
           if (stats.disks && stats.disks.length) {
             stats.disks.forEach(d => {
-              const mp = esc(d.mount_point).padEnd(15);
+              const name = esc(d.name || 'unknown').padEnd(15);
               const total = formatBytes(d.total_gb).padStart(5);
               const used = formatBytes(d.used_gb).padStart(5);
               const avail = formatBytes(d.avail_gb).padStart(5);
               const pct = ((d.use_pct || 0).toFixed(0) + '%').padStart(4);
-              addText(mp + ' ' + total + ' ' + used + ' ' + avail + ' ' + pct + '\n');
+              addText(name + ' ' + total + ' ' + used + ' ' + avail + ' ' + pct + '\n');
             });
           } else {
             addText('(no data)\n');

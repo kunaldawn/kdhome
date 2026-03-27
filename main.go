@@ -23,6 +23,7 @@ import (
 // ─── System Stats ───
 
 type DiskInfo struct {
+	Name       string  `json:"name"`
 	MountPoint string  `json:"mount_point"`
 	FSType     string  `json:"fs_type"`
 	TotalGB    float64 `json:"total_gb"`
@@ -50,6 +51,7 @@ var (
 	statsMu    sync.RWMutex
 	procPath   = "/proc"
 	sysPath    = "/sys"
+	hostRoot   = ""
 )
 
 func init() {
@@ -58,6 +60,9 @@ func init() {
 	}
 	if _, err := os.Stat("/host/sys/class/thermal"); err == nil {
 		sysPath = "/host/sys"
+	}
+	if _, err := os.Stat("/host/rootfs"); err == nil {
+		hostRoot = "/host/rootfs"
 	}
 }
 
@@ -105,18 +110,33 @@ func getCPUInfo() (string, int) {
 	if err != nil {
 		return "unknown", 0
 	}
-	model := "unknown"
+	model := ""
 	cores := 0
 	for _, line := range strings.Split(content, "\n") {
-		if strings.HasPrefix(line, "model name") {
-			parts := strings.SplitN(line, ":", 2)
-			if len(parts) == 2 {
-				model = strings.TrimSpace(parts[1])
-			}
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			continue
 		}
-		if strings.HasPrefix(line, "processor") {
+		key := strings.TrimSpace(parts[0])
+		val := strings.TrimSpace(parts[1])
+		switch key {
+		case "model name":
+			model = val
+		case "Model":
+			// ARM/Raspberry Pi: use "Model" if "model name" wasn't found
+			if model == "" {
+				model = val
+			}
+		case "Hardware":
+			if model == "" {
+				model = val
+			}
+		case "processor":
 			cores++
 		}
+	}
+	if model == "" {
+		model = "unknown"
 	}
 	return model, cores
 }
@@ -191,7 +211,11 @@ func getDisks() []DiskInfo {
 		seen[device] = true
 
 		var stat syscall.Statfs_t
-		if err := syscall.Statfs(mountPoint, &stat); err != nil {
+		statPath := mountPoint
+		if hostRoot != "" {
+			statPath = hostRoot + mountPoint
+		}
+		if err := syscall.Statfs(statPath, &stat); err != nil {
 			continue
 		}
 
@@ -210,7 +234,14 @@ func getDisks() []DiskInfo {
 			usePct = (usedBytes / totalBytes) * 100
 		}
 
+		// Extract drive name from device path (e.g. /dev/sda1 -> sda1)
+		driveName := device
+		if idx := strings.LastIndex(device, "/"); idx >= 0 {
+			driveName = device[idx+1:]
+		}
+
 		disks = append(disks, DiskInfo{
+			Name:       driveName,
 			MountPoint: mountPoint,
 			FSType:     fsType,
 			TotalGB:    math.Round(totalGB*100) / 100,

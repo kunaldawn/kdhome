@@ -13,6 +13,7 @@ services:
       - /proc/mounts:/host/proc/mounts:ro
       - /proc/version:/host/proc/version:ro
       - /sys/class/thermal:/host/sys/class/thermal:ro
+      - /:/host/rootfs:ro
       - kdhome-data:/app/data
     networks:
       - web
