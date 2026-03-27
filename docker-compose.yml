@@ -1,14 +1,24 @@
-version: '3.8'
-
 services:
   kdhome:
     build: .
     ports:
-      - "8888:80"
+      - "8888:8080"
     container_name: kunaldawn-homepage
     restart: unless-stopped
+    volumes:
+      - /proc/uptime:/host/proc/uptime:ro
+      - /proc/loadavg:/host/proc/loadavg:ro
+      - /proc/cpuinfo:/host/proc/cpuinfo:ro
+      - /proc/meminfo:/host/proc/meminfo:ro
+      - /proc/mounts:/host/proc/mounts:ro
+      - /proc/version:/host/proc/version:ro
+      - /sys/class/thermal:/host/sys/class/thermal:ro
+      - kdhome-data:/app/data
     networks:
       - web
+
+volumes:
+  kdhome-data:
 
 networks:
   web:
