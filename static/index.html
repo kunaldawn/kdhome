@@ -1440,12 +1440,8 @@
       height: 100%;
     }
 
-    .music-window.maximized .music-playlist {
-      max-height: none;
-    }
-
     .music-window.maximized .music-playlist.show {
-      max-height: 200px;
+      max-height: 50vh;
     }
 
     /* Track display */
@@ -1654,8 +1650,18 @@
       color: var(--neon);
       opacity: 0.7;
       letter-spacing: 1px;
-      border-bottom: 1px solid rgba(0, 255, 150, 0.06);
+      border-top: 1px solid rgba(0, 255, 150, 0.06);
     }
+    .music-pl-toggle-label {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: color 0.15s;
+    }
+    .music-pl-toggle-label:hover { color: #fff; }
+    .music-pl-toggle-label .pl-arrow { transition: transform 0.3s; }
+    .music-pl-toggle-label.open .pl-arrow { transform: rotate(180deg); }
 
     .music-playlist-list {
       max-height: 170px;
@@ -1686,25 +1692,6 @@
     .playlist-item.active::before { content: '\25B6'; font-size: 7px; text-shadow: 0 0 4px rgba(0, 255, 150, 0.6); }
     .playlist-item:not(.active)::before { content: '\00B7'; font-size: 12px; opacity: 0.3; }
 
-    /* Playlist toggle button */
-    .music-pl-toggle {
-      width: 100%;
-      background: none;
-      border: none;
-      border-top: 1px solid rgba(0, 255, 150, 0.06);
-      color: #7fd1b3;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      padding: 5px;
-      cursor: pointer;
-      letter-spacing: 1px;
-      transition: color 0.15s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-    }
-    .music-pl-toggle:hover { color: var(--neon); }
 
     /* Responsive */
     @media (max-width: 800px) {
@@ -2241,7 +2228,7 @@
     .lock-screen {
       position: fixed;
       inset: 0;
-      background: linear-gradient(135deg, rgba(0, 10, 8, 0.98), rgba(0, 0, 0, 0.99));
+      background: rgb(0, 5, 3);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2249,10 +2236,25 @@
       animation: fadeIn 0.3s ease-out;
     }
 
+    .lock-pipes-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
     .lock-content {
       text-align: center;
       font-family: 'Share Tech Mono', monospace;
       color: var(--neon);
+      position: relative;
+      z-index: 1;
+      background: rgba(0, 5, 3, 0.6);
+      padding: 40px 50px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 150, 0.15);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
     }
 
     .lock-icon {
@@ -2540,7 +2542,7 @@
           <span>Restart</span>
         </div>
         <div class="menu-item power" onclick="lockScreen()">
-          <span class="menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <span class="menu-icon"><svg width="14" height="14" viewBox="-1 0 26 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
           <span>Lock</span>
         </div>
       </div>
@@ -2578,23 +2580,22 @@
         <input type="range" class="music-slider" id="music-volume" min="0" max="100" value="70">
         <span class="music-slider-label" id="music-vol-pct">70%</span>
       </div>
+      <div class="music-playlist-header" id="music-playlist-header">
+        <span class="music-pl-toggle-label" id="music-pl-toggle"><svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg> PLAYLIST <span id="music-track-count" style="opacity:0.5"></span></span>
+        <span class="music-playlist-actions">
+          <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-loop" title="Song loop: OFF"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
+          <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-shuffle" title="Shuffle playlist"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></span>
+        </span>
+      </div>
       <div class="music-playlist" id="music-playlist">
-        <div class="music-playlist-header">
-          <span>PLAYLIST <span id="music-track-count" style="opacity:0.5"></span></span>
-          <span class="music-playlist-actions">
-            <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-loop" title="Loop: ON (playlist + module)" class="music-loop-active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
-            <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-shuffle" title="Shuffle playlist"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></span>
-          </span>
-        </div>
         <div class="music-playlist-list" id="playlist-list"></div>
       </div>
-      <button class="music-pl-toggle" id="music-pl-toggle"><svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg> PLAYLIST</button>
     </div>
 
     <!-- Windows-style Taskbar -->
     <div class="taskbar">
       <button class="start-button" onclick="toggleStartMenu()">
-        <svg width="18" height="18" viewBox="0 0 200 200" style="flex-shrink:0"><ellipse cx="100" cy="120" rx="55" ry="65" fill="currentColor"/><ellipse cx="100" cy="75" rx="45" ry="50" fill="#fff"/><ellipse cx="100" cy="80" rx="40" ry="42" fill="currentColor"/><circle cx="82" cy="70" r="12" fill="#fff"/><circle cx="118" cy="70" r="12" fill="#fff"/><circle cx="85" cy="68" r="5" fill="#000"/><circle cx="115" cy="68" r="5" fill="#000"/><ellipse cx="100" cy="88" rx="8" ry="5" fill="#f90"/><path d="M70 160 L60 185 L90 185 L85 160" fill="#f90"/><path d="M130 160 L140 185 L110 185 L115 160" fill="#f90"/><path d="M60 185 L55 190 L95 190 L90 185" fill="#f90"/><path d="M140 185 L145 190 L105 190 L110 185" fill="#f90"/></svg>
+        <svg width="18" height="18" viewBox="0 0 18 18" style="flex-shrink:0"><ellipse cx="9" cy="11.5" rx="5.5" ry="6" fill="#333"/><ellipse cx="9" cy="12.5" rx="3.5" ry="4.5" fill="#f0c674"/><circle cx="9" cy="5" r="3.8" fill="#333"/><ellipse cx="7.5" cy="4.5" rx="1.3" ry="1.5" fill="#fff"/><ellipse cx="10.5" cy="4.5" rx="1.3" ry="1.5" fill="#fff"/><circle cx="7.8" cy="4.6" r="0.6" fill="#000"/><circle cx="10.8" cy="4.6" r="0.6" fill="#000"/><ellipse cx="9" cy="6.2" rx="1.2" ry="0.6" fill="#e8a000"/><ellipse cx="7" cy="17" rx="1.8" ry="0.7" fill="#e8a000"/><ellipse cx="11" cy="17" rx="1.8" ry="0.7" fill="#e8a000"/><ellipse cx="4" cy="11" rx="1.2" ry="3" fill="#333" transform="rotate(10 4 11)"/><ellipse cx="14" cy="11" rx="1.2" ry="3" fill="#333" transform="rotate(-10 14 11)"/></svg>
         <span>START</span>
       </button>
 
@@ -4086,17 +4087,190 @@
           const lockScreen = document.createElement('div');
           lockScreen.className = 'lock-screen';
           lockScreen.innerHTML = `
+          <canvas class="lock-pipes-canvas"></canvas>
           <div class="lock-content">
             <div class="lock-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg></div>
             <div class="lock-time">${new Date().toLocaleTimeString()}</div>
             <div class="lock-date">${new Date().toLocaleDateString()}</div>
             <div class="lock-user">root@vault</div>
-            <button class="unlock-btn" onclick="this.parentElement.parentElement.remove()">
+            <button class="unlock-btn">
               Unlock
             </button>
           </div>
         `;
           document.body.appendChild(lockScreen);
+
+          // Wire unlock to clean up pipes + remove lock screen
+          var unlockBtn = lockScreen.querySelector('.unlock-btn');
+          unlockBtn.addEventListener('click', function() {
+            lockScreen._pipesStop = true;
+            lockScreen.remove();
+          });
+
+          // Update clock every second
+          var lockTime = lockScreen.querySelector('.lock-time');
+          var lockDate = lockScreen.querySelector('.lock-date');
+          var clockIv = setInterval(function() {
+            if (!document.body.contains(lockScreen)) { clearInterval(clockIv); return; }
+            lockTime.textContent = new Date().toLocaleTimeString();
+            lockDate.textContent = new Date().toLocaleDateString();
+          }, 1000);
+
+          // ─── Pipes Screensaver ───
+          (function initPipes() {
+            var canvas = lockScreen.querySelector('.lock-pipes-canvas');
+            var ctx = canvas.getContext('2d');
+            var dpr = window.devicePixelRatio || 1;
+
+            function resize() {
+              canvas.width = window.innerWidth * dpr;
+              canvas.height = window.innerHeight * dpr;
+              ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            var W = function() { return canvas.width / dpr; };
+            var H = function() { return canvas.height / dpr; };
+
+            // Directions: 0=right, 1=down, 2=left, 3=up
+            var DX = [1, 0, -1, 0];
+            var DY = [0, 1, 0, -1];
+
+            var PIPE_WIDTH = 6;
+            var JOINT_R = 5;
+            var SEGMENT_LEN = 20;
+            var SPEED = 3; // pixels per frame
+            var MAX_PIPES = 8;
+            var COLORS = [
+              'hsl(145,100%,50%)', 'hsl(180,100%,50%)', 'hsl(60,100%,50%)',
+              'hsl(280,100%,60%)', 'hsl(0,100%,55%)', 'hsl(200,100%,55%)',
+              'hsl(30,100%,55%)', 'hsl(320,80%,55%)'
+            ];
+
+            var pipes = [];
+
+            function newPipe() {
+              var side = Math.floor(Math.random() * 4);
+              var x, y, dir;
+              if (side === 0) { x = 0; y = Math.random() * H(); dir = 0; }
+              else if (side === 1) { x = Math.random() * W(); y = 0; dir = 1; }
+              else if (side === 2) { x = W(); y = Math.random() * H(); dir = 2; }
+              else { x = Math.random() * W(); y = H(); dir = 3; }
+              return {
+                x: x, y: y,
+                dir: dir,
+                color: COLORS[Math.floor(Math.random() * COLORS.length)],
+                segments: [{x: x, y: y}],
+                distInSeg: 0,
+                segTarget: SEGMENT_LEN + Math.random() * SEGMENT_LEN,
+                alive: true,
+                totalDist: 0
+              };
+            }
+
+            // Start with a few pipes
+            for (var i = 0; i < 3; i++) pipes.push(newPipe());
+
+            var frameCount = 0;
+            var lastSpawn = 0;
+
+            function drawFrame() {
+              if (lockScreen._pipesStop) return;
+              requestAnimationFrame(drawFrame);
+              frameCount++;
+
+              // Slowly fade — gives depth/trail effect
+              ctx.fillStyle = 'rgba(0,5,3,0.02)';
+              ctx.fillRect(0, 0, W(), H());
+
+              // Spawn new pipes periodically
+              if (pipes.length < MAX_PIPES && frameCount - lastSpawn > 120 + Math.random() * 180) {
+                pipes.push(newPipe());
+                lastSpawn = frameCount;
+              }
+
+              for (var p = 0; p < pipes.length; p++) {
+                var pipe = pipes[p];
+                if (!pipe.alive) continue;
+
+                // Advance pipe
+                pipe.distInSeg += SPEED;
+                pipe.totalDist += SPEED;
+                var curX = pipe.x + DX[pipe.dir] * pipe.distInSeg;
+                var curY = pipe.y + DY[pipe.dir] * pipe.distInSeg;
+
+                // Draw pipe segment
+                ctx.strokeStyle = pipe.color;
+                ctx.lineWidth = PIPE_WIDTH;
+                ctx.lineCap = 'round';
+                ctx.shadowColor = pipe.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.moveTo(pipe.x, pipe.y);
+                ctx.lineTo(curX, curY);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Turn at segment end
+                if (pipe.distInSeg >= pipe.segTarget) {
+                  // Draw joint ball
+                  ctx.beginPath();
+                  ctx.arc(curX, curY, JOINT_R, 0, Math.PI * 2);
+                  ctx.fillStyle = pipe.color;
+                  ctx.shadowColor = pipe.color;
+                  ctx.shadowBlur = 12;
+                  ctx.fill();
+                  ctx.shadowBlur = 0;
+
+                  // Metallic highlight on joint
+                  ctx.beginPath();
+                  ctx.arc(curX - 1.5, curY - 1.5, JOINT_R * 0.4, 0, Math.PI * 2);
+                  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+                  ctx.fill();
+
+                  pipe.x = curX;
+                  pipe.y = curY;
+                  pipe.segments.push({x: curX, y: curY});
+                  pipe.distInSeg = 0;
+                  pipe.segTarget = SEGMENT_LEN + Math.random() * SEGMENT_LEN;
+
+                  // Choose new direction (not reverse)
+                  var choices = [];
+                  for (var d = 0; d < 4; d++) {
+                    if (d === (pipe.dir + 2) % 4) continue; // no 180
+                    choices.push(d);
+                  }
+                  // Bias toward turning (70% turn, 30% straight)
+                  var turns = choices.filter(function(d) { return d !== pipe.dir; });
+                  if (turns.length > 0 && Math.random() < 0.7) {
+                    pipe.dir = turns[Math.floor(Math.random() * turns.length)];
+                  } else {
+                    pipe.dir = choices[Math.floor(Math.random() * choices.length)];
+                  }
+
+                  // Kill if off-screen or too long
+                  var margin = 50;
+                  if (curX < -margin || curX > W() + margin || curY < -margin || curY > H() + margin || pipe.totalDist > 2000 + Math.random() * 1500) {
+                    pipe.alive = false;
+                  }
+                }
+              }
+
+              // Replace dead pipes
+              for (var p = pipes.length - 1; p >= 0; p--) {
+                if (!pipes[p].alive) {
+                  pipes.splice(p, 1);
+                }
+              }
+            }
+
+            // Clear to dark
+            ctx.fillStyle = 'rgb(0,5,3)';
+            ctx.fillRect(0, 0, W(), H());
+            drawFrame();
+          })();
+
           toggleStartMenu();
         };
 
@@ -4210,8 +4384,6 @@
     (function() {
       var SVG_PLAY = '<svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>';
       var SVG_PAUSE = '<svg class="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>';
-      var SVG_ARROW_DOWN = '<svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg>';
-      var SVG_ARROW_UP = '<svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,6 4,16 20,16"/></svg>';
       var playlist = [];
       var currentTrack = 0;
       var player = null;
@@ -4240,15 +4412,17 @@
       var timeDur = document.getElementById('music-time-dur');
       var isSeeking = false;
       var isStopped = false; // true after explicit stop, prevents onEnded auto-advance
-      var loopEnabled = true; // controls both playlist wrap-around and module internal looping
+      var songLoopEnabled = false; // controls module internal looping (repeat patterns in MOD/XM/IT)
       var chipTaskbar = document.getElementById('chiptunes-taskbar');
 
       var vizWrap = document.getElementById('music-viz-wrap');
       var vizCanvas = document.getElementById('music-viz-canvas');
       var vizCtx = vizCanvas.getContext('2d');
-      var vizModes = ['BARS','SCOPE','MIRROR','DOTS','RING','FLAME','GRID','HELIX','STARS','WAVE3D','PIXEL','SINE','HEX'];
+      var vizModes = ['BARS','SCOPE','MIRROR','DOTS','RING','FLAME','GRID','HELIX','STARS','WAVE3D','PIXEL','SINE','HEX','TUNNEL','PLASMA','KALEIDO','WARP','NEBULA','VORTEX'];
       var vizModeIdx = 0;
       var waveData = null; // for oscilloscope modes
+      var mdFrame = 0; // milkdrop frame counter
+      var mdFeedback = null; // offscreen canvas for feedback effects
 
       var NUM_BARS = 24;
       for (var i = 0; i < NUM_BARS; i++) {
@@ -4263,6 +4437,10 @@
         vizModeIdx = (vizModeIdx + 1) % vizModes.length;
         var mode = vizModes[vizModeIdx];
         vizWrap.setAttribute('data-mode', mode);
+        // Reset feedback canvas and frame counter on mode switch
+        mdFeedback = null;
+        mdFrame = 0;
+        if (vizCanvas.width > 0) vizCtx.clearRect(0, 0, vizCanvas.width, vizCanvas.height);
         if (mode === 'BARS') {
           vizContainer.style.display = 'flex';
           vizCanvas.style.display = 'none';
@@ -4392,27 +4570,27 @@
       // ─── Playlist toggle ───
       plToggle.addEventListener('click', function() {
         plPanel.classList.toggle('show');
-        plToggle.innerHTML = plPanel.classList.contains('show') ? SVG_ARROW_UP + ' PLAYLIST' : SVG_ARROW_DOWN + ' PLAYLIST';
+        plToggle.classList.toggle('open', plPanel.classList.contains('show'));
       });
 
-      // ─── Loop toggle (playlist + module internal looping) ───
+      // ─── Loop toggle (song/module internal looping only) ───
       var loopBtn = document.getElementById('music-loop');
       loopBtn.addEventListener('click', function() {
-        loopEnabled = !loopEnabled;
-        if (loopEnabled) {
+        songLoopEnabled = !songLoopEnabled;
+        if (songLoopEnabled) {
           loopBtn.classList.add('music-loop-active');
-          loopBtn.title = 'Loop: ON (playlist + module)';
+          loopBtn.title = 'Song loop: ON';
         } else {
           loopBtn.classList.remove('music-loop-active');
-          loopBtn.title = 'Loop: OFF (play each track once)';
+          loopBtn.title = 'Song loop: OFF';
         }
         // Update repeat count on the currently playing module
         if (player && player.currentPlayingNode && player.currentPlayingNode.modulePtr) {
-          try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, loopEnabled ? -1 : 0); } catch(e) {}
+          try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, songLoopEnabled ? -1 : 0); } catch(e) {}
         }
         // Update config for future tracks
         if (player && player.config) {
-          player.config.repeatCount = loopEnabled ? -1 : 0;
+          player.config.repeatCount = songLoopEnabled ? -1 : 0;
         }
       });
 
@@ -4470,7 +4648,7 @@
       function initPlayer() {
         if (player) return;
         try {
-          var config = new ChiptuneJsConfig(loopEnabled ? -1 : 0);
+          var config = new ChiptuneJsConfig(songLoopEnabled ? -1 : 0);
           player = new ChiptuneJsPlayer(config);
           gainNode = player.context.createGain();
           gainNode.gain.value = volSlider.value / 100;
@@ -4481,14 +4659,7 @@
           waveData = new Uint8Array(analyser.fftSize);
           player.onEnded(function() {
             if (isStopped) return; // don't auto-advance after explicit stop
-            if (currentTrack + 1 >= playlist.length && !loopEnabled) {
-              // Reached end of playlist with loop off — stop
-              isPlaying = false;
-              btn.innerHTML = SVG_PLAY; btn.classList.remove('playing'); btn.classList.add('idle-pulse');
-              stopViz();
-              seekSlider.value = 0; timeCur.textContent = '0:00';
-              return;
-            }
+            // Always advance to next track (playlist always loops)
             currentTrack = (currentTrack + 1) % playlist.length;
             loadAndPlay();
           });
@@ -4507,7 +4678,7 @@
           player.play(buffer);
           // Set module internal loop: -1 = loop forever, 0 = play once
           if (player.currentPlayingNode && player.currentPlayingNode.modulePtr) {
-            try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, loopEnabled ? -1 : 0); } catch(e) {}
+            try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, songLoopEnabled ? -1 : 0); } catch(e) {}
           }
           if (player.currentPlayingNode && gainNode && analyser) {
             try {
@@ -4804,6 +4975,292 @@
                 vizCtx.lineWidth = 1 * dpr; vizCtx.stroke();
               }
             }
+
+          } else if (mode === 'TUNNEL') {
+            // ─── Milkdrop: Tunnel zoom with reactive rings ───
+            analyser.getByteFrequencyData(freqData);
+            mdFrame++;
+            var cx = cw / 2, cy = ch / 2;
+            var avg = 0, bass = 0;
+            for (var i = 0; i < freqData.length; i++) avg += freqData[i];
+            avg = avg / freqData.length / 255;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
+            var t = mdFrame * 0.02;
+            // Draw fading trail
+            vizCtx.fillStyle = 'rgba(0,0,0,0.12)';
+            vizCtx.fillRect(0, 0, cw, ch);
+            var rings = 20;
+            for (var r = rings; r >= 1; r--) {
+              var p = r / rings;
+              var depth = (p + t * (0.5 + bass)) % 1.0;
+              var radius = depth * Math.max(cw, ch) * 0.8;
+              var freqIdx = Math.floor(p * (freqData.length - 1));
+              var val = freqData[freqIdx] / 255;
+              var wobble = Math.sin(t * 3 + r * 0.7) * val * 15;
+              vizCtx.beginPath();
+              vizCtx.arc(cx + wobble, cy + Math.cos(t * 2 + r) * val * 10, radius, 0, Math.PI * 2);
+              var hue = (120 + r * 8 + mdFrame * 0.5) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (40 + val * 30) + '%,' + (0.15 + val * 0.4) * (1 - depth) + ')';
+              vizCtx.lineWidth = (1.5 + val * 3) * dpr;
+              vizCtx.stroke();
+            }
+
+          } else if (mode === 'PLASMA') {
+            // ─── Milkdrop: Reactive plasma field ───
+            analyser.getByteFrequencyData(freqData);
+            mdFrame++;
+            var t = mdFrame * 0.03;
+            var avg = 0;
+            for (var i = 0; i < 32; i++) avg += freqData[i];
+            avg = avg / 32 / 255;
+            var step = Math.max(4, Math.floor(6 * dpr));
+            var imgData = vizCtx.createImageData(cw, ch);
+            var d = imgData.data;
+            for (var py = 0; py < ch; py += step) {
+              for (var px = 0; px < cw; px += step) {
+                var nx = px / cw, ny = py / ch;
+                var freqIdx = Math.floor(nx * (freqData.length - 1));
+                var val = freqData[freqIdx] / 255;
+                var v1 = Math.sin(nx * 6 + t);
+                var v2 = Math.sin(ny * 8 - t * 1.3 + val * 3);
+                var v3 = Math.sin((nx + ny) * 4 + t * 0.7);
+                var v4 = Math.sin(Math.sqrt((nx - 0.5) * (nx - 0.5) + (ny - 0.5) * (ny - 0.5)) * 12 - t * 2);
+                var v = (v1 + v2 + v3 + v4) / 4;
+                var intensity = (v * 0.5 + 0.5) * (0.4 + val * 0.6 + avg * 0.3);
+                var rr = Math.floor(intensity * 30);
+                var gg = Math.floor(intensity * 255);
+                var bb = Math.floor(intensity * 150);
+                for (var sy = 0; sy < step && py + sy < ch; sy++) {
+                  for (var sx = 0; sx < step && px + sx < cw; sx++) {
+                    var idx = ((py + sy) * cw + (px + sx)) * 4;
+                    d[idx] = rr; d[idx + 1] = gg; d[idx + 2] = bb; d[idx + 3] = Math.floor(intensity * 200);
+                  }
+                }
+              }
+            }
+            vizCtx.putImageData(imgData, 0, 0);
+
+          } else if (mode === 'KALEIDO') {
+            // ─── Milkdrop: Kaleidoscope symmetry ───
+            analyser.getByteFrequencyData(freqData);
+            analyser.getByteTimeDomainData(waveData);
+            mdFrame++;
+            var cx = cw / 2, cy = ch / 2;
+            var t = mdFrame * 0.015;
+            var slices = 8;
+            var avg = 0;
+            for (var i = 0; i < 16; i++) avg += freqData[i];
+            avg = avg / 16 / 255;
+            // Fade trail
+            vizCtx.fillStyle = 'rgba(0,0,0,0.08)';
+            vizCtx.fillRect(0, 0, cw, ch);
+            vizCtx.save();
+            vizCtx.translate(cx, cy);
+            for (var s = 0; s < slices; s++) {
+              vizCtx.save();
+              vizCtx.rotate((s / slices) * Math.PI * 2);
+              if (s % 2 === 1) vizCtx.scale(1, -1);
+              // Draw reactive curves
+              vizCtx.beginPath();
+              var pts = 32;
+              for (var i = 0; i <= pts; i++) {
+                var p = i / pts;
+                var freqIdx = Math.floor(p * (freqData.length / 2));
+                var val = freqData[freqIdx] / 255;
+                var wv = (waveData[Math.floor(p * waveData.length)] / 128.0 - 1);
+                var r = 20 + p * Math.min(cx, cy) * 0.8;
+                var angle = p * Math.PI * 0.5 + wv * 0.3 + val * 0.5;
+                var x = Math.cos(angle + t) * r * (0.8 + val * 0.4);
+                var y = Math.sin(angle + t) * r * (0.8 + val * 0.4);
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              var hue = (140 + s * 20 + mdFrame * 0.3) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',90%,' + (45 + avg * 25) + '%,0.6)';
+              vizCtx.lineWidth = (1 + avg * 2) * dpr;
+              vizCtx.stroke();
+              vizCtx.restore();
+            }
+            vizCtx.restore();
+
+          } else if (mode === 'WARP') {
+            // ─── Milkdrop: Motion warp with feedback ───
+            analyser.getByteFrequencyData(freqData);
+            analyser.getByteTimeDomainData(waveData);
+            mdFrame++;
+            var cx = cw / 2, cy = ch / 2;
+            var bass = 0, mid = 0, high = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i];
+            mid = mid / 32 / 255;
+            for (var i = 40; i < freqData.length; i++) high += freqData[i];
+            high = high / (freqData.length - 40) / 255;
+            // Feedback: scale+rotate previous frame
+            if (!mdFeedback || mdFeedback.width !== cw || mdFeedback.height !== ch) {
+              mdFeedback = document.createElement('canvas');
+              mdFeedback.width = cw; mdFeedback.height = ch;
+            }
+            var fbCtx = mdFeedback.getContext('2d');
+            fbCtx.clearRect(0, 0, cw, ch);
+            fbCtx.drawImage(vizCanvas, 0, 0);
+            vizCtx.fillStyle = 'rgba(0,0,0,0.06)';
+            vizCtx.fillRect(0, 0, cw, ch);
+            vizCtx.save();
+            vizCtx.translate(cx, cy);
+            var zoom = 1.01 + bass * 0.03;
+            var rot = (mid - 0.3) * 0.015;
+            vizCtx.rotate(rot);
+            vizCtx.scale(zoom, zoom);
+            vizCtx.globalAlpha = 0.92;
+            vizCtx.drawImage(mdFeedback, -cx, -cy);
+            vizCtx.globalAlpha = 1.0;
+            vizCtx.restore();
+            // Draw waveform as warped shape
+            var t = mdFrame * 0.02;
+            var segs = 64;
+            vizCtx.beginPath();
+            for (var i = 0; i <= segs; i++) {
+              var p = i / segs;
+              var angle = p * Math.PI * 2;
+              var wIdx = Math.floor(p * (waveData.length - 1));
+              var wv = (waveData[wIdx] / 128.0 - 1);
+              var fIdx = Math.floor(p * (freqData.length - 1));
+              var fv = freqData[fIdx] / 255;
+              var r = Math.min(cx, cy) * 0.3 * (1 + wv * 0.5 + fv * 0.3);
+              var x = cx + Math.cos(angle + t) * r;
+              var y = cy + Math.sin(angle + t) * r;
+              i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+            }
+            vizCtx.closePath();
+            var hue = (120 + mdFrame * 0.4) % 360;
+            vizCtx.strokeStyle = 'hsla(' + hue + ',100%,60%,0.7)';
+            vizCtx.lineWidth = (1.5 + bass * 2) * dpr;
+            vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.5)';
+            vizCtx.shadowBlur = 8 + bass * 15;
+            vizCtx.stroke();
+            vizCtx.shadowBlur = 0;
+            // Inner particles
+            for (var i = 0; i < 12; i++) {
+              var angle = (i / 12) * Math.PI * 2 + t * 1.5;
+              var dist = 15 + high * 40;
+              vizCtx.beginPath();
+              vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, (1 + mid * 3) * dpr, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,' + (0.3 + high * 0.7) + ')';
+              vizCtx.fill();
+            }
+
+          } else if (mode === 'NEBULA') {
+            // ─── Milkdrop: Nebula clouds with particle flow ───
+            analyser.getByteFrequencyData(freqData);
+            mdFrame++;
+            var t = mdFrame * 0.008;
+            var cx = cw / 2, cy = ch / 2;
+            var bass = 0, avg = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
+            for (var i = 0; i < freqData.length; i++) avg += freqData[i];
+            avg = avg / freqData.length / 255;
+            // Slow fade for trails
+            vizCtx.fillStyle = 'rgba(0,0,0,0.05)';
+            vizCtx.fillRect(0, 0, cw, ch);
+            // Nebula clouds — layered radial gradients
+            var clouds = 4;
+            for (var c = 0; c < clouds; c++) {
+              var seed = c * 73.37;
+              var ox = cx + Math.sin(t * 0.7 + seed) * cw * 0.2;
+              var oy = cy + Math.cos(t * 0.5 + seed * 1.3) * ch * 0.2;
+              var freqIdx = Math.floor((c / clouds) * freqData.length);
+              var val = freqData[Math.min(freqIdx, freqData.length - 1)] / 255;
+              var radius = (30 + val * 60 + bass * 40) * dpr;
+              var grad = vizCtx.createRadialGradient(ox, oy, 0, ox, oy, radius);
+              var hue = (100 + c * 40 + mdFrame * 0.2) % 360;
+              grad.addColorStop(0, 'hsla(' + hue + ',80%,50%,' + (0.15 + val * 0.25) + ')');
+              grad.addColorStop(0.5, 'hsla(' + ((hue + 30) % 360) + ',70%,40%,' + (0.06 + val * 0.1) + ')');
+              grad.addColorStop(1, 'hsla(' + hue + ',60%,30%,0)');
+              vizCtx.fillStyle = grad;
+              vizCtx.fillRect(ox - radius, oy - radius, radius * 2, radius * 2);
+            }
+            // Flowing particles
+            var count = 40;
+            for (var i = 0; i < count; i++) {
+              var seed = i * 127.1 + 311.7;
+              var freqIdx = Math.floor((i / count) * freqData.length);
+              var val = freqData[Math.min(freqIdx, freqData.length - 1)] / 255;
+              var angle = seed * 2.31 + t * (0.3 + val * 0.5);
+              var dist = ((seed * 0.47 + t * 0.2) % 1.0) * Math.max(cw, ch) * 0.5;
+              var px = cx + Math.cos(angle) * dist;
+              var py = cy + Math.sin(angle) * dist;
+              var pr = (0.5 + val * 2.5) * dpr;
+              var hue = (130 + i * 3 + mdFrame * 0.3) % 360;
+              vizCtx.beginPath(); vizCtx.arc(px, py, pr, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + hue + ',90%,65%,' + (0.2 + val * 0.6) + ')';
+              vizCtx.fill();
+            }
+
+          } else if (mode === 'VORTEX') {
+            // ─── Milkdrop: Spiral vortex with feedback ───
+            analyser.getByteFrequencyData(freqData);
+            analyser.getByteTimeDomainData(waveData);
+            mdFrame++;
+            var cx = cw / 2, cy = ch / 2;
+            var bass = 0, avg = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
+            for (var i = 0; i < freqData.length; i++) avg += freqData[i];
+            avg = avg / freqData.length / 255;
+            var t = mdFrame * 0.02;
+            // Feedback zoom+rotate
+            if (!mdFeedback || mdFeedback.width !== cw || mdFeedback.height !== ch) {
+              mdFeedback = document.createElement('canvas');
+              mdFeedback.width = cw; mdFeedback.height = ch;
+            }
+            var fbCtx = mdFeedback.getContext('2d');
+            fbCtx.clearRect(0, 0, cw, ch);
+            fbCtx.drawImage(vizCanvas, 0, 0);
+            vizCtx.fillStyle = 'rgba(0,0,0,0.07)';
+            vizCtx.fillRect(0, 0, cw, ch);
+            vizCtx.save();
+            vizCtx.translate(cx, cy);
+            vizCtx.rotate(0.02 + bass * 0.03);
+            vizCtx.scale(0.985, 0.985);
+            vizCtx.globalAlpha = 0.9;
+            vizCtx.drawImage(mdFeedback, -cx, -cy);
+            vizCtx.globalAlpha = 1.0;
+            vizCtx.restore();
+            // Draw spiral arms
+            var arms = 3;
+            for (var a = 0; a < arms; a++) {
+              vizCtx.beginPath();
+              var armOffset = (a / arms) * Math.PI * 2;
+              var pts = 60;
+              for (var i = 0; i <= pts; i++) {
+                var p = i / pts;
+                var freqIdx = Math.floor(p * (freqData.length - 1));
+                var val = freqData[freqIdx] / 255;
+                var wIdx = Math.floor(p * (waveData.length - 1));
+                var wv = (waveData[wIdx] / 128.0 - 1);
+                var spiralAngle = armOffset + p * Math.PI * 4 + t;
+                var r = p * Math.min(cx, cy) * (0.7 + val * 0.4 + wv * 0.15);
+                var x = cx + Math.cos(spiralAngle) * r;
+                var y = cy + Math.sin(spiralAngle) * r;
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              var hue = (120 + a * 40 + mdFrame * 0.5) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (50 + avg * 20) + '%,' + (0.5 + bass * 0.4) + ')';
+              vizCtx.lineWidth = (1.5 + bass * 2.5) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.4)';
+              vizCtx.shadowBlur = 6 + bass * 12;
+              vizCtx.stroke();
+            }
+            vizCtx.shadowBlur = 0;
+            // Center glow
+            var grad = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, 20 + bass * 25);
+            var hue2 = (160 + mdFrame * 0.6) % 360;
+            grad.addColorStop(0, 'hsla(' + hue2 + ',100%,70%,' + (0.3 + avg * 0.5) + ')');
+            grad.addColorStop(1, 'hsla(' + hue2 + ',100%,50%,0)');
+            vizCtx.fillStyle = grad;
+            vizCtx.fillRect(cx - 50, cy - 50, 100, 100);
           }
         }
 
