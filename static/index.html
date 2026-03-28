@@ -520,7 +520,10 @@
     .user-avatar {
       font-size: 20px;
       filter: drop-shadow(0 0 10px rgba(0, 255, 150, 0.5));
+      display: inline-flex;
+      align-items: center;
     }
+    .user-avatar svg { display: block; }
 
     .user-name {
       color: var(--neon);
@@ -588,7 +591,12 @@
     .menu-icon {
       font-size: 16px;
       filter: drop-shadow(0 0 5px currentColor);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
     }
+    .menu-icon svg { display: block; }
 
     .menu-shortcut {
       margin-left: auto;
@@ -728,6 +736,7 @@
       transition: all 0.2s;
       position: relative;
     }
+    .taskbar-item svg { display: block; }
 
     .taskbar-item.active {
       background: rgba(0, 255, 150, 0.1);
@@ -1515,7 +1524,11 @@
       cursor: pointer;
       transition: all 0.15s;
       line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
+    .music-btn svg { display: block; }
 
     .music-btn:hover {
       background: rgba(0, 255, 150, 0.1);
@@ -1617,9 +1630,24 @@
       max-height: 200px;
     }
 
+    .music-playlist-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    #music-loop, #music-shuffle {
+      opacity: 0.35;
+      transition: opacity 0.2s;
+    }
+    #music-loop.music-loop-active {
+      opacity: 1;
+      filter: drop-shadow(0 0 4px var(--neon));
+    }
+    #music-loop:hover, #music-shuffle:hover { opacity: 0.8; }
+
     .music-playlist-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
       padding: 5px 10px;
       font-size: 9px;
@@ -1671,6 +1699,10 @@
       cursor: pointer;
       letter-spacing: 1px;
       transition: color 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
     }
     .music-pl-toggle:hover { color: var(--neon); }
 
@@ -1991,16 +2023,14 @@
     .floating-icon {
       position: fixed;
       font-size: 36px;
-      opacity: 0.25;
+      opacity: 0.35;
       color: var(--neon);
       pointer-events: none;
       animation: float 20s infinite ease-in-out;
-      text-shadow:
-        0 0 20px rgba(0, 255, 150, 0.8),
-        0 0 40px rgba(0, 255, 150, 0.4);
-      filter: blur(0.5px);
+      filter: drop-shadow(0 0 8px rgba(0, 255, 150, 0.6));
       mix-blend-mode: screen;
     }
+    .floating-icon svg { display: block; }
 
     @keyframes float {
 
@@ -2129,51 +2159,6 @@
     }
 
 
-    /* Terminal window — same chrome as vault */
-    .terminal-popup {
-      position: fixed;
-      top: calc(50% - 230px);
-      left: calc(50% - 320px);
-      width: 640px;
-      max-width: 90vw;
-      background: linear-gradient(180deg, var(--panel), #031018 140%);
-      border: 1px solid rgba(0, 255, 150, 0.15);
-      border-radius: 10px;
-      box-shadow:
-        0 10px 40px rgba(0, 0, 0, 0.7),
-        0 0 60px rgba(0, 255, 150, 0.05);
-      z-index: 10000;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .terminal-body {
-      padding: 15px;
-      font-family: 'Share Tech Mono', monospace;
-      color: var(--neon);
-      font-size: 12px;
-      max-height: 420px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .terminal-body::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    .terminal-body::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.3);
-    }
-
-    .terminal-body::-webkit-scrollbar-thumb {
-      background: rgba(0, 255, 150, 0.2);
-      border-radius: 4px;
-    }
-
-    .terminal-cursor {
-      animation: blink 1s infinite;
-    }
 
     /* Draggable title bars */
     .vault-titlebar {
@@ -2481,16 +2466,11 @@
       }
 
       /* Make popups more readable on mobile */
-      .diagnostic-window,
-      .terminal-popup {
+      .diagnostic-window {
         width: 95%;
         left: 2.5%;
         right: 2.5%;
         top: 10%;
-        font-size: 14px;
-      }
-
-      .terminal-body {
         font-size: 14px;
       }
     }
@@ -2510,62 +2490,57 @@
     </div>
 
     <!-- Floating retro icons -->
-    <div class="floating-icon" style="top: 10%; left: 5%;">💾</div>
-    <div class="floating-icon" style="top: 30%; right: 10%; animation-delay: 5s;">📼</div>
-    <div class="floating-icon" style="bottom: 20%; left: 8%; animation-delay: 10s;">🖥️</div>
-    <div class="floating-icon" style="top: 50%; right: 5%; animation-delay: 15s;">📟</div>
+    <div class="floating-icon" style="top: 10%; left: 5%;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h12l4 4v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect x="6" y="2" width="10" height="7" rx="1"/><rect x="6" y="14" width="12" height="6" rx="1"/><line x1="10" y1="17" x2="14" y2="17"/></svg></div>
+    <div class="floating-icon" style="top: 30%; right: 10%; animation-delay: 5s;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="12" r="2.5"/><circle cx="16" cy="12" r="2.5"/><line x1="10.5" y1="12" x2="13.5" y2="12"/><rect x="7" y="5" width="10" height="3" rx="0.5"/></svg></div>
+    <div class="floating-icon" style="bottom: 20%; left: 8%; animation-delay: 10s;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 7l4 3-4 3" opacity="0.5"/></svg></div>
+    <div class="floating-icon" style="top: 50%; right: 5%; animation-delay: 15s;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M5 8h14"/><path d="M5 12h10"/><path d="M5 16h6"/><circle cx="18" cy="14" r="2"/></svg></div>
 
     <!-- Start Menu -->
     <div class="start-menu" id="startMenu">
       <div class="start-menu-header">
         <div class="user-info">
-          <span class="user-avatar">👤</span>
+          <span class="user-avatar"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 12 0v1" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></span>
           <span class="user-name">vault</span>
         </div>
       </div>
       <div class="start-menu-content">
         <div class="menu-column left">
-          <div class="menu-item" onclick="openTerminal()">
-            <span class="menu-icon">⌨️</span>
-            <span>Terminal</span>
-            <span class="menu-shortcut">Ctrl+T</span>
-          </div>
           <div class="menu-item" onclick="openVaultWindow()">
-            <span class="menu-icon">📁</span>
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg></span>
             <span>Vault</span>
           </div>
           <div class="menu-item" onclick="openChiptunes()">
-            <span class="menu-icon">🎵</span>
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
             <span>Chiptunes</span>
           </div>
         </div>
         <div class="menu-column right">
           <div class="menu-section-title">Quick Access</div>
           <div class="menu-item" onclick="window.open('https://wiki.kunaldawn.com', '_blank')">
-            <span class="menu-icon">🌐</span>
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></span>
             <span>Wiki Archive</span>
           </div>
           <div class="menu-item" onclick="window.open('https://archive.kunaldawn.com', '_blank')">
-            <span class="menu-icon">💿</span>
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></span>
             <span>Data Archive</span>
           </div>
           <div class="menu-item" onclick="window.open('https://pdfarchive.kunaldawn.com', '_blank')">
-            <span class="menu-icon">📚</span>
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h5" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" fill="none"/></svg></span>
             <span>PDF Archive</span>
           </div>
         </div>
       </div>
       <div class="start-menu-footer">
         <div class="menu-item power" onclick="showShutdownDialog()">
-          <span class="menu-icon">⏼</span>
+          <span class="menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg></span>
           <span>Shutdown</span>
         </div>
         <div class="menu-item power" onclick="showRestartDialog()">
-          <span class="menu-icon">⟲</span>
+          <span class="menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></span>
           <span>Restart</span>
         </div>
         <div class="menu-item power" onclick="lockScreen()">
-          <span class="menu-icon">⚿</span>
+          <span class="menu-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
           <span>Lock</span>
         </div>
       </div>
@@ -2589,9 +2564,9 @@
         </div>
       </div>
       <div class="music-controls">
-        <button class="music-btn" id="music-prev" title="Previous">&#9664;</button>
-        <button class="music-btn play-btn idle-pulse" id="music-toggle" title="Play">&#9654;</button>
-        <button class="music-btn" id="music-next" title="Next">&#9654;</button>
+        <button class="music-btn" id="music-prev" title="Previous"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="19,20 9,12 19,4"/><rect x="5" y="4" width="3" height="16"/></svg></button>
+        <button class="music-btn play-btn idle-pulse" id="music-toggle" title="Play"><svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg></button>
+        <button class="music-btn" id="music-next" title="Next"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,4 15,12 5,20"/><rect x="16" y="4" width="3" height="16"/></svg></button>
       </div>
       <div class="music-slider-row">
         <span class="music-slider-label" id="music-time-cur">0:00</span>
@@ -2606,27 +2581,30 @@
       <div class="music-playlist" id="music-playlist">
         <div class="music-playlist-header">
           <span>PLAYLIST <span id="music-track-count" style="opacity:0.5"></span></span>
-          <span style="cursor:pointer" id="music-shuffle" title="Shuffle playlist">&#8645;</span>
+          <span class="music-playlist-actions">
+            <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-loop" title="Loop: ON (playlist + module)" class="music-loop-active"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
+            <span style="cursor:pointer;display:inline-flex;align-items:center" id="music-shuffle" title="Shuffle playlist"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg></span>
+          </span>
         </div>
         <div class="music-playlist-list" id="playlist-list"></div>
       </div>
-      <button class="music-pl-toggle" id="music-pl-toggle">&#9660; PLAYLIST</button>
+      <button class="music-pl-toggle" id="music-pl-toggle"><svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg> PLAYLIST</button>
     </div>
 
     <!-- Windows-style Taskbar -->
     <div class="taskbar">
       <button class="start-button" onclick="toggleStartMenu()">
-        <span style="font-size: 16px;">🐧</span>
+        <svg width="18" height="18" viewBox="0 0 200 200" style="flex-shrink:0"><ellipse cx="100" cy="120" rx="55" ry="65" fill="currentColor"/><ellipse cx="100" cy="75" rx="45" ry="50" fill="#fff"/><ellipse cx="100" cy="80" rx="40" ry="42" fill="currentColor"/><circle cx="82" cy="70" r="12" fill="#fff"/><circle cx="118" cy="70" r="12" fill="#fff"/><circle cx="85" cy="68" r="5" fill="#000"/><circle cx="115" cy="68" r="5" fill="#000"/><ellipse cx="100" cy="88" rx="8" ry="5" fill="#f90"/><path d="M70 160 L60 185 L90 185 L85 160" fill="#f90"/><path d="M130 160 L140 185 L110 185 L115 160" fill="#f90"/><path d="M60 185 L55 190 L95 190 L90 185" fill="#f90"/><path d="M140 185 L145 190 L105 190 L110 185" fill="#f90"/></svg>
         <span>START</span>
       </button>
 
       <div class="taskbar-items">
         <div class="taskbar-item active" id="vault-window" onclick="restoreWindow()">
-          <span>📁</span>
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 6a2 2 0 0 1 2-2h5l2 2h9a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/></svg></span>
           <span>Vault</span>
         </div>
         <div class="taskbar-item active" id="chiptunes-taskbar" onclick="toggleChiptunes()">
-          <span>🎵</span>
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
           <span>Chiptunes</span>
         </div>
       </div>
@@ -3046,13 +3024,13 @@
           fetch('/api/visit', { method: 'POST' })
             .then(r => r.json())
             .then(data => {
-              if (el && data.count) el.textContent = data.count.toLocaleString() + ' visits';
+              if (el && data.count != null) el.textContent = data.count.toLocaleString() + ' visits';
             })
             .catch(() => {
               // Fallback: just get count
               fetch('/api/visit')
                 .then(r => r.json())
-                .then(data => { if (el && data.count) el.textContent = data.count.toLocaleString() + ' visits'; })
+                .then(data => { if (el && data.count != null) el.textContent = data.count.toLocaleString() + ' visits'; })
                 .catch(() => { if (el) el.textContent = ''; });
             });
         })();
@@ -4050,7 +4028,7 @@
 
         // On resize, clamp all positioned windows back into view
         window.addEventListener('resize', () => {
-          document.querySelectorAll('.vault, .terminal-popup, .music-window').forEach(clampWindowBounds);
+          document.querySelectorAll('.vault, .music-window').forEach(clampWindowBounds);
           if (window._chipSizeCanvas) window._chipSizeCanvas();
         });
 
@@ -4059,176 +4037,6 @@
         if (vaultTitlebar) {
           makeDraggable(document.querySelector('.vault'), vaultTitlebar);
         }
-
-        // --- Terminal window ---
-        function formatBytes(gb) {
-          if (gb >= 1024) return (gb / 1024).toFixed(1) + 'T';
-          if (gb >= 1) return gb.toFixed(1) + 'G';
-          return (gb * 1024).toFixed(0) + 'M';
-        }
-
-        // Safe DOM builder — no innerHTML, prevents XSS from API data
-        function esc(str) { return String(str || ''); }
-
-        function buildTerminalDOM(pre, stats) {
-          pre.textContent = ''; // clear
-
-          function addPrompt(host) {
-            const s = document.createElement('span');
-            s.style.color = '#a8d8c4';
-            s.textContent = esc(host) + ':~$ ';
-            pre.appendChild(s);
-          }
-          function addLabel(text) {
-            const s = document.createElement('span');
-            s.style.color = 'var(--neon)';
-            s.textContent = text;
-            pre.appendChild(s);
-          }
-          function addText(text) {
-            pre.appendChild(document.createTextNode(text));
-          }
-          function addCursor() {
-            const s = document.createElement('span');
-            s.className = 'terminal-cursor';
-            s.textContent = '█';
-            pre.appendChild(s);
-          }
-
-          const host = 'vault@kd';
-          const memTotal = stats.mem_total_mb >= 1024
-            ? (stats.mem_total_mb / 1024).toFixed(1) + 'G'
-            : (stats.mem_total_mb || 0).toFixed(0) + 'M';
-          const memUsed = stats.mem_used_mb >= 1024
-            ? (stats.mem_used_mb / 1024).toFixed(1) + 'G'
-            : (stats.mem_used_mb || 0).toFixed(0) + 'M';
-
-          addPrompt(host); addText('neofetch\n');
-          addLabel('  Hostname:  '); addText(host + '\n');
-          addLabel('  CPU:       '); addText(esc(stats.cpu_model) + ' (' + (stats.cpu_cores || '?') + ' cores)\n');
-          addLabel('  Memory:    '); addText(memUsed + ' / ' + memTotal + ' (' + (stats.mem_use_pct || 0) + '%)\n');
-          addLabel('  Uptime:    '); addText(esc(stats.uptime) + '\n');
-          addLabel('  Load:      '); addText(esc(stats.load_avg) + '\n');
-          addText('\n');
-
-          addPrompt(host); addText('df -h\n');
-          addText('Drive           Size   Type\n');
-          if (stats.disks && stats.disks.length) {
-            stats.disks.forEach(d => {
-              const name = esc(d.name || 'unknown').padEnd(15);
-              const total = formatBytes(d.total_gb).padStart(6);
-              const fstype = esc(d.fs_type || '').padStart(6);
-              addText(name + ' ' + total + ' ' + fstype + '\n');
-            });
-          } else {
-            addText('(no data)\n');
-          }
-          addText('\n');
-
-          addPrompt(host); addText('date\n');
-          addText(new Date().toString() + '\n\n');
-          addPrompt(host); addCursor();
-        }
-
-        window.openTerminal = function () {
-          const existing = document.getElementById('terminal-window');
-          if (existing) {
-            // Restore if minimized
-            existing.style.display = '';
-            const tb = document.getElementById('terminal-taskbar');
-            if (tb) { tb.classList.remove('minimized'); tb.classList.add('active'); }
-            const menu = document.getElementById('startMenu');
-            if (menu && menu.classList.contains('show')) toggleStartMenu();
-            return;
-          }
-
-          const terminal = document.createElement('div');
-          terminal.className = 'terminal-popup';
-          terminal.id = 'terminal-window';
-          terminal.innerHTML = `
-            <div class="vault-titlebar" id="terminal-titlebar">
-              <div class="vault-titlebar-controls">
-                <div class="window-btn close" title="Close" onclick="closeTerminal()"></div>
-                <div class="window-btn minimize" title="Minimize" onclick="minimizeTerminal()"></div>
-              </div>
-              <span class="vault-titlebar-title">vault@kd:~</span>
-            </div>
-            <div class="terminal-body" id="terminal-body">
-              <pre style="margin:0;white-space:pre-wrap;word-break:break-all;">Loading system stats...</pre>
-            </div>
-          `;
-          document.body.appendChild(terminal);
-
-          // Add taskbar entry
-          const taskbarItems = document.querySelector('.taskbar-items');
-          const tbItem = document.createElement('div');
-          tbItem.className = 'taskbar-item active';
-          tbItem.id = 'terminal-taskbar';
-          tbItem.innerHTML = '<span>⌨️</span><span>Terminal</span>';
-          tbItem.onclick = function () { toggleTerminalWindow(); };
-          taskbarItems.appendChild(tbItem);
-
-          // Make draggable
-          makeDraggable(terminal, document.getElementById('terminal-titlebar'));
-
-          // Fetch real stats — uses safe DOM builder, no innerHTML
-          fetch('/api/stats')
-            .then(r => r.json())
-            .then(stats => {
-              const pre = terminal.querySelector('pre');
-              if (pre) buildTerminalDOM(pre, stats);
-              const title = terminal.querySelector('.vault-titlebar-title');
-              if (title) title.textContent = 'vault@kd:~';
-            })
-            .catch(() => {
-              const pre = terminal.querySelector('pre');
-              if (pre) {
-                pre.textContent = '';
-                const err = document.createElement('span');
-                err.style.color = '#ff6b6b';
-                err.textContent = 'Failed to fetch system stats.';
-                pre.appendChild(err);
-                pre.appendChild(document.createTextNode('\n'));
-                const cursor = document.createElement('span');
-                cursor.className = 'terminal-cursor';
-                cursor.textContent = '█';
-                pre.appendChild(cursor);
-              }
-            });
-
-          const menu = document.getElementById('startMenu');
-          if (menu && menu.classList.contains('show')) toggleStartMenu();
-        };
-
-        window.closeTerminal = function () {
-          const terminal = document.getElementById('terminal-window');
-          if (terminal) terminal.remove();
-          const tb = document.getElementById('terminal-taskbar');
-          if (tb) tb.remove();
-        };
-
-        window.minimizeTerminal = function () {
-          const terminal = document.getElementById('terminal-window');
-          const tb = document.getElementById('terminal-taskbar');
-          if (terminal) terminal.style.display = 'none';
-          if (tb) { tb.classList.add('minimized'); tb.classList.remove('active'); }
-        };
-
-        window.toggleTerminalWindow = function () {
-          const terminal = document.getElementById('terminal-window');
-          const tb = document.getElementById('terminal-taskbar');
-          if (!terminal) return;
-
-          if (terminal.style.display === 'none') {
-            // Restore
-            terminal.style.display = '';
-            if (tb) { tb.classList.remove('minimized'); tb.classList.add('active'); }
-          } else if (tb && tb.classList.contains('active')) {
-            // Minimize
-            terminal.style.display = 'none';
-            if (tb) { tb.classList.add('minimized'); tb.classList.remove('active'); }
-          }
-        };
 
         // Open Vault window
         window.openVaultWindow = function () {
@@ -4279,7 +4087,7 @@
           lockScreen.className = 'lock-screen';
           lockScreen.innerHTML = `
           <div class="lock-content">
-            <div class="lock-icon">🔒</div>
+            <div class="lock-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg></div>
             <div class="lock-time">${new Date().toLocaleTimeString()}</div>
             <div class="lock-date">${new Date().toLocaleDateString()}</div>
             <div class="lock-user">root@vault</div>
@@ -4400,6 +4208,10 @@
     <script src="/music/chiptune2.js"></script>
     <script>
     (function() {
+      var SVG_PLAY = '<svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>';
+      var SVG_PAUSE = '<svg class="icon-pause" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/></svg>';
+      var SVG_ARROW_DOWN = '<svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg>';
+      var SVG_ARROW_UP = '<svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,6 4,16 20,16"/></svg>';
       var playlist = [];
       var currentTrack = 0;
       var player = null;
@@ -4428,6 +4240,7 @@
       var timeDur = document.getElementById('music-time-dur');
       var isSeeking = false;
       var isStopped = false; // true after explicit stop, prevents onEnded auto-advance
+      var loopEnabled = true; // controls both playlist wrap-around and module internal looping
       var chipTaskbar = document.getElementById('chiptunes-taskbar');
 
       var vizWrap = document.getElementById('music-viz-wrap');
@@ -4469,7 +4282,7 @@
           isStopped = true;
           try { player.stop(); } catch(e) {}
           isPlaying = false;
-          btn.textContent = '\u25B6'; btn.classList.remove('playing'); btn.classList.add('idle-pulse');
+          btn.innerHTML = SVG_PLAY; btn.classList.remove('playing'); btn.classList.add('idle-pulse');
           stopViz();
           seekSlider.value = 0; timeCur.textContent = '0:00';
         }
@@ -4579,7 +4392,28 @@
       // ─── Playlist toggle ───
       plToggle.addEventListener('click', function() {
         plPanel.classList.toggle('show');
-        plToggle.innerHTML = plPanel.classList.contains('show') ? '&#9650; PLAYLIST' : '&#9660; PLAYLIST';
+        plToggle.innerHTML = plPanel.classList.contains('show') ? SVG_ARROW_UP + ' PLAYLIST' : SVG_ARROW_DOWN + ' PLAYLIST';
+      });
+
+      // ─── Loop toggle (playlist + module internal looping) ───
+      var loopBtn = document.getElementById('music-loop');
+      loopBtn.addEventListener('click', function() {
+        loopEnabled = !loopEnabled;
+        if (loopEnabled) {
+          loopBtn.classList.add('music-loop-active');
+          loopBtn.title = 'Loop: ON (playlist + module)';
+        } else {
+          loopBtn.classList.remove('music-loop-active');
+          loopBtn.title = 'Loop: OFF (play each track once)';
+        }
+        // Update repeat count on the currently playing module
+        if (player && player.currentPlayingNode && player.currentPlayingNode.modulePtr) {
+          try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, loopEnabled ? -1 : 0); } catch(e) {}
+        }
+        // Update config for future tracks
+        if (player && player.config) {
+          player.config.repeatCount = loopEnabled ? -1 : 0;
+        }
       });
 
       // ─── Shuffle ───
@@ -4636,7 +4470,7 @@
       function initPlayer() {
         if (player) return;
         try {
-          var config = new ChiptuneJsConfig(-1);
+          var config = new ChiptuneJsConfig(loopEnabled ? -1 : 0);
           player = new ChiptuneJsPlayer(config);
           gainNode = player.context.createGain();
           gainNode.gain.value = volSlider.value / 100;
@@ -4647,6 +4481,14 @@
           waveData = new Uint8Array(analyser.fftSize);
           player.onEnded(function() {
             if (isStopped) return; // don't auto-advance after explicit stop
+            if (currentTrack + 1 >= playlist.length && !loopEnabled) {
+              // Reached end of playlist with loop off — stop
+              isPlaying = false;
+              btn.innerHTML = SVG_PLAY; btn.classList.remove('playing'); btn.classList.add('idle-pulse');
+              stopViz();
+              seekSlider.value = 0; timeCur.textContent = '0:00';
+              return;
+            }
             currentTrack = (currentTrack + 1) % playlist.length;
             loadAndPlay();
           });
@@ -4663,6 +4505,10 @@
         if (info) info.textContent = 'Loading...';
         player.load(track.url, function(buffer) {
           player.play(buffer);
+          // Set module internal loop: -1 = loop forever, 0 = play once
+          if (player.currentPlayingNode && player.currentPlayingNode.modulePtr) {
+            try { libopenmpt._openmpt_module_set_repeat_count(player.currentPlayingNode.modulePtr, loopEnabled ? -1 : 0); } catch(e) {}
+          }
           if (player.currentPlayingNode && gainNode && analyser) {
             try {
               player.currentPlayingNode.disconnect();
@@ -4672,7 +4518,7 @@
             } catch(e) {}
           }
           isPlaying = true;
-          btn.textContent = '\u23F8'; btn.classList.add('playing'); btn.classList.remove('idle-pulse');
+          btn.innerHTML = SVG_PAUSE; btn.classList.add('playing'); btn.classList.remove('idle-pulse');
           updateInfo(); renderPlaylist(); startViz();
         });
       }
@@ -4999,11 +4845,11 @@
         if (isPlaying) {
           // Pause
           player.togglePause(); isPlaying = false;
-          btn.textContent = '\u25B6'; btn.classList.remove('playing'); btn.classList.add('idle-pulse'); stopViz();
+          btn.innerHTML = SVG_PLAY; btn.classList.remove('playing'); btn.classList.add('idle-pulse'); stopViz();
         } else if (player.currentPlayingNode) {
           // Unpause existing track
           player.togglePause(); isPlaying = true;
-          btn.textContent = '\u23F8'; btn.classList.add('playing'); btn.classList.remove('idle-pulse'); startViz();
+          btn.innerHTML = SVG_PAUSE; btn.classList.add('playing'); btn.classList.remove('idle-pulse'); startViz();
         } else {
           // No track loaded (after close/stop) — start fresh
           loadAndPlay();

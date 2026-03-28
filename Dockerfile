@@ -10,7 +10,7 @@ RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o server .
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates sqlite-libs && \
+RUN apk add --no-cache ca-certificates sqlite-libs su-exec && \
     adduser -D -u 1001 appuser
 
 WORKDIR /app
@@ -19,7 +19,9 @@ COPY static/ ./static/
 
 RUN mkdir -p /app/data && chown appuser:appuser /app/data
 
-USER appuser
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
 EXPOSE 8080
 
-CMD ["./server"]
+ENTRYPOINT ["./entrypoint.sh"]

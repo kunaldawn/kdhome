@@ -6,264 +6,15 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"math"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-// ─── System Stats ───
-
-type DiskInfo struct {
-	Name       string  `json:"name"`
-	MountPoint string  `json:"mount_point"`
-	FSType     string  `json:"fs_type"`
-	TotalGB    float64 `json:"total_gb"`
-	UsedGB     float64 `json:"used_gb"`
-	AvailGB    float64 `json:"avail_gb"`
-	UsePct     float64 `json:"use_pct"`
-}
-
-type SystemStats struct {
-	Uptime      string     `json:"uptime"`
-	LoadAvg     string     `json:"load_avg"`
-	CPUModel    string     `json:"cpu_model"`
-	CPUCores    int        `json:"cpu_cores"`
-	MemTotalMB  float64    `json:"mem_total_mb"`
-	MemUsedMB   float64    `json:"mem_used_mb"`
-	MemAvailMB  float64    `json:"mem_avail_mb"`
-	MemUsePct   float64    `json:"mem_use_pct"`
-	Disks       []DiskInfo `json:"disks"`
-	CollectedAt string     `json:"collected_at"`
-}
-
-var (
-	cachedJSON []byte
-	statsMu    sync.RWMutex
-	procPath   = "/proc"
-)
-
-func init() {
-	if _, err := os.Stat("/host/proc/uptime"); err == nil {
-		procPath = "/host/proc"
-	}
-}
-
-func readFile(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(string(data)), nil
-}
-
-func getUptime() string {
-	content, err := readFile(filepath.Join(procPath, "uptime"))
-	if err != nil {
-		return "unknown"
-	}
-	parts := strings.Fields(content)
-	if len(parts) < 1 {
-		return "unknown"
-	}
-	secs, err := strconv.ParseFloat(parts[0], 64)
-	if err != nil {
-		return "unknown"
-	}
-	days := int(secs) / 86400
-	hours := (int(secs) % 86400) / 3600
-	mins := (int(secs) % 3600) / 60
-	return fmt.Sprintf("%d days, %02d:%02d", days, hours, mins)
-}
-
-func getLoadAvg() string {
-	content, err := readFile(filepath.Join(procPath, "loadavg"))
-	if err != nil {
-		return "unknown"
-	}
-	parts := strings.Fields(content)
-	if len(parts) >= 3 {
-		return strings.Join(parts[:3], ", ")
-	}
-	return content
-}
-
-func getCPUInfo() (string, int) {
-	content, err := readFile(filepath.Join(procPath, "cpuinfo"))
-	if err != nil {
-		return "unknown", 0
-	}
-	model := ""
-	cores := 0
-	for _, line := range strings.Split(content, "\n") {
-		parts := strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-		switch key {
-		case "model name":
-			model = val
-		case "Model":
-			// ARM/Raspberry Pi: use "Model" if "model name" wasn't found
-			if model == "" {
-				model = val
-			}
-		case "Hardware":
-			if model == "" {
-				model = val
-			}
-		case "processor":
-			cores++
-		}
-	}
-	if model == "" {
-		model = "unknown"
-	}
-	return model, cores
-}
-
-
-func getMemInfo() (total, used, avail, pct float64) {
-	content, err := readFile(filepath.Join(procPath, "meminfo"))
-	if err != nil {
-		return
-	}
-	values := make(map[string]float64)
-	for _, line := range strings.Split(content, "\n") {
-		parts := strings.Fields(line)
-		if len(parts) >= 2 {
-			key := strings.TrimSuffix(parts[0], ":")
-			val, err := strconv.ParseFloat(parts[1], 64)
-			if err == nil {
-				values[key] = val
-			}
-		}
-	}
-	total = values["MemTotal"] / 1024
-	avail = values["MemAvailable"] / 1024
-	used = total - avail
-	if total > 0 {
-		pct = (used / total) * 100
-	}
-	return
-}
-
-func getDisks() []DiskInfo {
-	// Read partition sizes from /proc/partitions (works without mount access)
-	partContent, err := readFile(filepath.Join(procPath, "partitions"))
-	if err != nil {
-		return nil
-	}
-	// Map partition name -> size in bytes
-	partSizes := make(map[string]float64)
-	for _, line := range strings.Split(partContent, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 4 {
-			continue
-		}
-		blocks, err := strconv.ParseFloat(fields[2], 64)
-		if err != nil {
-			continue
-		}
-		partSizes[fields[3]] = blocks * 1024 // /proc/partitions uses 1K blocks
-	}
-
-	// Read mounts to map devices to mount points and filesystem types
-	mountContent, err := readFile(filepath.Join(procPath, "mounts"))
-	if err != nil {
-		return nil
-	}
-	seen := make(map[string]bool)
-	var disks []DiskInfo
-
-	for _, line := range strings.Split(mountContent, "\n") {
-		parts := strings.Fields(line)
-		if len(parts) < 3 {
-			continue
-		}
-		device := parts[0]
-		fsType := parts[2]
-
-		if !strings.HasPrefix(device, "/dev/") {
-			continue
-		}
-		if strings.Contains(device, "loop") || strings.Contains(device, "ram") {
-			continue
-		}
-		if seen[device] {
-			continue
-		}
-		seen[device] = true
-
-		// Extract partition name (e.g. /dev/sda1 -> sda1)
-		driveName := device
-		if idx := strings.LastIndex(device, "/"); idx >= 0 {
-			driveName = device[idx+1:]
-		}
-
-		totalBytes, ok := partSizes[driveName]
-		if !ok || totalBytes < 0.1*(1<<30) {
-			continue
-		}
-
-		disks = append(disks, DiskInfo{
-			Name:    driveName,
-			FSType:  fsType,
-			TotalGB: math.Round(totalBytes/(1<<30)*100) / 100,
-		})
-	}
-	return disks
-}
-
-func collectStats() *SystemStats {
-	uptime := getUptime()
-	loadAvg := getLoadAvg()
-	cpuModel, cpuCores := getCPUInfo()
-	memTotal, memUsed, memAvail, memPct := getMemInfo()
-	disks := getDisks()
-
-	return &SystemStats{
-		Uptime:      uptime,
-		LoadAvg:     loadAvg,
-		CPUModel:    cpuModel,
-		CPUCores:    cpuCores,
-		MemTotalMB:  math.Round(memTotal*10) / 10,
-		MemUsedMB:   math.Round(memUsed*10) / 10,
-		MemAvailMB:  math.Round(memAvail*10) / 10,
-		MemUsePct:   math.Round(memPct*10) / 10,
-		Disks:       disks,
-		CollectedAt: time.Now().Format(time.RFC3339),
-	}
-}
-
-func refreshStats() {
-	stats := collectStats()
-	data, err := json.Marshal(stats)
-	if err != nil {
-		log.Printf("[STATS] marshal error: %v", err)
-		return
-	}
-	statsMu.Lock()
-	cachedJSON = data
-	statsMu.Unlock()
-	log.Printf("[STATS] refreshed — mem=%.0f%%", stats.MemUsePct)
-}
-
-func refreshLoop() {
-	for {
-		time.Sleep(1 * time.Hour)
-		refreshStats()
-	}
-}
 
 // ─── Visit Counter (SQLite) ───
 
@@ -407,20 +158,6 @@ func playlistHandler(staticDir string) http.HandlerFunc {
 	}
 }
 
-func statsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	statsMu.RLock()
-	data := cachedJSON
-	statsMu.RUnlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "private, max-age=3600")
-	w.Write(data)
-}
-
 type noDirFS struct {
 	fs http.FileSystem
 }
@@ -462,11 +199,8 @@ func main() {
 
 	// Initialize systems
 	initVisitDB(dataDir)
-	refreshStats()
-	go refreshLoop()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/stats", statsHandler)
 	mux.HandleFunc("/api/visit", visitHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
 	mux.Handle("/", http.FileServer(noDirFS{http.Dir(staticDir)}))

@@ -6,12 +6,6 @@ services:
     container_name: kunaldawn-homepage
     restart: unless-stopped
     volumes:
-      - /proc/uptime:/host/proc/uptime:ro
-      - /proc/loadavg:/host/proc/loadavg:ro
-      - /proc/cpuinfo:/host/proc/cpuinfo:ro
-      - /proc/meminfo:/host/proc/meminfo:ro
-      - /proc/mounts:/host/proc/mounts:ro
-      - /proc/partitions:/host/proc/partitions:ro
       - ./data:/app/data
     networks:
       - web
