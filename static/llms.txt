@@ -1,20 +1,25 @@
 # KD's Homebrew Digital Archive
 # https://kunaldawn.com
 
-> 1.3 TB of preserved knowledge on a Raspberry Pi.
-> Fighting link rot and bit decay — because information deserves to outlive the servers
-> that first hosted it.
+> A home-grown mirror of the public internet — 12 TB of preserved knowledge.
+> A shelf in a house, not a rack in a data centre.
+> Fighting link rot, one wget at a time.
 
 ## What this project is
 
-KD's Homebrew Archive is a digital preservation project — a homebrew effort to collect,
-organize, and freely share knowledge from across the internet before it disappears. Websites go
-dark, servers get decommissioned, links rot, and entire libraries of human work vanish without
-warning. This archive exists to push back against that entropy, one wget at a time.
+KD's Homebrew Digital Archive is a personal digital preservation project — a homebrew effort
+to collect, organize, and freely share knowledge from across the internet before it disappears.
+Websites go dark, servers get decommissioned, databases deprecate, and entire libraries of
+human work vanish without warning. This archive exists to push back against that entropy,
+one wget at a time.
 
-The project spans three sub-archives totaling over 1.3 TB of curated content, served from a
-single Raspberry Pi 4 consuming under 5W of power. No ads, no subscriptions, no revenue. Just
-preserved knowledge, openly accessible.
+This is where abandonware lives: retro code nobody ships any more, dead magazines, dusty
+journals, and manuals for chips that stopped being made decades ago. Useless to most. Gold
+to the few who go looking.
+
+The project spans three sub-archives totalling over 12 TB of curated content, served from
+a home-grown homelab cluster drawing about 30 watts off-grid. No ads, no tracking, no
+telemetry, no SLA, no monetization, no users — free for all, free forever.
 
 ## Sub-Archives
 
@@ -37,7 +42,7 @@ preserved knowledge, openly accessible.
 - Video archives (228 GB)
 
 ### PDF Archive (pdfarchive.kunaldawn.com)
-23,000+ curated PDFs totaling ~800 GB across 13 categories:
+23,000+ curated PDFs totalling ~800 GB across 13 categories:
 - Computer Components: 7,200 vintage hardware manuals (Commodore, CDC, RCA, Amdahl, NCR)
 - Computer Magazines: 5,768 issues (Byte, Linux Voice, Datamation, MagPi, Retro Gamer)
 - Computer Engineering: ML textbooks, Python guides, SQL references, quantum computing
@@ -53,18 +58,28 @@ follows the same tradition as public libraries, the Internet Archive, and commun
 around the world: information belongs to everyone, and it deserves to outlive the servers that
 first hosted it.
 
+Ethos is stark and deliberate: no ads, no tracking, no telemetry, no SLA, no monetization,
+no users. Free for all, free forever. Preservation doesn't require a data centre — just
+determination, a shelf, and enough panels to cover the draw.
+
 All content is sourced from publicly accessible locations including open repositories, academic
 databases, digital libraries, and shadow libraries. No paywalls bypassed, no access controls
 circumvented.
 
 ## Technical Details
 
-- Hosted on a single Raspberry Pi 4 (ARM64, under 5W power)
-- Served via a custom Go server with SQLite visit tracking
-- Data rsynced across two HDDs (one hot, one cold backup)
-- No cloud infrastructure, no CDN origin
-- Residential internet connection
-- Security headers, CSP, rate limiting, non-root container
+Infrastructure is a small home-grown homelab cluster, not a single box:
+
+- Compute: 2x Raspberry Pi 4 (8 GB each) for services and scraping, plus an N150 mini-PC
+  (12 GB) for heavier indexing workloads
+- Network: 5-port switch, residential fibre uplink
+- Power: single 65 W USB-C power adapter for the whole rig
+- Hot storage: 4x 2 TB HDDs + 2x 2 TB SSDs (working set)
+- Cold backup: 1x 12 TB external HDD, kept offline
+- Total draw: ~30 W — deliberately engineered to run off-grid on a modest solar rig
+- No cloud, no CDN, no SLA; when the battery dies, the site goes with it
+- Served via a custom Go HTTP server with SQLite visit tracking
+- Hardened with security headers, CSP, rate limiting, non-root container
 
 ## Contact
 

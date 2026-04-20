@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -196,6 +197,11 @@ func main() {
 	}
 
 	staticDir := "./static"
+
+	// Register MIME types Go's mime package doesn't know by default.
+	// X-Content-Type-Options: nosniff forces browsers to honour these, so
+	// the PWA manifest needs the correct type or installability breaks.
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
 
 	// Initialize systems
 	initVisitDB(dataDir)

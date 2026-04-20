@@ -179,11 +179,11 @@ def generate():
     desc_font = mono(14)
     archives = [
         ("\u25B8 wiki.kunaldawn.com",
-         "36 offline wikis \u2014 Wikipedia, Stack Overflow, iFixit"),
+         "36 offline ZIMs \u2014 Wikipedia, Stack Overflow, ArchWiki, iFixit"),
         ("\u25B8 archive.kunaldawn.com",
-         "500+ GB \u2014 OS images, vintage software, chiptunes"),
+         "500+ GB \u2014 OS images, vintage CD/DVDs, chiptunes, video"),
         ("\u25B8 pdfarchive.kunaldawn.com",
-         "23K+ PDFs \u2014 Byte Magazine, hardware manuals, journals"),
+         "23K+ PDFs \u2014 Byte Magazine, 1960s hw manuals, 1890s journals"),
     ]
     for url_text, desc in archives:
         draw.text((left_x, ty), url_text, fill=NEON, font=url_font)
@@ -196,7 +196,7 @@ def generate():
         ("36", "Offline Wikis"),
         ("23,000+", "Curated PDFs"),
         ("500+ GB", "Data Archives"),
-        ("1.3 TB", "Total Preserved"),
+        ("12 TB", "Total Preserved"),
     ]
     box_w = 260
     box_h = 60
@@ -223,8 +223,8 @@ def generate():
     # ─── Quote ───
     qy = py + ph - 50
     quote_font = bold(15)
-    quote = ('\u201CInformation belongs to everyone \u2014 '
-             'it deserves to outlive the servers that first hosted it.\u201D')
+    quote = ('\u201CInformation wants to be free \u2014 '
+             'but it also wants to be preserved.\u201D')
     qw = draw.textlength(quote, font=quote_font)
     qx = px + (pw - qw) / 2
     # Decorative line above
@@ -294,7 +294,9 @@ def generate():
     tray_sep_bot = bar_y + bar_h - 10
 
     tray_x = W - 18
-    tray_items = ["30W", "ARM64", "12TB"]
+    # Tray reflects cluster-era stats: ~30W total draw, off-grid solar,
+    # 12 TB preserved. (ARM64 was inaccurate once the N150 x86 node joined.)
+    tray_items = ["30W", "SOLAR", "12TB"]
     for i, item in enumerate(reversed(tray_items)):
         iw = draw.textlength(item, font=tray_font)
         tray_x -= iw

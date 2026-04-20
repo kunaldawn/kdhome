@@ -42,35 +42,43 @@
   <meta name="theme-color" content="#071013">
   <link rel="canonical" href="https://kunaldawn.com/">
 
+  <!-- Favicons (generated via generate_favicon.py) -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+
   <!-- Language declaration to prevent Chrome from detecting Japanese -->
   <meta http-equiv="content-language" content="en">
   <meta name="language" content="English">
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="KD's Homebrew Digital Archive — 1.3 TB of preserved knowledge running on a Raspberry Pi. 36 offline wikis (Wikipedia, Stack Overflow, iFixit), 23,000+ vintage computing PDFs (Byte Magazine, hardware manuals from the 1960s), and 500+ GB of OS images and software archives. Fighting link rot, one wget at a time.">
-  <meta name="keywords" content="digital archive, digital preservation, internet archival, offline wikipedia, offline stack overflow, vintage computing manuals, Byte Magazine archive, PDF archive, wiki archive, homebrew server, Raspberry Pi archive, open knowledge, knowledge preservation, iFixit offline, Project Gutenberg, data hoarding, digital history, self-hosted archive, personal archive project">
+  <meta name="description" content="KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) drawing ~30W off-grid solar. 36 offline wikis (Wikipedia, Stack Overflow, iFixit, Project Gutenberg), 23,000+ vintage computing PDFs (Byte Magazine, 1960s hardware manuals, MIT Press, science journals from the 1890s), 500+ GB of OS images, vintage software, and chiptunes. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+  <meta name="keywords" content="digital archive, digital preservation, internet archival, offline wikipedia, offline stack overflow, vintage computing manuals, Byte Magazine archive, PDF archive, wiki archive, abandonware preservation, homebrew server, homelab, Raspberry Pi cluster, N150 mini-PC, off-grid solar hosting, open knowledge, knowledge preservation, iFixit offline, Project Gutenberg, data hoarding, digital history, self-hosted archive, personal archive project, link rot">
   <meta name="author" content="Kunal Dawn">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://kunaldawn.com/">
-  <meta property="og:title" content="KD's Homebrew Digital Archive — 1.3 TB of Knowledge Preserved on a Raspberry Pi">
-  <meta property="og:description" content="36 offline wikis. 23,000+ vintage computing PDFs. 500+ GB of OS images and software. A digital preservation project fighting link rot and bit decay — because information deserves to outlive the servers that first hosted it.">
+  <meta property="og:title" content="KD's Homebrew Digital Archive — 12 TB on a Homebrew Homelab">
+  <meta property="og:description" content="A home-grown mirror of the public internet. 36 offline wikis, 23,000+ vintage computing PDFs, 500+ GB of OS images and chiptunes — 12 TB total, served from a 2x RPi4 + N150 cluster on ~30W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
   <meta property="og:site_name" content="KD's Homebrew Archive">
   <meta property="og:image" content="https://kunaldawn.com/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="KD's Homebrew Digital Archive — Preserve, Share, Rebuild. 36 wikis, 23K+ PDFs, 500+ GB archives, 1.3 TB total.">
+  <meta property="og:image:alt" content="KD's Homebrew Digital Archive — Preserve, Share, Rebuild. 36 wikis, 23K+ PDFs, 500+ GB archives, 12 TB total.">
   <meta property="og:locale" content="en_US">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://kunaldawn.com/">
-  <meta name="twitter:title" content="KD's Homebrew Digital Archive — 1.3 TB on a Raspberry Pi">
-  <meta name="twitter:description" content="36 offline wikis. 23K+ vintage computing PDFs. 500+ GB of digital artifacts. A homebrew preservation project fighting link rot — because information deserves to outlive its servers.">
+  <meta name="twitter:title" content="KD's Homebrew Digital Archive — 12 TB on a Homebrew Homelab">
+  <meta name="twitter:description" content="A home-grown mirror of the public internet. 36 offline wikis, 23K+ vintage computing PDFs, 500+ GB of digital artifacts — served from a 2x RPi4 + N150 cluster on ~30W. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
   <meta name="twitter:image" content="https://kunaldawn.com/og-image.png">
-  <meta name="twitter:image:alt" content="KD's Homebrew Digital Archive — 36 wikis, 23K+ PDFs, 1.3 TB preserved">
+  <meta name="twitter:image:alt" content="KD's Homebrew Digital Archive — 36 wikis, 23K+ PDFs, 12 TB preserved">
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -85,8 +93,8 @@
         "name": "Kunal Dawn",
         "url": "https://kunaldawn.com"
       },
-      "description": "A homebrew digital preservation vault: 1.3 TB of offline wikis, vintage computing manuals, science journals, OS images, and software archives — curated and served from a single Raspberry Pi 4. Fighting link rot and bit decay since the bits started rotting.",
-      "keywords": "digital archive, digital preservation, internet archival, offline wikipedia, vintage computing, homebrew server, open knowledge, link rot, bit decay"
+      "description": "A home-grown mirror of the public internet — 12 TB of offline wikis, vintage computing manuals, science journals, OS images, and abandonware archives, curated and served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) drawing about 30 W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.",
+      "keywords": "digital archive, digital preservation, internet archival, offline wikipedia, vintage computing, abandonware, homelab, Raspberry Pi cluster, off-grid solar, open knowledge, link rot, bit decay"
     }
   </script>
   <script type="application/ld+json">
@@ -95,7 +103,7 @@
       "@type": "CollectionPage",
       "name": "KD's Homebrew Digital Archive",
       "url": "https://kunaldawn.com/",
-      "description": "1.3 TB of curated digital archives preserving knowledge from across the internet before it disappears. Offline wikis, vintage computing manuals, science journals, and software — open access, freely shared.",
+      "description": "12 TB of curated digital archives preserving knowledge from across the internet before it disappears. Offline wikis, vintage computing manuals, science journals, and software — open access, freely shared.",
       "about": {
         "@type": "Thing",
         "name": "Digital Preservation",
@@ -124,7 +132,7 @@
     }
   </script>
 
-  <title>KD's Homebrew Digital Archive — 1.3 TB of Knowledge Preserved on a Raspberry Pi</title>
+  <title>KD's Homebrew Digital Archive — 12 TB Preserved on a Home-grown Homelab</title>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap"
     rel="stylesheet">
@@ -2953,7 +2961,7 @@
         </div>
         <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
       </div>
-      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — 1.3 TB on a Raspberry Pi 4 ARM64 running on 5 watts. 23,000+ PDFs across 800 GB. 36 offline wikis including Wikipedia, Stack Overflow, ArchWiki, iFixit, and Project Gutenberg. 500 GB of operating system images, vintage software CD/DVD archives, chiptune collections, and curated video archives. Developed by Kunal Dawn with AI assistance.</p>
+      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from a homelab cluster: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. 23,000+ PDFs across 800 GB. 36 offline wikis including Wikipedia, Stack Overflow, ArchWiki, iFixit, and Project Gutenberg. 500 GB of operating system images, vintage software CD/DVD archives, chiptune collections, and curated video archives. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
       <h2 class="entry-gate-title" id="entry-gate-title">KD's Homebrew Digital Archive</h2>
 
       <div class="entry-terms" role="group" aria-label="Terms">
@@ -5048,12 +5056,13 @@
               playing:    ['*pounce*', 'Caught a byte!', '*bat bat bat*', 'Is that a cursor?!'],
               tips:       [
                 'Try the Wiki Archive for docs!',
-                'This vault runs on 5W of power',
+                'This archive runs on ~30W off-grid solar',
                 'Click me 3x for a surprise~',
                 'Everything here is archived via wget',
                 'The PDF archive has rare zines!',
                 'All content sourced from the open internet',
-                'Running on a Raspberry Pi 4!',
+                'Running on 2x RPi4 + N150 cluster!',
+                'A shelf in a house, not a rack in a DC',
                 'Data preserved, one bit at a time',
                 'Information wants to be free',
                 'Ctrl+Shift+I for hacker mode',
