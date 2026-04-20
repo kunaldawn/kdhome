@@ -2631,6 +2631,7 @@
       letter-spacing: 0.5px;
       color: #7fd1b3;
       white-space: pre;
+      text-align: left;
       will-change: transform;
       text-shadow: 0 0 4px rgba(0, 255, 150, 0.25);
     }
@@ -2991,53 +2992,225 @@
 
       function clearBuf() { buf.fill(SPACE); }
 
-      /* ─── BBS ticker content (rolls from bottom to top) ─── */
-      const TICKER_LINES = [
-        ['tk-ok',   '[SYS] KD/HOMEBREW BBS v0x01 · ONLINE'],
-        ['tk-dim',  '[SYS] uptime: infinite  users: 0  motd: updated'],
-        ['tk-ok',   '[OK ] mount /dev/sda1 -> /mnt/archive'],
-        ['tk-ok',   '[OK ] mount /dev/sdb1 -> /mnt/cold'],
-        ['tk-ok',   '[OK ] sqlite: visits db ready'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['',        '[FS ] 1.3 TB total  ·  5W draw  ·  pi 4 arm64'],
-        ['',        '[FS ] 36 offline wikis indexed'],
-        ['',        '[FS ] wikipedia ......... 26.6M articles'],
-        ['',        '[FS ] stackoverflow ..... 66.0M answers'],
-        ['',        '[FS ] archwiki .......... mirrored'],
-        ['',        '[FS ] ifixit ............ 862,000 guides'],
-        ['',        '[FS ] gutenberg ......... full catalog'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['',        '[FS ] 23,000+ PDFs  ·  800 GB'],
-        ['',        '[FS ] byte mag .......... decades'],
-        ['',        '[FS ] mit press ......... catalog'],
-        ['',        '[FS ] hw manuals ........ 1960s+'],
-        ['',        '[FS ] science journals .. 1890s+'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['',        '[FS ] 500 GB OS images  ·  vintage CD/DVD'],
-        ['',        '[FS ] chiptune archive mounted'],
-        ['tk-warn', '[NOW] now playing: CORE · CODEX · DUBMOOD'],
-        ['tk-warn', '[NOW] tracker fmt: MOD · XM · IT · S3M'],
-        ['tk-warn', '[NOW] elysium · flashback · space_debris'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['tk-hot',  '[ETH] no ads  ·  no telemetry  ·  no SLA'],
-        ['tk-hot',  '[ETH] no users  ·  free for all & always'],
-        ['tk-hot',  '[ETH] information wants to be free'],
-        ['tk-hot',  '[ETH] ... and it wants to be preserved'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['',        '[LOG] fighting link rot, one wget at a time'],
-        ['',        '[LOG] preserve · share · rebuild'],
-        ['',        '[LOG] archive.org who?'],
-        ['',        '[LOG] one hot drive · one cold drive'],
-        ['',        '[LOG] endless knowledge'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['tk-ok',   '[DEV] kunal dawn  ·  ai-assisted'],
-        ['tk-ok',   '[DEV] made with <3 in 1337-time'],
-        ['tk-ok',   '[DEV] greetz 2 old-school sceners'],
-        ['tk-ok',   '[DEV] keep the scene alive'],
-        ['tk-dim',  '---------------------------------------------'],
-        ['tk-warn', '[END] -- ready for input --'],
-        ['', ''],
-      ];
+      /* ─── Cracktro ticker content (rolls from bottom to top) ───
+         Width-aware: all structural glyphs are ASCII so every line has
+         identical monospace advance and borders span the full pane.
+         Desktop W=56 cols (~428px of 436px content box); mobile W=42
+         cols (~270px of 280px). Every line is padded to W so the right
+         edge of every row lines up with the right edge of every box. */
+      const TICKER_LINES = (function() {
+        const W = isMobile ? 42 : 56;
+        const R = (ch, n) => ch.repeat(Math.max(0, n | 0));
+        const clip = s => (s.length > W ? s.slice(0, W) : s);
+        const padR = s => (s.length >= W ? s.slice(0, W) : s + R(' ', W - s.length));
+        const center = s => {
+          if (s.length >= W) return s.slice(0, W);
+          const gap = W - s.length, l = gap >> 1;
+          return R(' ', l) + s + R(' ', gap - l);
+        };
+
+        // Full-width double-rule banner top/bottom:  +======...======+
+        const hr2 = () => '+' + R('=', W - 2) + '+';
+        // Mid rule inside a box:  +------...------+
+        const hr1 = () => '+' + R('-', W - 2) + '+';
+        // Full-width dashed divider (decorative):   - - - ... - - -
+        const divLine = () => clip(padR(R('- ', W >> 1)));
+        // Same but with a centered star.
+        const divStar = () => {
+          const pat = R('- ', W >> 1);                  // W chars
+          const mid = W >> 1;                           // center index
+          return pat.slice(0, mid - 2) + ' * * ' + pat.slice(mid + 3);
+        };
+
+        // "| <centered inner> |" padded to exactly W.
+        const rowC = inner => {
+          const inside = W - 4;
+          const t = inner.length > inside ? inner.slice(0, inside) : inner;
+          const gap = inside - t.length, l = gap >> 1;
+          return '| ' + R(' ', l) + t + R(' ', gap - l) + ' |';
+        };
+        // "| <left inner>         |" padded to exactly W.
+        const rowL = inner => {
+          const inside = W - 4;
+          const t = inner.length > inside ? inner.slice(0, inside) : inner;
+          return '| ' + t + R(' ', inside - t.length) + ' |';
+        };
+
+        // Hardware spec row: " label " + dots + " value", exactly W.
+        const hwRow = (label, value) => {
+          const pre = label ? ' ' + label + ' ' : ' ' + R(' ', 12);
+          const post = ' ' + value;
+          const dots = W - pre.length - post.length;
+          if (dots < 1) return padR(pre + post);
+          return pre + R('.', dots) + post;
+        };
+
+        // Word-wrap prose to fit in (W-2) chars, 1-space left indent,
+        // right-padded to W so every prose line ends flush at W.
+        const wrap = (text, maxLen) => {
+          const words = text.split(/\s+/).filter(Boolean);
+          const out = [];
+          let cur = '';
+          for (const w of words) {
+            const next = cur ? cur + ' ' + w : w;
+            if (next.length > maxLen) {
+              if (cur) out.push(cur);
+              cur = w;
+            } else {
+              cur = next;
+            }
+          }
+          if (cur) out.push(cur);
+          return out;
+        };
+        const prose = (cls, text) => {
+          wrap(text, W - 2).forEach(l => L.push([cls, padR(' ' + l)]));
+        };
+
+        const L = [];
+        const add = (cls, txt) => L.push([cls, padR(txt)]);
+        const addRaw = (cls, txt) => L.push([cls, txt]);
+        const blank = () => L.push(['', '']);
+        const section = (title) => {
+          blank();
+          L.push(['tk-dim', divStar()]);
+          blank();
+          L.push(['tk-hot', center('>>>  ' + title + '  <<<')]);
+          blank();
+        };
+
+        // ─── TITLE BANNER ───────────────────────────────
+        add('tk-ok',  hr2());
+        add('tk-ok',  rowC(''));
+        add('tk-ok',  rowC('K D  ·  H O M E B R E W'));
+        add('tk-ok',  rowC('I N T E R N E T  ·  A R C H I V E'));
+        add('tk-ok',  rowC(''));
+        add('tk-dim', rowC('[ rel 0x01 · online · 2026 ]'));
+        add('tk-ok',  hr2());
+
+        // ─── ABOUT ──────────────────────────────────────
+        section('A B O U T');
+        prose('', 'A home-grown mirror of the public internet.');
+        prose('', 'A shelf in a house, not a rack in a data centre.');
+        blank();
+        prose('', 'This is where abandonware lives -- retro code, dead magazines, dusty journals, and manuals for chips that nobody makes any more.');
+        blank();
+        prose('', 'Useless to most. Gold to the few who go looking.');
+
+        // ─── HARDWARE ───────────────────────────────────
+        section('H A R D W A R E');
+        add('',       hwRow('compute',     '2x RPi4 8G'));
+        add('',       hwRow('',            '1x N150 12G'));
+        add('',       hwRow('network',     '5-port switch'));
+        add('',       hwRow('power',       '65W USB-C PSU'));
+        add('',       hwRow('hot storage', '4x 2TB HDD'));
+        add('',       hwRow('',            '2x 2TB SSD'));
+        add('tk-warn',hwRow('cold backup', '1x 12TB HDD'));
+        blank();
+        add('tk-warn',hwRow('total draw',  '~30 W'));
+        add('tk-warn',hwRow('design goal', 'off-grid solar'));
+
+        // ─── KIT (cat + rack) ───────────────────────────
+        section('K D   K I T');
+        if (!isMobile) {
+          // Desktop: cat left (col 0-13), rack right (col 14-55).
+          const CAT_COL = 14;
+          const CAT = [
+            '   /\\_/\\     ',
+            '  ( o.o )    ',
+            '   > ^ <     ',
+            '    ~|~      ',
+            '  (  (  )    ',
+            '             ',
+          ];
+          const rackW = W - CAT_COL;
+          const rackTB = '+' + R('=', rackW - 2) + '+';
+          const rackMD = '+' + R('-', rackW - 2) + '+';
+          const rackRow = s => {
+            const inside = rackW - 4;
+            const t = s.length > inside ? s.slice(0, inside) : s;
+            const gap = inside - t.length, l = gap >> 1;
+            return '| ' + R(' ', l) + t + R(' ', gap - l) + ' |';
+          };
+          const catCell = i => {
+            const c = CAT[i] || '';
+            return c.length >= CAT_COL ? c.slice(0, CAT_COL) : c + R(' ', CAT_COL - c.length);
+          };
+          addRaw('tk-ok', catCell(0) + rackTB);
+          addRaw('tk-ok', catCell(1) + rackRow('pi . pi . n150'));
+          addRaw('tk-ok', catCell(2) + rackMD);
+          addRaw('tk-ok', catCell(3) + rackRow('hdd . hdd . hdd . hdd'));
+          addRaw('tk-ok', catCell(4) + rackRow('ssd . ssd . ext 12T'));
+          addRaw('tk-ok', catCell(5) + rackTB);
+        } else {
+          // Mobile: stacked — small cat centered, then rack box.
+          add('tk-ok', center('/\\_/\\'));
+          add('tk-ok', center('( o.o )'));
+          add('tk-ok', center('> ^ <'));
+          blank();
+          add('tk-ok', hr2());
+          add('tk-ok', rowC('pi . pi . n150'));
+          add('tk-ok', rowC('5-port switch . 65W'));
+          add('tk-ok', hr1());
+          add('tk-ok', rowC('4x 2TB hdd'));
+          add('tk-ok', rowC('2x 2TB ssd'));
+          add('tk-ok', rowC('1x 12TB ext backup'));
+          add('tk-ok', hr2());
+        }
+
+        // ─── COLLECTIONS ────────────────────────────────
+        section('C O L L E C T I O N S');
+        prose('',       'wikis -- 36 offline in ZIM');
+        prose('tk-dim', 'wikipedia . stackoverflow . archwiki . ifixit . gutenberg . medical . survival');
+        blank();
+        prose('',       'pdfs -- 23,000+ across 800 GB');
+        prose('tk-dim', 'byte magazine . mit press . hardware manuals from the 1960s . science journals from the 1890s . repair guides . story books');
+        blank();
+        prose('',       'data -- 500+ GB');
+        prose('tk-dim', 'os images . vintage cd/dvd archives . chiptune music . curated video');
+        blank();
+        prose('',       'retro -- abandonware and orphans');
+        prose('tk-dim', 'software nobody ships . manuals for hardware no longer made . knowledge saved from 404s');
+
+        // ─── ETHOS ──────────────────────────────────────
+        section('E T H O S');
+        add('tk-hot', center('no  ads'));
+        add('tk-hot', center('no  tracking'));
+        add('tk-hot', center('no  telemetry'));
+        add('tk-hot', center('no  SLA'));
+        add('tk-hot', center('no  monetization'));
+        add('tk-hot', center('no  users'));
+        blank();
+        add('tk-ok',  center('free for all  .  free forever'));
+
+        // ─── GREETZ ─────────────────────────────────────
+        section('G R E E T Z');
+        add('tk-ok', center('greetz to the old-school scene'));
+        add('tk-ok', center('keep the scene alive'));
+        blank();
+        add('',      center('archive everything'));
+        add('',      center('mirror everything'));
+        add('',      center('seed everything'));
+        blank();
+        prose('',    '"information wants to be free -- but it also wants to be preserved"');
+        blank();
+        add('',      center('fighting link rot, one wget at a time'));
+
+        // ─── CLOSING BANNER ─────────────────────────────
+        blank();
+        add('tk-ok', hr2());
+        add('tk-ok', rowC(''));
+        add('tk-ok', rowC('DEV  .  KUNAL DAWN  .  MADE WITH <3'));
+        add('tk-ok', rowC(''));
+        add('tk-ok', hr2());
+        blank();
+
+        // ─── LOOP MARKER ────────────────────────────────
+        add('tk-dim', clip(R('*  ', (W / 3) | 0)));
+        blank();
+
+        return L;
+      })();
       function renderTicker(el) {
         const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const block = TICKER_LINES.map(([cls, txt]) =>
@@ -4411,12 +4584,16 @@
               </div>
               <div class="info-body">
                 <small class="muted" style="font-size: 11px; opacity: 0.8; line-height: 1.6;">
-                  This vault runs on a single Raspberry Pi 4 consuming under 5W of power, served over a
-                  residential internet connection. No cloud, no CDN origin, no SLA — when the power goes
-                  out, the site goes with it. All data is rsynced across two hard drives — one hot (actively
-                  serving) and one cold (offline backup) — so even if a drive fails, nothing is lost. Not
-                  enterprise-grade, but enough to sleep at night. Preservation doesn't require a data center,
-                  just determination, a spare ARM board, and two hard drives.
+                  The archive runs on a small homelab cluster: <strong>two Raspberry Pi 4 (8 GB)</strong>
+                  nodes for the services and scraping, plus an <strong>N150 mini-PC (12 GB)</strong> for
+                  heavier indexing. They share a <strong>5-port switch</strong> and the whole rig is fed
+                  from a single <strong>65 W USB-C power adapter</strong>. Storage is
+                  <strong>4&#215;2 TB HDDs + 2&#215;2 TB SSDs</strong> for the hot working set, with a
+                  <strong>12 TB external HDD</strong> kept offline for cold backups. The stack pulls about
+                  <strong>30 W</strong> total — deliberately engineered to run off-grid on a modest solar
+                  rig. No cloud, no CDN, no SLA; when the battery dies the site goes with it. Preservation
+                  doesn't require a data centre — just determination, a shelf, and enough panels to cover
+                  the draw.
                 </small>
               </div>
             </div>
