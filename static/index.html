@@ -3066,35 +3066,33 @@
         }
       }
 
-      /* ─── Scene: Fire ─── */
-      const fireH = ROWS + 3;
+      /* ─── Scene: Fire (classic DOOM / PSX fire: propagate-up with drift + cool) ─── */
+      const fireH = ROWS + 1;
       const fireBuf = new Float32Array(COLS * fireH);
       function drawFire(now) {
         const t = now * 0.001;
-        // seed bottom 2 rows
+        // Seed bottom row: always hot but with per-cell jitter so flame bases flicker.
         for (let x = 0; x < COLS; x++) {
-          const jitter = Math.sin(x * 0.3 + t * 2) * 0.1;
-          fireBuf[(fireH - 1) * COLS + x] = 0.75 + Math.random() * 0.25 + jitter;
-          fireBuf[(fireH - 2) * COLS + x] = 0.6 + Math.random() * 0.3;
+          fireBuf[(fireH - 1) * COLS + x] = 0.88 + Math.random() * 0.12;
         }
-        // propagate upward with sideways drift
-        for (let y = 0; y < fireH - 2; y++) {
-          const drift = Math.sin(t * 0.8 + y * 0.2) * 0.6;
+        // Slow wind shifts the whole flame gently.
+        const wind = Math.sin(t * 0.7) * 0.6;
+        // Propagate from below, with per-cell sideways drift (-1, 0, +1) and cooling.
+        for (let y = 0; y < fireH - 1; y++) {
           for (let x = 0; x < COLS; x++) {
-            const sx = Math.max(0, Math.min(COLS - 1, Math.round(x + drift)));
-            const below = fireBuf[(y + 1) * COLS + sx];
-            const belowL = fireBuf[(y + 1) * COLS + Math.max(0, sx - 1)];
-            const belowR = fireBuf[(y + 1) * COLS + Math.min(COLS - 1, sx + 1)];
-            const below2 = fireBuf[(y + 2) * COLS + sx];
-            const avg = (below * 3 + belowL + belowR + below2) / 6;
-            fireBuf[y * COLS + x] = Math.max(0, avg - Math.random() * 0.07 - 0.005);
+            const drift = ((Math.random() * 3) | 0) - 1 + (Math.random() < Math.abs(wind) ? (wind > 0 ? 1 : -1) : 0);
+            const srcX = Math.max(0, Math.min(COLS - 1, x + drift));
+            const below = fireBuf[(y + 1) * COLS + srcX];
+            // Cooling decreases with altitude so flames thin out as they rise.
+            const cooling = Math.random() * 0.055 + 0.002;
+            fireBuf[y * COLS + x] = Math.max(0, below - cooling);
           }
         }
-        // render to main buf
+        // Render with a squared ramp so high-heat cells pop and low-heat fade quickly.
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             const v = fireBuf[y * COLS + x];
-            let idx = (v * RAMP_LEN) | 0;
+            let idx = (v * v * RAMP_LEN) | 0;
             if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
             if (idx < 0) idx = 0;
             buf[y * COLS + x] = RAMP.charCodeAt(idx);
@@ -3570,31 +3568,44 @@
       }
       function drawVoxel(now) {
         clearBuf();
-        const t = now * 0.0003;
-        const horizon = Math.floor(ROWS * 0.35);
-        const camX = t * 6;
-        const camZ = t * 4;
-        // y-buffer: highest screen row that's been occupied per column (from bottom)
+        const t = now * 0.00035;
+        const horizon = Math.floor(ROWS * 0.5);
+        // ── Sky: sparse twinkling stars above the horizon
+        const starN = isMobile ? 10 : 18;
+        for (let i = 0; i < starN; i++) {
+          const sx = (i * 41 + ((t * 120) | 0)) % COLS;
+          const sy = ((i * 7) % Math.max(1, horizon));
+          if ((((i + (t * 5)) | 0) & 1)) buf[sy * COLS + sx] = 46; // '.'
+        }
+        const camX = t * 12;
+        const camZ = t * 10;
+        const CAM_H = 0.45;        // camera altitude (world-units) above "sea level"
+        const FOV = 15;            // effective focal length; bigger -> taller peaks
         const yBuf = new Int16Array(COLS);
         for (let x = 0; x < COLS; x++) yBuf[x] = ROWS;
-        const near = 1, far = 26;
-        for (let z = near; z < far; z += 0.6) {
-          const scale = 18 / z;
+        // Comanche Y-buffer: iterate near -> far. Close voxels below the horizon
+        // (camera above), distant mountain peaks rise above horizon into the sky.
+        for (let z = 1.4; z < 38; z += 0.38) {
+          const invZ = 1 / z;
+          const fogZ = Math.max(0.1, 1 - z / 32);
           for (let sx = 0; sx < COLS; sx++) {
-            const wx = camX + (sx - COLS / 2) * z * 0.12;
+            const wx = camX + (sx - COLS / 2) * z * 0.09;
             const wz = camZ + z;
-            const h = (voxelHeight(wx * 0.12, wz * 0.12) + voxelHeight(wx * 0.25 + 7, wz * 0.25 + 3) * 0.5) / 1.5;
-            const screenY = Math.floor(horizon + (0.6 - h) * scale);
+            // Multi-octave noise, scaled down so no single octave pins every peak
+            // to the canvas ceiling. High x-freq so close slices still vary across columns.
+            const h = (voxelHeight(wx * 0.35, wz * 0.11) * 1.2 +
+                       voxelHeight(wx * 0.9 + 11, wz * 0.25 + 3) * 0.5 +
+                       voxelHeight(wx * 2.1 + 7, wz * 0.55 + 9) * 0.22) * 0.52;
+            const screenY = Math.round(horizon - (h - CAM_H) * FOV * invZ);
             if (screenY < yBuf[sx]) {
-              const shade = Math.min(1, Math.max(0, h * 1.3));
-              const fog = Math.max(0.15, 1 - z / 28);
               const top = Math.max(0, screenY);
               const bot = yBuf[sx];
+              // Per-column height influences shade so varying peaks don't all render identically.
+              const heightTone = Math.max(0.25, Math.min(1, h * 0.75 + 0.25));
               for (let y = top; y < bot; y++) {
-                // Brightest at the crest, dimming and fogging toward valley floors and distance.
-                const crestFade = 1 - (y - top) / Math.max(1, ROWS);
-                const rowShade = Math.max(0, Math.min(1, shade * crestFade * fog + 0.1));
-                const ri = Math.max(1, Math.min(RAMP_LEN - 1, (rowShade * RAMP_LEN) | 0));
+                const depth = (y - top) / Math.max(1, ROWS - horizon + 1);
+                const shade = fogZ * heightTone * Math.max(0.1, 1 - depth * 0.5);
+                const ri = Math.max(1, Math.min(RAMP_LEN - 1, (shade * RAMP_LEN) | 0));
                 buf[y * COLS + sx] = RAMP.charCodeAt(ri);
               }
               yBuf[sx] = screenY;
@@ -4019,6 +4030,29 @@
       const DISSOLVE_MS = 900;
       const startTime = performance.now();
 
+      // Bag-style random scene picker: play through every scene once before any repeats.
+      let sceneBag = [];
+      window.__fxBagHistory = [];
+      function refillBag(excludeIdx) {
+        sceneBag = SCENES.map((_, i) => i);
+        for (let i = sceneBag.length - 1; i > 0; i--) {
+          const j = (Math.random() * (i + 1)) | 0;
+          const t = sceneBag[i]; sceneBag[i] = sceneBag[j]; sceneBag[j] = t;
+        }
+        // If the next pop (end of array) matches the just-played scene,
+        // swap it with the first entry so we don't get a back-to-back repeat.
+        if (sceneBag.length > 1 && sceneBag[sceneBag.length - 1] === excludeIdx) {
+          const t = sceneBag[0]; sceneBag[0] = sceneBag[sceneBag.length - 1]; sceneBag[sceneBag.length - 1] = t;
+        }
+        window.__fxBagHistory.push({ size: sceneBag.length, snapshot: sceneBag.slice(), excludeIdx });
+      }
+      function nextSceneFromBag() {
+        if (sceneBag.length === 0) refillBag(sceneIdx);
+        return sceneBag.pop();
+      }
+      // Seed the bag on the initial scene (PLASMA) so it's excluded from round 1.
+      refillBag(sceneIdx);
+
       function setSceneClass(cls) {
         canvas.className = 'fx-canvas ' + cls;
       }
@@ -4033,16 +4067,16 @@
         const elapsed = now - sceneStart;
         const cur = SCENES[sceneIdx];
 
-        // Advance scene
+        // Advance scene (bag-style random: all scenes play once before any repeats)
         if (elapsed >= cur.dur) {
-          // snapshot previous
           prevBuf.set(buf);
           hasPrev = true;
-          sceneIdx = (sceneIdx + 1) % SCENES.length;
+          sceneIdx = nextSceneFromBag();
           sceneStart = now;
           const next = SCENES[sceneIdx];
           setSceneClass(next.cls);
           if (sceneLabel) sceneLabel.textContent = next.name;
+          if (window.__fxTransitionLog) window.__fxTransitionLog.push(next.name);
         }
 
         // Mobile frame-skip: if dt > 28ms and we haven't just skipped, render scene but allow skipping next
@@ -4104,7 +4138,15 @@
         if (name) return window.__fxJump(name);
         return true;
       };
+      // Force every scene to a given duration in ms — used by the test harness
+      // to observe many transitions quickly.
+      window.__fxSpeedMs = function(ms) {
+        for (const s of SCENES) s.dur = ms;
+        return true;
+      };
       window.__fxList = () => SCENES.map(s => s.name);
+      window.__fxBag = () => sceneBag.map(i => SCENES[i].name);
+      window.__fxBagSize = () => sceneBag.length;
 
       if (reducedMotion) {
         // Static: one frame of plasma, no animation loop, ticker stays at top
@@ -4856,6 +4898,7 @@
 
           init() {
             this.relocateAwayFromMusic();
+            this.startMusicAvoidWatcher();
             this.scheduleNext();
             this.cat.addEventListener('click', () => this.handleInteraction());
 
@@ -5266,9 +5309,26 @@
             return { left: r.left - pad, right: r.right + pad, top: r.top - pad, bottom: r.bottom + pad };
           }
 
+          // Compute pixels of free space on each side of the music window.
+          // Used both for rerouting movement targets and for instant escape when
+          // the cat finds itself under the window.
+          getFreeSpaces(catW, catH) {
+            const avoid = this.getAvoidRect();
+            if (!avoid) return null;
+            const TASKBAR_H = 44;
+            return {
+              avoid,
+              left:   avoid.left - catW - 10,
+              right:  window.innerWidth - avoid.right - catW - 10,
+              top:    avoid.top - catH - 10,
+              bottom: window.innerHeight - avoid.bottom - TASKBAR_H - catH - 10,
+            };
+          }
+
           // Given a target CSS right/bottom pair, return a reroute that keeps the cat's
-          // bounding box out of the music window. Falls back to the original target if
-          // no valid detour fits on-screen.
+          // bounding box out of the music window. Scores candidates by free space (preferring
+          // roomier sides) and penalises long detours, so the cat heads to the side with
+          // actual room instead of bumping up against the nearest edge.
           avoidMusicWindow(targetRight, targetBottom) {
             const avoid = this.getAvoidRect();
             if (!avoid) return { right: targetRight, bottom: targetBottom };
@@ -5283,23 +5343,97 @@
               return !(left + catW < avoid.left || left > avoid.right || top + catH < avoid.top || top > avoid.bottom);
             };
             if (!overlaps(targetRight, targetBottom)) return { right: targetRight, bottom: targetBottom };
-            const rLeftOfMusic = Math.min(maxR, Math.max(minR, window.innerWidth - avoid.left + 4));
-            const rRightOfMusic = Math.min(maxR, Math.max(minR, window.innerWidth - avoid.right - catW - 4));
-            const bAboveMusic = Math.min(maxB, Math.max(minB, window.innerHeight - avoid.top + 4));
-            const bBelowMusic = Math.min(maxB, Math.max(minB, window.innerHeight - avoid.bottom - catH - 4));
+            const spaces = this.getFreeSpaces(catW, catH);
+            const tR = Math.max(minR, Math.min(maxR, targetRight));
+            const tB = Math.max(minB, Math.min(maxB, targetBottom));
             const candidates = [
-              { right: rLeftOfMusic,  bottom: targetBottom },
-              { right: rRightOfMusic, bottom: targetBottom },
-              { right: targetRight,   bottom: bAboveMusic },
-              { right: targetRight,   bottom: bBelowMusic },
+              { right: Math.min(maxR, Math.max(minR, window.innerWidth - avoid.left + 12)),          bottom: tB, space: spaces.left },
+              { right: Math.min(maxR, Math.max(minR, window.innerWidth - avoid.right - catW - 12)), bottom: tB, space: spaces.right },
+              { right: tR, bottom: Math.min(maxB, Math.max(minB, window.innerHeight - avoid.top + 12)),           space: spaces.top },
+              { right: tR, bottom: Math.min(maxB, Math.max(minB, window.innerHeight - avoid.bottom - catH - 12)), space: spaces.bottom },
             ];
-            let best = null, bestDist = Infinity;
+            let best = null, bestScore = -Infinity;
             for (const c of candidates) {
+              if (c.space <= 0) continue;
               if (overlaps(c.right, c.bottom)) continue;
-              const d = Math.abs(c.right - targetRight) + Math.abs(c.bottom - targetBottom);
-              if (d < bestDist) { bestDist = d; best = c; }
+              const detour = Math.abs(c.right - targetRight) + Math.abs(c.bottom - targetBottom);
+              // Free space is the dominant factor; detour is a tiebreaker.
+              const score = c.space - detour * 0.35;
+              if (score > bestScore) { bestScore = score; best = { right: c.right, bottom: c.bottom }; }
             }
             return best || { right: targetRight, bottom: targetBottom };
+          }
+
+          // True if the cat's current bounding box overlaps the music window.
+          isOnMusicWindow() {
+            const avoid = this.getAvoidRect();
+            if (!avoid) return false;
+            const r = this.cat.getBoundingClientRect();
+            return !(r.right < avoid.left || r.left > avoid.right || r.bottom < avoid.top || r.top > avoid.bottom);
+          }
+
+          // Instant escape: dart toward whichever side of the music window has the most room.
+          escapeMusicWindow() {
+            const avoid = this.getAvoidRect();
+            if (!avoid) return false;
+            const catRect = this.cat.getBoundingClientRect();
+            const catW = catRect.width || 80;
+            const catH = catRect.height || 60;
+            const spaces = this.getFreeSpaces(catW, catH);
+            if (!spaces) return false;
+            // Allow the cat to range across the full viewport during escape —
+            // the music window can be dragged anywhere, so the normal 50..300
+            // bottom-strip isn't wide enough.
+            const TASKBAR_H = 44;
+            const minR = 20, maxR = window.innerWidth - catW - 20;
+            const minB = TASKBAR_H + 10, maxB = window.innerHeight - catH - 10;
+            const curR = parseInt(this.cat.style.right) || 30;
+            const curB = parseInt(this.cat.style.bottom) || 50;
+            const sides = [
+              { name: 'left',   space: spaces.left,   target: () => ({ right: Math.min(maxR, Math.max(minR, window.innerWidth - avoid.left + 14)),          bottom: Math.max(minB, Math.min(maxB, curB)) }) },
+              { name: 'right',  space: spaces.right,  target: () => ({ right: Math.min(maxR, Math.max(minR, window.innerWidth - avoid.right - catW - 14)), bottom: Math.max(minB, Math.min(maxB, curB)) }) },
+              { name: 'top',    space: spaces.top,    target: () => ({ right: Math.max(minR, Math.min(maxR, curR)), bottom: Math.min(maxB, Math.max(minB, window.innerHeight - avoid.top + 14)) }) },
+              { name: 'bottom', space: spaces.bottom, target: () => ({ right: Math.max(minR, Math.min(maxR, curR)), bottom: Math.max(minB, Math.min(maxB, window.innerHeight - avoid.bottom - catH - 14)) }) },
+            ];
+            sides.sort((a, b) => b.space - a.space);
+            const pick = sides.find(s => s.space > 0);
+            if (!pick) return false;
+            const t = pick.target();
+            this.cat.style.transition = 'all 0.55s ease-out';
+            this.direction = t.right > curR ? -1 : 1;
+            this.updateDirection();
+            this.setState('running');
+            this.isMoving = true;
+            this.cat.style.right = t.right + 'px';
+            this.cat.style.bottom = t.bottom + 'px';
+            this.animateFrames(150, 550);
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.cat.style.transition = '';
+              this.isMoving = false;
+              this.setState('surprised');
+              this.showMessage('Shoo!');
+              this.stateTimer = setTimeout(() => {
+                this.hideMessage();
+                this.setState('idle');
+                this.restartBehaviorLoop(1200);
+              }, 1200);
+            }, 600);
+            return true;
+          }
+
+          // Poll for overlap with the music window (the user can drag it anywhere);
+          // if the cat winds up under it, drop everything and escape to the freest side.
+          startMusicAvoidWatcher() {
+            if (this._musicWatcher) return;
+            this._musicWatcher = setInterval(() => {
+              if (document.hidden) return;
+              if (this.isMoving) return;
+              if (!this.isOnMusicWindow()) return;
+              this.cancelBehaviorLoop();
+              if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+              this.escapeMusicWindow();
+            }, 350);
           }
 
           moveWalk(dur) {
@@ -5523,6 +5657,7 @@
         // Initialize
         if (document.getElementById('desktop-cat')) {
           const desktopCat = new DesktopCat();
+          window.__cat = desktopCat;
           window.debugCat = () => {
             const states = Object.keys(desktopCat.frames);
             let i = 0;
