@@ -1188,12 +1188,15 @@
         display: none;
       }
 
-      /* Keep cat visible on mobile but adjust position */
+      /* Keep cat visible on mobile but smaller. The desktop .desktop-cat
+         rule appears *later* in source order, so !important is required on
+         width/height to override it. Do NOT use !important on bottom/right:
+         the state-machine JS sets those via inline style to animate the cat
+         around, and !important would pin it in the corner. */
       .desktop-cat {
-        bottom: 60px !important;
-        right: 10px !important;
-        width: 40px;
-        height: 35px;
+        width: 40px !important;
+        min-width: 0 !important;
+        height: 35px !important;
         z-index: 998;
       }
 
@@ -1316,7 +1319,7 @@
       }
 
       #visit-count {
-        display: none;
+        font-size: 9px;
       }
 
       .taskbar-item span:last-child {
@@ -4506,8 +4509,8 @@
       </div>
       <div class="music-slider-row">
         <span class="music-slider-label">VOL</span>
-        <input type="range" class="music-slider" id="music-volume" min="0" max="100" value="70">
-        <span class="music-slider-label" id="music-vol-pct">70%</span>
+        <input type="range" class="music-slider" id="music-volume" min="0" max="100" value="50">
+        <span class="music-slider-label" id="music-vol-pct">50%</span>
       </div>
       <div class="music-playlist-header" id="music-playlist-header">
         <span class="music-pl-toggle-label" id="music-pl-toggle"><svg class="pl-arrow" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12,18 4,8 20,8"/></svg> PLAYLIST <span id="music-track-count" style="opacity:0.5"></span></span>
@@ -5566,7 +5569,11 @@
             const catW = catRect.width || 80;
             const catH = catRect.height || 60;
             const minR = 30, maxR = window.innerWidth - 100;
-            const minB = 50, maxB = 300;
+            // On narrow viewports the music window is almost full-width, so
+            // capping maxB at 300 leaves only one safe spot (directly above
+            // the window). Let mobile roam up to just under the header.
+            const isMobile = window.innerWidth <= 520;
+            const minB = 50, maxB = isMobile ? Math.max(300, window.innerHeight - 120) : 300;
             const overlaps = (r, b) => {
               const left = window.innerWidth - r - catW;
               const top = window.innerHeight - b - catH;
@@ -5666,14 +5673,38 @@
             }, 350);
           }
 
+          // Vertical range for free-roam. On narrow viewports the music
+          // window spans almost the full width, so we start the range just
+          // above it — otherwise ~half of random Y targets would land in
+          // the music-overlap zone and get rerouted back to a single spot.
+          wanderYRange() {
+            const isMobile = window.innerWidth <= 520;
+            if (!isMobile) return { min: 50, span: 150 };
+            const avoid = this.getAvoidRect();
+            const catH = (this.cat.getBoundingClientRect().height || 35);
+            if (avoid) {
+              const aboveMusic = window.innerHeight - avoid.top + 12;
+              const topRoom = window.innerHeight - 120 - aboveMusic;
+              if (topRoom > 40) return { min: aboveMusic, span: topRoom };
+            }
+            // Fallback: roam the upper half.
+            return { min: 50, span: Math.max(150, window.innerHeight - 220) };
+          }
+
           moveWalk(dur) {
             if (this.isMoving) return;
             this.isMoving = true;
             const distance = Math.random() * 300 + 100;
             const currentRight = parseInt(this.cat.style.right) || 30;
             const currentBottom = parseInt(this.cat.style.bottom) || 50;
-            const walkDir = Math.random() < 0.5 ? 1 : -1;
-            const rawRight = Math.max(30, Math.min(window.innerWidth - 100, currentRight + (walkDir * distance)));
+            // Bias direction away from the left edge so the cat doesn't burn
+            // half its walks clamped at right=30 (the bottom-right corner).
+            const maxR = window.innerWidth - 100;
+            let walkDir;
+            if (currentRight <= 50)       walkDir = 1;   // near right edge → move left
+            else if (currentRight >= maxR - 20) walkDir = -1;  // near left edge → move right
+            else                          walkDir = Math.random() < 0.5 ? 1 : -1;
+            const rawRight = Math.max(30, Math.min(maxR, currentRight + (walkDir * distance)));
             const safe = this.avoidMusicWindow(rawRight, currentBottom);
             const newRight = safe.right;
             this.direction = newRight > currentRight ? -1 : 1;
@@ -5689,7 +5720,8 @@
             this.isMoving = true;
             const currentRight = parseInt(this.cat.style.right) || 30;
             const rawX = Math.random() * (window.innerWidth - 130) + 30;
-            const rawY = Math.random() * 150 + 50;
+            const yR = this.wanderYRange();
+            const rawY = Math.random() * yR.span + yR.min;
             const safe = this.avoidMusicWindow(rawX, rawY);
             const targetX = safe.right;
             const targetY = safe.bottom;
@@ -7455,7 +7487,11 @@
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       });
       // ─── Minimize on mobile by default ───
-      if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      // Use a viewport-width query rather than touch-capability: a touch
+      // check falsely fires on touchscreen laptops, while desktop-mode
+      // browsers on phones wouldn't set either flag. 800px matches the
+      // breakpoint the rest of the mobile layout uses.
+      if (window.matchMedia('(max-width: 800px)').matches) {
         minimizeChiptunes();
       }
     })();
