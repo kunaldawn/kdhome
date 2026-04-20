@@ -2476,10 +2476,1674 @@
         font-size: 14px;
       }
     }
+
+    /* ═══ Entry gate (glass welcome overlay) ═══ */
+    .entry-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(circle at 50% 40%, rgba(0, 30, 22, 0.55), rgba(0, 0, 0, 0.85));
+      backdrop-filter: blur(18px) saturate(130%);
+      -webkit-backdrop-filter: blur(18px) saturate(130%);
+      opacity: 1;
+      transition: opacity 1.4s ease, backdrop-filter 1.4s ease, -webkit-backdrop-filter 1.4s ease;
+    }
+    .entry-gate.dismissing {
+      opacity: 0;
+      pointer-events: none;
+      backdrop-filter: blur(0) saturate(100%);
+      -webkit-backdrop-filter: blur(0) saturate(100%);
+    }
+    .entry-gate-glass {
+      max-width: 520px;
+      width: 100%;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding: 26px 26px 18px;
+      border-radius: 14px;
+      text-align: center;
+      position: relative;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 255, 150, 0.02));
+      border: 1px solid rgba(0, 255, 150, 0.28);
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.65),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 0 80px rgba(0, 255, 150, 0.15);
+      backdrop-filter: blur(22px) saturate(140%);
+      -webkit-backdrop-filter: blur(22px) saturate(140%);
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.1s ease;
+    }
+    .entry-gate.dismissing .entry-gate-glass {
+      transform: translateY(12px) scale(0.96);
+      opacity: 0;
+    }
+    .entry-gate-glass::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      pointer-events: none;
+      background: linear-gradient(120deg, rgba(0, 255, 150, 0.08) 0%, transparent 40%, transparent 60%, rgba(0, 255, 150, 0.06) 100%);
+    }
+    .entry-gate-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 20px;
+      letter-spacing: 5px;
+      color: #d5ffe8;
+      margin: 0 0 14px;
+      text-transform: uppercase;
+      text-shadow:
+        -1px 0 0 rgba(255, 0, 128, 0.45),
+         1px 0 0 rgba(0, 200, 255, 0.45),
+         0 0 14px rgba(0, 255, 150, 0.45);
+      animation: entry-rgb 4s ease-in-out infinite;
+    }
+    @keyframes entry-rgb {
+      0%, 100% { text-shadow: -1px 0 0 rgba(255, 0, 128, 0.45), 1px 0 0 rgba(0, 200, 255, 0.45), 0 0 14px rgba(0, 255, 150, 0.45); }
+      50%      { text-shadow:  1px 0 0 rgba(255, 0, 128, 0.5),  -1px 0 0 rgba(0, 200, 255, 0.5),  0 0 22px rgba(0, 255, 150, 0.55); }
+    }
+
+    /* ─── Demoscene intro (ASCII FX canvas) ─── */
+    .sr-only {
+      position: absolute !important;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+    .fx-wrap {
+      margin: 0 0 14px;
+      padding: 6px 10px 4px;
+      border: 1px solid rgba(0, 255, 150, 0.22);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(0, 255, 150, 0.05), rgba(0, 255, 150, 0.01)),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px);
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      position: relative;
+      overflow: hidden;
+    }
+    .fx-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%);
+    }
+    .fx-header, .fx-footer {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      column-gap: 8px;
+      font-size: 9.5px;
+      letter-spacing: 1.5px;
+      color: #7fd1b3;
+      opacity: 0.75;
+      padding: 2px 4px;
+      text-transform: uppercase;
+    }
+    .fx-header .fx-tag, .fx-footer .fx-chan { justify-self: start; color: #00ff99; }
+    .fx-footer .fx-chan { color: #7fd1b3; opacity: 0.7; }
+    .fx-header .fx-mid { justify-self: center; opacity: 0.55; }
+    .fx-header .fx-fx, .fx-footer .fx-timer { justify-self: end; }
+    .fx-header .fx-fx .fx-scene { color: #ff48a0; margin-left: 4px; text-shadow: 0 0 4px rgba(255,72,160,0.5); }
+    .fx-footer .fx-timer { font-variant-numeric: tabular-nums; }
+    .fx-canvas {
+      margin: 3px 0 0;
+      padding: 0;
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      white-space: pre;
+      overflow: hidden;
+      text-align: center;
+      color: #00ff99;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.6s ease, text-shadow 0.6s ease;
+      height: calc(11px * 1.2 * 22 + 2px);
+      box-sizing: content-box;
+    }
+    .fx-ticker-wrap {
+      position: relative;
+      margin-top: 6px;
+      padding-top: 4px;
+      height: calc(13px * 1.5 * 5);
+      overflow: hidden;
+      border-top: 1px dashed rgba(0, 255, 150, 0.22);
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+              mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+    }
+    .fx-ticker {
+      margin: 0;
+      padding: 0 4px;
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      letter-spacing: 0.5px;
+      color: #7fd1b3;
+      white-space: pre;
+      will-change: transform;
+      text-shadow: 0 0 4px rgba(0, 255, 150, 0.25);
+    }
+    .fx-ticker .tk-ok  { color: #00ff99; }
+    .fx-ticker .tk-hot { color: #ff48a0; }
+    .fx-ticker .tk-warn{ color: #ffb648; }
+    .fx-ticker .tk-dim { color: #4a8f76; }
+    .fx-canvas.fx-plasma {
+      color: #00ff99;
+      text-shadow: -1px 0 rgba(255,0,128,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(0,255,150,0.5);
+    }
+    .fx-canvas.fx-fire {
+      color: #ffb648;
+      text-shadow: -1px 0 rgba(255,0,80,0.35), 1px 0 rgba(255,160,0,0.4), 0 0 8px rgba(255,120,0,0.45);
+    }
+    .fx-canvas.fx-starfield {
+      color: #d5ffe8;
+      text-shadow: 0 0 4px rgba(120,230,255,0.55), 0 0 10px rgba(120,230,255,0.25);
+    }
+    .fx-canvas.fx-tunnel {
+      color: #8affff;
+      text-shadow: -1px 0 rgba(255,60,200,0.35), 1px 0 rgba(0,255,200,0.4), 0 0 8px rgba(120,200,255,0.45);
+    }
+    .fx-canvas.fx-torus {
+      color: #00ff99;
+      text-shadow: 0 0 6px rgba(0,255,150,0.55), 0 0 14px rgba(0,255,150,0.2);
+    }
+    .fx-canvas.fx-matrix {
+      color: #3dff7d;
+      text-shadow: 0 0 3px rgba(0,255,120,0.5), 0 0 10px rgba(0,255,120,0.2);
+    }
+    .fx-canvas.fx-wave3d {
+      color: #7affc7;
+      text-shadow: -1px 0 rgba(0,200,255,0.35), 1px 0 rgba(180,0,255,0.25), 0 0 8px rgba(100,220,200,0.45);
+    }
+    .fx-canvas.fx-ripple {
+      color: #8affff;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(80,255,200,0.35), 0 0 8px rgba(120,230,255,0.5);
+    }
+    .fx-canvas.fx-life {
+      color: #c8ff72;
+      text-shadow: 0 0 4px rgba(180,255,80,0.45), 0 0 10px rgba(180,255,80,0.2);
+    }
+    .fx-canvas.fx-cube {
+      color: #ffd066;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
+    }
+    .fx-canvas.fx-kaleido {
+      color: #ff7ad1;
+      text-shadow: -1px 0 rgba(100,0,255,0.35), 1px 0 rgba(0,255,200,0.35), 0 0 8px rgba(255,120,200,0.5);
+    }
+    .fx-canvas.fx-meta {
+      color: #9cffd5;
+      text-shadow: -1px 0 rgba(0,180,255,0.35), 1px 0 rgba(150,0,255,0.3), 0 0 10px rgba(100,255,210,0.4);
+    }
+    .fx-canvas.fx-mandel {
+      color: #ffb648;
+      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,0,0.4), 0 0 8px rgba(255,140,0,0.45);
+    }
+    .fx-canvas.fx-copper {
+      color: #ff6bd2;
+      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,100,200,0.45);
+    }
+    .fx-canvas.fx-cellular {
+      color: #b5ff8a;
+      text-shadow: 0 0 3px rgba(140,255,120,0.45), 0 0 10px rgba(140,255,120,0.15);
+    }
+    .fx-canvas.fx-spiral {
+      color: #8ad5ff;
+      text-shadow: -1px 0 rgba(255,80,220,0.3), 1px 0 rgba(0,220,255,0.4), 0 0 8px rgba(120,200,255,0.45);
+    }
+    .fx-canvas.fx-voxel {
+      color: #a8ff7a;
+      text-shadow: -1px 0 rgba(180,120,0,0.35), 1px 0 rgba(0,200,120,0.35), 0 0 8px rgba(140,255,100,0.35);
+    }
+    .fx-canvas.fx-checker {
+      color: #ffd58a;
+      text-shadow: -1px 0 rgba(255,100,160,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(255,180,60,0.35);
+    }
+    .fx-canvas.fx-vectors {
+      color: #ff9edc;
+      text-shadow: -1px 0 rgba(80,0,200,0.45), 1px 0 rgba(0,255,255,0.4), 0 0 8px rgba(255,120,200,0.5);
+    }
+    .fx-canvas.fx-rotozoom {
+      color: #d8b0ff;
+      text-shadow: -1px 0 rgba(0,220,255,0.35), 1px 0 rgba(255,0,180,0.35), 0 0 8px rgba(200,160,255,0.45);
+    }
+    .fx-canvas.fx-sphere3d {
+      color: #aef0ff;
+      text-shadow: -1px 0 rgba(180,0,255,0.3), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(160,220,255,0.45);
+    }
+    .fx-canvas.fx-twister {
+      color: #ffca5a;
+      text-shadow: -1px 0 rgba(255,0,100,0.4), 1px 0 rgba(255,220,0,0.4), 0 0 8px rgba(255,180,60,0.5);
+    }
+    .fx-canvas.fx-warp {
+      color: #e0f5ff;
+      text-shadow: -1px 0 rgba(0,180,255,0.5), 1px 0 rgba(180,80,255,0.4), 0 0 8px rgba(200,220,255,0.55);
+    }
+    .fx-canvas.fx-moire {
+      color: #ff7aa2;
+      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,200,0,0.35), 0 0 8px rgba(255,120,160,0.5);
+    }
+    .fx-canvas.fx-landscape {
+      color: #88eaa6;
+      text-shadow: -1px 0 rgba(0,180,120,0.35), 1px 0 rgba(100,200,255,0.35), 0 0 8px rgba(120,240,160,0.4);
+    }
+    .fx-canvas.fx-ribbon {
+      color: #c6d5ff;
+      text-shadow: -1px 0 rgba(255,80,180,0.35), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(180,200,255,0.45);
+    }
+    @media (max-width: 520px) {
+      .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
+      .fx-ticker { font-size: 11px; line-height: 1.45; }
+      .fx-ticker-wrap { height: calc(11px * 1.45 * 5); }
+      .fx-header, .fx-footer { font-size: 8.5px; letter-spacing: 1px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fx-canvas { text-shadow: 0 0 4px rgba(0,255,150,0.4); color: #00ff99; transition: none; }
+    }
+
+    .entry-terms {
+      text-align: left;
+      margin: 14px 0 18px;
+      padding: 12px 14px 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12.5px;
+      color: #b9e8d2;
+      background: rgba(0, 255, 150, 0.03);
+      border: 1px dashed rgba(0, 255, 150, 0.28);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .entry-terms:hover {
+      background: rgba(0, 255, 150, 0.06);
+      border-color: rgba(0, 255, 150, 0.45);
+    }
+    .entry-terms-head {
+      text-align: center;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: #00ff99;
+      opacity: 0.75;
+      margin-bottom: 10px;
+    }
+    .entry-check {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      padding: 4px 0 10px;
+      border-bottom: 1px dashed rgba(0, 255, 150, 0.18);
+      margin-bottom: 10px;
+      user-select: none;
+    }
+    .entry-check input {
+      position: absolute;
+      opacity: 0;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      cursor: pointer;
+    }
+    .entry-check-box {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgba(0, 255, 150, 0.6);
+      background: rgba(0, 255, 150, 0.06);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      color: #00ff99;
+      transition: background 0.15s, box-shadow 0.15s;
+    }
+    .entry-check input:checked ~ .entry-check-box {
+      background: rgba(0, 255, 150, 0.22);
+      box-shadow: 0 0 10px rgba(0, 255, 150, 0.4);
+    }
+    .entry-check input:checked ~ .entry-check-box::after {
+      content: '\2713';
+      text-shadow: 0 0 6px rgba(0, 255, 150, 0.7);
+    }
+    .entry-check input:focus-visible ~ .entry-check-box {
+      outline: 1px solid #00ff99;
+      outline-offset: 2px;
+    }
+    .entry-check-label b { color: #00ff99; font-weight: 700; }
+
+    .entry-rules {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px 14px;
+    }
+    .entry-rules li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #b9e8d2;
+      line-height: 1.6;
+    }
+    .entry-rules .bul {
+      color: #ff48a0;
+      text-shadow: 0 0 6px rgba(255, 72, 160, 0.55);
+      font-weight: 700;
+    }
+
+    .entry-gate-btn {
+      position: relative;
+      display: inline-block;
+      padding: 12px 40px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: #00ff99;
+      background: rgba(0, 255, 150, 0.08);
+      border: 1px solid rgba(0, 255, 150, 0.5);
+      border-radius: 6px;
+      cursor: pointer;
+      text-align: center;
+      text-transform: uppercase;
+      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease, color 0.2s ease, opacity 0.2s ease;
+    }
+    .entry-gate-btn:hover:not([disabled]) {
+      background: rgba(0, 255, 150, 0.18);
+      color: #d5ffe8;
+      box-shadow: 0 0 26px rgba(0, 255, 150, 0.4);
+    }
+    .entry-gate-btn:active:not([disabled]) { transform: scale(0.97); }
+    .entry-gate-btn[disabled] {
+      opacity: 0.35;
+      cursor: not-allowed;
+      color: #7fd1b3;
+      border-color: rgba(0, 255, 150, 0.2);
+      box-shadow: none;
+    }
+    .entry-cursor {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      animation: entry-blink 1s steps(2, end) infinite;
+    }
+    @keyframes entry-blink { 50% { opacity: 0; } }
+
+    @media (max-width: 520px) {
+      .entry-gate { padding: 16px; }
+      .entry-gate-glass { padding: 20px 18px 14px; }
+      .entry-gate-title { font-size: 16px; letter-spacing: 3px; }
+      .entry-terms { font-size: 12px; padding: 10px 12px; }
+      .entry-rules { grid-template-columns: 1fr; gap: 2px; }
+      .entry-gate-btn { padding: 11px 30px; font-size: 12px; letter-spacing: 3px; }
+    }
+
+    body.entry-gate-locked { overflow: hidden; }
   </style>
 </head>
 
-<body>
+<body class="entry-gate-locked">
+  <!-- Entry gate: user gesture unlocks audio playback -->
+  <div class="entry-gate" id="entry-gate" role="dialog" aria-modal="true" aria-labelledby="entry-gate-title">
+    <div class="entry-gate-glass">
+      <div class="fx-wrap" aria-hidden="true">
+        <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">PLASMA</span></span></div>
+        <pre class="fx-canvas fx-plasma" id="fx-canvas"></pre>
+        <div class="fx-ticker-wrap">
+          <pre class="fx-ticker" id="fx-ticker"></pre>
+        </div>
+        <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
+      </div>
+      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — 1.3 TB on a Raspberry Pi 4 ARM64 running on 5 watts. 23,000+ PDFs across 800 GB. 36 offline wikis including Wikipedia, Stack Overflow, ArchWiki, iFixit, and Project Gutenberg. 500 GB of operating system images, vintage software CD/DVD archives, chiptune collections, and curated video archives. Developed by Kunal Dawn with AI assistance.</p>
+      <h2 class="entry-gate-title" id="entry-gate-title">KD's Homebrew Digital Archive</h2>
+
+      <div class="entry-terms" role="group" aria-label="Terms">
+        <div class="entry-terms-head"><span>── T E R M S ──</span></div>
+        <label class="entry-check">
+          <input type="checkbox" id="entry-age-check">
+          <span class="entry-check-box" aria-hidden="true"></span>
+          <span class="entry-check-label">I agree I am <b>18+</b> years old</span>
+        </label>
+        <ul class="entry-rules">
+          <li><span class="bul">&raquo;</span> no SLA</li>
+          <li><span class="bul">&raquo;</span> no ads</li>
+          <li><span class="bul">&raquo;</span> no monetization</li>
+          <li><span class="bul">&raquo;</span> no telemetry</li>
+          <li><span class="bul">&raquo;</span> no users</li>
+          <li><span class="bul">&raquo;</span> free for all &amp; always</li>
+        </ul>
+      </div>
+
+      <button type="button" class="entry-gate-btn" id="entry-gate-btn" disabled>[ ENTER ]<span class="entry-cursor" aria-hidden="true">_</span></button>
+    </div>
+  </div>
+  <script>
+    (function() {
+      var gate = document.getElementById('entry-gate');
+      var btn = document.getElementById('entry-gate-btn');
+      var ageCheck = document.getElementById('entry-age-check');
+      var termsBox = document.querySelector('.entry-terms');
+      if (!gate || !btn) return;
+      function syncBtn() { btn.disabled = !(ageCheck && ageCheck.checked); }
+      if (ageCheck) ageCheck.addEventListener('change', syncBtn);
+      syncBtn();
+      // Whole terms box toggles the 18+ checkbox (the native <label> around the
+      // checkbox would double-fire, so skip clicks that originate inside the label).
+      if (termsBox && ageCheck) {
+        termsBox.addEventListener('click', function(e) {
+          if (e.target.closest('.entry-check')) return;
+          ageCheck.checked = !ageCheck.checked;
+          ageCheck.dispatchEvent(new Event('change'));
+        });
+      }
+      function enter() {
+        if (btn.disabled) return;
+        btn.removeEventListener('click', enter);
+        gate.classList.add('dismissing');
+        document.body.classList.remove('entry-gate-locked');
+        try { if (typeof window.startMusicPlayback === 'function') window.startMusicPlayback(); } catch(e) {}
+        setTimeout(function() {
+          if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
+        }, 1600);
+      }
+      btn.addEventListener('click', enter);
+    })();
+  </script>
+  <script>
+    /* ═══ Demoscene ASCII intro (bb/aalib-inspired) ═══ */
+    (function() {
+      const canvas = document.getElementById('fx-canvas');
+      if (!canvas) return;
+      const sceneLabel = document.querySelector('.fx-scene');
+      const timerLabel = document.getElementById('fx-timer');
+      const gate = document.getElementById('entry-gate');
+
+      const isMobile = window.matchMedia('(max-width: 520px)').matches;
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const COLS = isMobile ? 34 : 46;
+      const ROWS = isMobile ? 17 : 22;
+
+      const RAMP = " .'`,:;!i~-+=<>*?/\\|()][}{1trlJCYXZO0Qkbdpwm#W%@&$";
+      const RAMP_LEN = RAMP.length;
+      const SPACE = 32;
+
+      const buf = new Uint8Array(COLS * ROWS);
+      const prevBuf = new Uint8Array(COLS * ROWS);
+      let hasPrev = false;
+      const rowStrs = new Array(ROWS);
+
+      function clearBuf() { buf.fill(SPACE); }
+
+      /* ─── BBS ticker content (rolls from bottom to top) ─── */
+      const TICKER_LINES = [
+        ['tk-ok',   '[SYS] KD/HOMEBREW BBS v0x01 · ONLINE'],
+        ['tk-dim',  '[SYS] uptime: infinite  users: 0  motd: updated'],
+        ['tk-ok',   '[OK ] mount /dev/sda1 -> /mnt/archive'],
+        ['tk-ok',   '[OK ] mount /dev/sdb1 -> /mnt/cold'],
+        ['tk-ok',   '[OK ] sqlite: visits db ready'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['',        '[FS ] 1.3 TB total  ·  5W draw  ·  pi 4 arm64'],
+        ['',        '[FS ] 36 offline wikis indexed'],
+        ['',        '[FS ] wikipedia ......... 26.6M articles'],
+        ['',        '[FS ] stackoverflow ..... 66.0M answers'],
+        ['',        '[FS ] archwiki .......... mirrored'],
+        ['',        '[FS ] ifixit ............ 862,000 guides'],
+        ['',        '[FS ] gutenberg ......... full catalog'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['',        '[FS ] 23,000+ PDFs  ·  800 GB'],
+        ['',        '[FS ] byte mag .......... decades'],
+        ['',        '[FS ] mit press ......... catalog'],
+        ['',        '[FS ] hw manuals ........ 1960s+'],
+        ['',        '[FS ] science journals .. 1890s+'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['',        '[FS ] 500 GB OS images  ·  vintage CD/DVD'],
+        ['',        '[FS ] chiptune archive mounted'],
+        ['tk-warn', '[NOW] now playing: CORE · CODEX · DUBMOOD'],
+        ['tk-warn', '[NOW] tracker fmt: MOD · XM · IT · S3M'],
+        ['tk-warn', '[NOW] elysium · flashback · space_debris'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['tk-hot',  '[ETH] no ads  ·  no telemetry  ·  no SLA'],
+        ['tk-hot',  '[ETH] no users  ·  free for all & always'],
+        ['tk-hot',  '[ETH] information wants to be free'],
+        ['tk-hot',  '[ETH] ... and it wants to be preserved'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['',        '[LOG] fighting link rot, one wget at a time'],
+        ['',        '[LOG] preserve · share · rebuild'],
+        ['',        '[LOG] archive.org who?'],
+        ['',        '[LOG] one hot drive · one cold drive'],
+        ['',        '[LOG] endless knowledge'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['tk-ok',   '[DEV] kunal dawn  ·  ai-assisted'],
+        ['tk-ok',   '[DEV] made with <3 in 1337-time'],
+        ['tk-ok',   '[DEV] greetz 2 old-school sceners'],
+        ['tk-ok',   '[DEV] keep the scene alive'],
+        ['tk-dim',  '---------------------------------------------'],
+        ['tk-warn', '[END] -- ready for input --'],
+        ['', ''],
+      ];
+      function renderTicker(el) {
+        const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const block = TICKER_LINES.map(([cls, txt]) =>
+          cls ? `<span class="${cls}">${esc(txt)}</span>` : esc(txt)
+        ).join('\n');
+        // Double the content so the rAF-driven scroll can loop seamlessly
+        el.innerHTML = block + '\n' + block;
+      }
+
+      /* ─── Scene: Plasma ─── */
+      function drawPlasma(now) {
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS / 2;
+        for (let y = 0; y < ROWS; y++) {
+          const fy = y * 0.25 + t * 0.9;
+          const sy = Math.sin(fy);
+          for (let x = 0; x < COLS; x++) {
+            const dx = x - cx, dy = (y - cy) * 1.8;
+            const v = Math.sin(x * 0.18 + t * 1.3) + sy +
+                      Math.sin((x + y) * 0.14 + t * 0.7) +
+                      Math.sin(Math.sqrt(dx * dx + dy * dy) * 0.3 + t * 1.1);
+            const norm = (v + 4) / 8;
+            const idx = norm < 0 ? 0 : norm > 1 ? RAMP_LEN - 1 : (norm * RAMP_LEN) | 0;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx >= RAMP_LEN ? RAMP_LEN - 1 : idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Fire ─── */
+      const fireH = ROWS + 3;
+      const fireBuf = new Float32Array(COLS * fireH);
+      function drawFire(now) {
+        const t = now * 0.001;
+        // seed bottom 2 rows
+        for (let x = 0; x < COLS; x++) {
+          const jitter = Math.sin(x * 0.3 + t * 2) * 0.1;
+          fireBuf[(fireH - 1) * COLS + x] = 0.75 + Math.random() * 0.25 + jitter;
+          fireBuf[(fireH - 2) * COLS + x] = 0.6 + Math.random() * 0.3;
+        }
+        // propagate upward with sideways drift
+        for (let y = 0; y < fireH - 2; y++) {
+          const drift = Math.sin(t * 0.8 + y * 0.2) * 0.6;
+          for (let x = 0; x < COLS; x++) {
+            const sx = Math.max(0, Math.min(COLS - 1, Math.round(x + drift)));
+            const below = fireBuf[(y + 1) * COLS + sx];
+            const belowL = fireBuf[(y + 1) * COLS + Math.max(0, sx - 1)];
+            const belowR = fireBuf[(y + 1) * COLS + Math.min(COLS - 1, sx + 1)];
+            const below2 = fireBuf[(y + 2) * COLS + sx];
+            const avg = (below * 3 + belowL + belowR + below2) / 6;
+            fireBuf[y * COLS + x] = Math.max(0, avg - Math.random() * 0.07 - 0.005);
+          }
+        }
+        // render to main buf
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const v = fireBuf[y * COLS + x];
+            let idx = (v * RAMP_LEN) | 0;
+            if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            if (idx < 0) idx = 0;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Starfield (3D parallax) ─── */
+      const starCount = isMobile ? 80 : 160;
+      const stars = new Float32Array(starCount * 3);
+      function initStars() {
+        for (let i = 0; i < starCount; i++) {
+          stars[i * 3 + 0] = (Math.random() - 0.5) * 2;
+          stars[i * 3 + 1] = (Math.random() - 0.5) * 2;
+          stars[i * 3 + 2] = Math.random() * 1.5 + 0.1;
+        }
+      }
+      initStars();
+      function drawStars(now, dt) {
+        clearBuf();
+        const cx = COLS / 2, cy = ROWS / 2;
+        const scaleX = COLS * 0.55;
+        const scaleY = ROWS * 0.55;
+        const speed = Math.min(0.05, (dt || 16) / 1000 * 0.55);
+        for (let i = 0; i < starCount; i++) {
+          const b = i * 3;
+          stars[b + 2] -= speed;
+          if (stars[b + 2] <= 0.05) {
+            stars[b + 0] = (Math.random() - 0.5) * 2;
+            stars[b + 1] = (Math.random() - 0.5) * 2;
+            stars[b + 2] = 1.5;
+          }
+          const z = stars[b + 2];
+          const sx = Math.round(stars[b + 0] / z * scaleX + cx);
+          const sy = Math.round(stars[b + 1] / z * scaleY + cy);
+          if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS) continue;
+          const bright = Math.min(1, (1.5 - z) / 1.4);
+          const idx = Math.max(1, Math.min(RAMP_LEN - 1, (bright * bright * RAMP_LEN) | 0));
+          buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Tunnel ─── */
+      const tunU = new Float32Array(COLS * ROWS);
+      const tunV = new Float32Array(COLS * ROWS);
+      const tunDist = new Float32Array(COLS * ROWS);
+      function buildTunnelTables() {
+        const cx = COLS / 2, cy = ROWS / 2;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const dx = x - cx;
+            const dy = (y - cy) * 1.8;
+            const d = Math.sqrt(dx * dx + dy * dy) + 0.001;
+            tunU[y * COLS + x] = 14 / d;
+            tunV[y * COLS + x] = Math.atan2(dy, dx) / Math.PI * 6;
+            tunDist[y * COLS + x] = d;
+          }
+        }
+      }
+      buildTunnelTables();
+      function drawTunnel(now) {
+        const t = now * 0.001;
+        const maxD = Math.sqrt((COLS/2)**2 + (ROWS*0.9)**2);
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const i = y * COLS + x;
+            const u = tunU[i] + t * 2;
+            const v = tunV[i] + t * 1;
+            const check = (((u | 0) + (v | 0)) & 1);
+            const shade = 1 - tunDist[i] / maxD;
+            let idx = check ? (shade * (RAMP_LEN - 1)) | 0 : (shade * (RAMP_LEN - 1) * 0.35) | 0;
+            if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            if (idx < 0) idx = 0;
+            buf[i] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Torus (donut.c style, ASCII shaded) ─── */
+      const zBuf = new Float32Array(COLS * ROWS);
+      function drawTorus(now) {
+        clearBuf();
+        zBuf.fill(0);
+        const A = now * 0.0008;
+        const B = now * 0.0013;
+        const cosA = Math.cos(A), sinA = Math.sin(A);
+        const cosB = Math.cos(B), sinB = Math.sin(B);
+        const R1 = 1, R2 = 2, K2 = 5;
+        const K1 = COLS * K2 * 3 / (4 * (R1 + R2));
+        const K1y = K1 * 0.5;
+        for (let th = 0; th < 6.283; th += 0.17) {
+          const cosT = Math.cos(th), sinT = Math.sin(th);
+          const circleX = R2 + R1 * cosT;
+          const circleY = R1 * sinT;
+          for (let ph = 0; ph < 6.283; ph += 0.055) {
+            const cosP = Math.cos(ph), sinP = Math.sin(ph);
+            const x = circleX * (cosB * cosP + sinA * sinB * sinP) - circleY * cosA * sinB;
+            const y = circleX * (sinB * cosP - sinA * cosB * sinP) + circleY * cosA * cosB;
+            const z = K2 + cosA * circleX * sinP + circleY * sinA;
+            const ooz = 1 / z;
+            const xp = (COLS / 2 + K1 * ooz * x) | 0;
+            const yp = (ROWS / 2 - K1y * ooz * y) | 0;
+            if (xp < 0 || xp >= COLS || yp < 0 || yp >= ROWS) continue;
+            const L = cosP * cosT * sinB - cosA * cosT * sinP - sinA * sinT +
+                      cosB * (cosA * sinT - cosT * sinA * sinP);
+            if (L > 0) {
+              const bi = yp * COLS + xp;
+              if (ooz > zBuf[bi]) {
+                zBuf[bi] = ooz;
+                let li = (L * 8) | 0;
+                if (li >= RAMP_LEN) li = RAMP_LEN - 1;
+                buf[bi] = RAMP.charCodeAt(li);
+              }
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Matrix rain ─── */
+      const mDrops = new Float32Array(COLS);
+      const mChars = new Uint16Array(COLS * ROWS);
+      const MATRIX_POOL = "01_/\\|<>{}[]()KDHOMEARCHIVEMOD@#%*+=.";
+      function initMatrix() {
+        for (let x = 0; x < COLS; x++) {
+          mDrops[x] = Math.random() * ROWS;
+          for (let y = 0; y < ROWS; y++) {
+            mChars[y * COLS + x] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
+          }
+        }
+      }
+      initMatrix();
+      function drawMatrix(now, dt) {
+        clearBuf();
+        const step = (dt || 16) / 60;
+        for (let x = 0; x < COLS; x++) {
+          mDrops[x] += step * (0.4 + Math.random() * 0.35);
+          if (mDrops[x] > ROWS + 8) mDrops[x] = -Math.random() * 8;
+          const head = Math.floor(mDrops[x]);
+          const tail = 9;
+          for (let k = 0; k < tail; k++) {
+            const y = head - k;
+            if (y < 0 || y >= ROWS) continue;
+            if (k === 0) {
+              if (Math.random() < 0.4) mChars[y * COLS + x] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
+              buf[y * COLS + x] = mChars[y * COLS + x];
+            } else {
+              const rampI = Math.max(2, RAMP_LEN - 1 - k * 5);
+              buf[y * COLS + x] = RAMP.charCodeAt(rampI);
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Wave3D (3D sine heightmap, perspective-projected dots) ─── */
+      function drawWave3d(now) {
+        clearBuf();
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS * 0.78;
+        const GRID = isMobile ? 18 : 26;
+        for (let gz = 1; gz <= GRID; gz++) {
+          const zScale = 1.15 / (gz * 0.17 + 0.55);
+          for (let gx = -GRID; gx <= GRID; gx++) {
+            const h = Math.sin(gx * 0.42 + t * 1.3) + Math.cos(gz * 0.42 + t * 0.9) * 0.7 + Math.sin((gx + gz) * 0.19 + t) * 0.5;
+            const sx = Math.round(cx + gx * zScale * 1.9);
+            const sy = Math.round(cy - (h * zScale * 4.2) - gz * zScale * 1.5);
+            if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS) continue;
+            const bright = Math.min(1, zScale * 1.2);
+            const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+            buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Ripple (radial water ripple from centre) ─── */
+      function drawRipple(now) {
+        const t = now * 0.003;
+        const cx = COLS / 2, cy = ROWS / 2;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const dx = x - cx;
+            const dy = (y - cy) * 1.8;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            const v = Math.sin(d * 0.55 - t * 3) * Math.exp(-d * 0.035) +
+                      Math.sin(d * 0.25 - t * 1.5) * 0.4 * Math.exp(-d * 0.02);
+            const norm = (v + 1.2) / 2.4;
+            let idx = (norm * RAMP_LEN) | 0;
+            if (idx < 0) idx = 0;
+            if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Life (Conway's Game of Life with periodic reseed) ─── */
+      const lifeSz = COLS * ROWS;
+      let lifeCurr = new Uint8Array(lifeSz);
+      let lifeNext = new Uint8Array(lifeSz);
+      let lifeAcc = 0;
+      let lifeAge = 0;
+      function seedLife() {
+        for (let i = 0; i < lifeSz; i++) lifeCurr[i] = Math.random() < 0.24 ? 1 : 0;
+        lifeAge = 0;
+      }
+      seedLife();
+      function stepLife() {
+        for (let y = 0; y < ROWS; y++) {
+          const ym1 = (y - 1 + ROWS) % ROWS;
+          const yp1 = (y + 1) % ROWS;
+          for (let x = 0; x < COLS; x++) {
+            const xm1 = (x - 1 + COLS) % COLS;
+            const xp1 = (x + 1) % COLS;
+            const n = lifeCurr[ym1 * COLS + xm1] + lifeCurr[ym1 * COLS + x] + lifeCurr[ym1 * COLS + xp1] +
+                      lifeCurr[y   * COLS + xm1] +                              lifeCurr[y   * COLS + xp1] +
+                      lifeCurr[yp1 * COLS + xm1] + lifeCurr[yp1 * COLS + x] + lifeCurr[yp1 * COLS + xp1];
+            const alive = lifeCurr[y * COLS + x];
+            lifeNext[y * COLS + x] = alive ? ((n === 2 || n === 3) ? 1 : 0) : (n === 3 ? 1 : 0);
+          }
+        }
+        const tmp = lifeCurr; lifeCurr = lifeNext; lifeNext = tmp;
+      }
+      function drawLife(now, dt) {
+        lifeAcc += dt;
+        if (lifeAcc > 130) {
+          lifeAcc = 0;
+          stepLife();
+          lifeAge++;
+          if (lifeAge > 40) seedLife();
+        }
+        for (let i = 0; i < lifeSz; i++) {
+          buf[i] = lifeCurr[i] ? 64 /* @ */ : 32;
+        }
+      }
+
+      /* ─── Scene: Cube (wireframe rotating cube, Bresenham line-drawn) ─── */
+      const CUBE_V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+      const CUBE_E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+      function plotLine(x0, y0, x1, y1, ch) {
+        let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+        const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy;
+        while (true) {
+          if (x0 >= 0 && x0 < COLS && y0 >= 0 && y0 < ROWS) buf[y0 * COLS + x0] = ch;
+          if (x0 === x1 && y0 === y1) break;
+          const e2 = 2 * err;
+          if (e2 >= dy) { err += dy; x0 += sx; }
+          if (e2 <= dx) { err += dx; y0 += sy; }
+        }
+      }
+      function drawCube(now) {
+        clearBuf();
+        const A = now * 0.0009, B = now * 0.0013, C = now * 0.0007;
+        const ca = Math.cos(A), sa = Math.sin(A);
+        const cb = Math.cos(B), sb = Math.sin(B);
+        const cc = Math.cos(C), sc = Math.sin(C);
+        const scale = Math.min(COLS, ROWS * 1.8) * 0.5;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const proj = new Array(8);
+        for (let i = 0; i < 8; i++) {
+          const v = CUBE_V[i];
+          let x = v[0], y = v[1], z = v[2];
+          // Rx
+          let y1 = y * cc - z * sc, z1 = y * sc + z * cc;
+          // Ry
+          let x1 = x * ca + z1 * sa, z2 = -x * sa + z1 * ca;
+          // Rz
+          let x2 = x1 * cb - y1 * sb, y2 = x1 * sb + y1 * cb;
+          const dist = 4;
+          const ooz = 1 / (z2 + dist);
+          const sxp = Math.round(cx + x2 * ooz * scale * 2);
+          const syp = Math.round(cy - y2 * ooz * scale);
+          proj[i] = [sxp, syp];
+        }
+        for (let i = 0; i < CUBE_E.length; i++) {
+          const e = CUBE_E[i];
+          plotLine(proj[e[0]][0], proj[e[0]][1], proj[e[1]][0], proj[e[1]][1], 42 /* * */);
+        }
+        // corner dots
+        for (let i = 0; i < 8; i++) {
+          const p = proj[i];
+          if (p[0] >= 0 && p[0] < COLS && p[1] >= 0 && p[1] < ROWS) buf[p[1] * COLS + p[0]] = 35 /* # */;
+        }
+      }
+
+      /* ─── Scene: Kaleido (8-way mirrored plasma) ─── */
+      function drawKaleido(now) {
+        const t = now * 0.0012;
+        const cx = COLS / 2, cy = ROWS / 2;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            let dx = Math.abs(x - cx);
+            let dy = Math.abs((y - cy) * 1.8);
+            if (dy > dx) { const tmp = dx; dx = dy; dy = tmp; }
+            const v = Math.sin(dx * 0.25 + t * 2) + Math.cos(dy * 0.32 + t * 1.3) + Math.sin((dx + dy) * 0.18 + t * 0.8);
+            const norm = (v + 3) / 6;
+            let idx = (norm * RAMP_LEN) | 0;
+            if (idx < 0) idx = 0; if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Metaballs (3 orbiting blobs) ─── */
+      function drawMetaballs(now) {
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const bx = [ cx + Math.cos(t) * COLS * 0.32,
+                     cx + Math.cos(t * 0.77 + 2) * COLS * 0.35,
+                     cx + Math.cos(t * 1.15 + 4) * COLS * 0.28 ];
+        const by = [ cy + Math.sin(t * 0.91) * ROWS * 0.38,
+                     cy + Math.sin(t * 1.13 + 1) * ROWS * 0.3,
+                     cy + Math.sin(t * 0.83 + 3) * ROWS * 0.42 ];
+        const br = [ 40, 32, 50 ];
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            let v = 0;
+            for (let i = 0; i < 3; i++) {
+              const dx = x - bx[i];
+              const dy = (y - by[i]) * 1.8;
+              v += br[i] / (dx * dx + dy * dy + 0.5);
+            }
+            const norm = Math.min(1, v * 0.12);
+            let idx = (norm * RAMP_LEN) | 0;
+            if (idx < 0) idx = 0; if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Mandelbrot (slowly panning+zooming fractal) ─── */
+      function drawMandelbrot(now) {
+        const t = now * 0.0004;
+        const zoom = 1.6 + Math.sin(t * 0.6) * 0.9;
+        const cx = -0.745 + Math.sin(t * 0.3) * 0.12;
+        const cy = 0.113 + Math.cos(t * 0.25) * 0.08;
+        const maxIter = 42;
+        const LOG2 = Math.log(2);
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const a0 = (x - COLS / 2) / COLS * 3 / zoom + cx;
+            const b0 = (y - ROWS / 2) / ROWS * 2.2 / zoom + cy;
+            let a = a0, b = b0, i = 0, r2 = 0;
+            while (i < maxIter && (r2 = a * a + b * b) < 4) {
+              const ta = a * a - b * b + a0;
+              b = 2 * a * b + b0;
+              a = ta;
+              i++;
+            }
+            let idx;
+            if (i === maxIter) {
+              idx = 0;
+            } else {
+              // Smooth continuous escape count for banding-free shading.
+              const nu = Math.log(Math.log(Math.sqrt(r2 || 4)) / LOG2) / LOG2;
+              const smooth = Math.max(0, i + 1 - nu);
+              idx = Math.max(1, Math.min(RAMP_LEN - 1, ((smooth / maxIter) * RAMP_LEN) | 0));
+            }
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Copper (horizontal scrolling bar stripes) ─── */
+      function drawCopper(now) {
+        const t = now * 0.002;
+        for (let y = 0; y < ROWS; y++) {
+          const bar = Math.sin(y * 0.55 - t * 2) * 0.5 + 0.5;
+          const bar2 = Math.sin(y * 0.15 + t * 0.8) * 0.4 + 0.5;
+          for (let x = 0; x < COLS; x++) {
+            const ripple = Math.sin(x * 0.18 + t * 3) * 0.12;
+            const mod = Math.max(0, Math.min(1, bar * 0.7 + bar2 * 0.35 + ripple));
+            let idx = (mod * RAMP_LEN) | 0;
+            if (idx < 0) idx = 0; if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Cellular (rule 30, rolling history) ─── */
+      let caRow = new Uint8Array(COLS);
+      let caHistory = new Uint8Array(COLS * ROWS);
+      let caAcc = 0;
+      let caAge = 0;
+      function seedCellular() {
+        caRow.fill(0);
+        caRow[COLS >> 1] = 1;
+        caHistory.fill(0);
+        caAge = 0;
+      }
+      seedCellular();
+      function stepCellular() {
+        // scroll history up
+        for (let y = 0; y < ROWS - 1; y++) {
+          for (let x = 0; x < COLS; x++) caHistory[y * COLS + x] = caHistory[(y + 1) * COLS + x];
+        }
+        for (let x = 0; x < COLS; x++) caHistory[(ROWS - 1) * COLS + x] = caRow[x];
+        // next row via rule 30
+        const next = new Uint8Array(COLS);
+        for (let x = 0; x < COLS; x++) {
+          const l = caRow[(x - 1 + COLS) % COLS];
+          const c = caRow[x];
+          const r = caRow[(x + 1) % COLS];
+          const pat = (l << 2) | (c << 1) | r;
+          next[x] = (30 >> pat) & 1;
+        }
+        caRow = next;
+        caAge++;
+        if (caAge > ROWS * 2) seedCellular();
+      }
+      function drawCellular(now, dt) {
+        caAcc += dt;
+        while (caAcc > 75) {
+          caAcc -= 75;
+          stepCellular();
+        }
+        for (let i = 0; i < caHistory.length; i++) {
+          buf[i] = caHistory[i] ? 35 /* # */ : 32;
+        }
+      }
+
+      /* ─── Scene: Spiral (particles on an outward spiral with fade) ─── */
+      const spiralN = isMobile ? 60 : 90;
+      const spiralPart = new Float32Array(spiralN * 3); // angle, radius, speed
+      function initSpiral() {
+        for (let i = 0; i < spiralN; i++) {
+          spiralPart[i * 3 + 0] = Math.random() * Math.PI * 2;
+          spiralPart[i * 3 + 1] = Math.random() * 2;
+          spiralPart[i * 3 + 2] = 0.5 + Math.random() * 1.5;
+        }
+      }
+      initSpiral();
+      function drawSpiral(now, dt) {
+        clearBuf();
+        const cx = COLS / 2, cy = ROWS / 2;
+        const maxR = Math.sqrt(cx * cx + cy * cy);
+        const step = (dt || 16) / 1000;
+        for (let i = 0; i < spiralN; i++) {
+          const b = i * 3;
+          spiralPart[b + 1] += step * spiralPart[b + 2] * 3;
+          spiralPart[b + 0] += step * 1.4;
+          if (spiralPart[b + 1] > maxR) {
+            spiralPart[b + 0] = Math.random() * Math.PI * 2;
+            spiralPart[b + 1] = 0.1;
+            spiralPart[b + 2] = 0.5 + Math.random() * 1.5;
+          }
+          const r = spiralPart[b + 1];
+          const a = spiralPart[b + 0] + r * 0.3;
+          const sx = Math.round(cx + Math.cos(a) * r);
+          const sy = Math.round(cy + Math.sin(a) * r * 0.55);
+          if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS) continue;
+          const bright = Math.max(0.08, 1 - r / maxR);
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+          buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Voxel (Comanche-style heightmap voxel terrain) ─── */
+      function hash2(x, y) {
+        let h = x * 374761393 + y * 668265263;
+        h = (h ^ (h >>> 13)) * 1274126177;
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+      }
+      function voxelHeight(x, y) {
+        // layered value noise
+        const x0 = Math.floor(x), y0 = Math.floor(y);
+        const fx = x - x0, fy = y - y0;
+        const a = hash2(x0, y0);
+        const b = hash2(x0 + 1, y0);
+        const c = hash2(x0, y0 + 1);
+        const d = hash2(x0 + 1, y0 + 1);
+        const u = fx * fx * (3 - 2 * fx);
+        const v = fy * fy * (3 - 2 * fy);
+        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+      }
+      function drawVoxel(now) {
+        clearBuf();
+        const t = now * 0.0003;
+        const horizon = Math.floor(ROWS * 0.35);
+        const camX = t * 6;
+        const camZ = t * 4;
+        // y-buffer: highest screen row that's been occupied per column (from bottom)
+        const yBuf = new Int16Array(COLS);
+        for (let x = 0; x < COLS; x++) yBuf[x] = ROWS;
+        const near = 1, far = 26;
+        for (let z = near; z < far; z += 0.6) {
+          const scale = 18 / z;
+          for (let sx = 0; sx < COLS; sx++) {
+            const wx = camX + (sx - COLS / 2) * z * 0.12;
+            const wz = camZ + z;
+            const h = (voxelHeight(wx * 0.12, wz * 0.12) + voxelHeight(wx * 0.25 + 7, wz * 0.25 + 3) * 0.5) / 1.5;
+            const screenY = Math.floor(horizon + (0.6 - h) * scale);
+            if (screenY < yBuf[sx]) {
+              const shade = Math.min(1, Math.max(0, h * 1.3));
+              const fog = Math.max(0.15, 1 - z / 28);
+              const top = Math.max(0, screenY);
+              const bot = yBuf[sx];
+              for (let y = top; y < bot; y++) {
+                // Brightest at the crest, dimming and fogging toward valley floors and distance.
+                const crestFade = 1 - (y - top) / Math.max(1, ROWS);
+                const rowShade = Math.max(0, Math.min(1, shade * crestFade * fog + 0.1));
+                const ri = Math.max(1, Math.min(RAMP_LEN - 1, (rowShade * RAMP_LEN) | 0));
+                buf[y * COLS + sx] = RAMP.charCodeAt(ri);
+              }
+              yBuf[sx] = screenY;
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Checker (perspective ground plane, Space Harrier-style) ─── */
+      function drawChecker(now) {
+        clearBuf();
+        const t = now * 0.001;
+        const horizon = Math.floor(ROWS * 0.35);
+        // sky rows stay black (cleared)
+        for (let y = horizon + 1; y < ROWS; y++) {
+          const perspective = (y - horizon) / (ROWS - horizon);
+          // clamp the far plane so the farthest rows aren't infinitesimally small
+          const z = 3 / Math.max(0.09, perspective);
+          for (let x = 0; x < COLS; x++) {
+            const wx = (x - COLS / 2) * z * 0.22 + t * 6;
+            const wz = z + t * 5;
+            // big cells so the checker reads at all depths (Space Harrier feel)
+            const cell = ((Math.floor(wx / 5.5) + Math.floor(wz / 3.8)) & 1);
+            const fog = Math.pow(Math.max(0, 1 - z / 40), 1.3);
+            const idx = cell ? Math.max(2, Math.min(RAMP_LEN - 1, (fog * RAMP_LEN * 1.4) | 0))
+                             : Math.max(0, Math.min(RAMP_LEN - 1, (fog * RAMP_LEN * 0.18) | 0));
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+        // horizon line as a thin bright strip
+        for (let x = 0; x < COLS; x++) {
+          buf[horizon * COLS + x] = 45; // '-'
+        }
+      }
+
+      /* ─── Scene: Vectors (bouncing 3D "vector balls", Amiga demo classic) ─── */
+      const VEC_COUNT = isMobile ? 28 : 48;
+      const vecs = new Float32Array(VEC_COUNT * 6); // x,y,z,vx,vy,vz
+      function initVecs() {
+        for (let i = 0; i < VEC_COUNT; i++) {
+          const b = i * 6;
+          vecs[b + 0] = (Math.random() - 0.5) * 2;
+          vecs[b + 1] = (Math.random() - 0.5) * 2;
+          vecs[b + 2] = (Math.random() - 0.5) * 2;
+          vecs[b + 3] = (Math.random() - 0.5) * 1.6;
+          vecs[b + 4] = (Math.random() - 0.5) * 1.6;
+          vecs[b + 5] = (Math.random() - 0.5) * 1.6;
+        }
+      }
+      initVecs();
+      function drawVectors(now, dt) {
+        clearBuf();
+        const t = now * 0.0009;
+        const cosA = Math.cos(t), sinA = Math.sin(t);
+        const cosB = Math.cos(t * 0.7), sinB = Math.sin(t * 0.7);
+        const cx = COLS / 2, cy = ROWS / 2;
+        const scale = Math.min(COLS, ROWS * 1.8) * 0.78;
+        const step = (dt || 16) / 1000;
+        // Depth-sort indices
+        const order = new Array(VEC_COUNT);
+        const zs = new Float32Array(VEC_COUNT);
+        const projX = new Float32Array(VEC_COUNT);
+        const projY = new Float32Array(VEC_COUNT);
+        for (let i = 0; i < VEC_COUNT; i++) {
+          const b = i * 6;
+          // bounce physics
+          vecs[b + 0] += vecs[b + 3] * step;
+          vecs[b + 1] += vecs[b + 4] * step;
+          vecs[b + 2] += vecs[b + 5] * step;
+          if (vecs[b + 0] > 1 || vecs[b + 0] < -1) vecs[b + 3] *= -1;
+          if (vecs[b + 1] > 1 || vecs[b + 1] < -1) vecs[b + 4] *= -1;
+          if (vecs[b + 2] > 1 || vecs[b + 2] < -1) vecs[b + 5] *= -1;
+          let x = vecs[b + 0], y = vecs[b + 1], z = vecs[b + 2];
+          // Ry
+          let x1 = x * cosA + z * sinA, z1 = -x * sinA + z * cosA;
+          // Rx
+          let y2 = y * cosB - z1 * sinB, z2 = y * sinB + z1 * cosB;
+          const ooz = 1 / (z2 + 3);
+          projX[i] = cx + x1 * ooz * scale * 2;
+          projY[i] = cy - y2 * ooz * scale;
+          zs[i] = z2;
+          order[i] = i;
+        }
+        order.sort((a, b) => zs[b] - zs[a]);
+        for (let k = 0; k < VEC_COUNT; k++) {
+          const i = order[k];
+          const px = Math.round(projX[i]);
+          const py = Math.round(projY[i]);
+          if (px < 0 || px >= COLS || py < 0 || py >= ROWS) continue;
+          const depth = (zs[i] + 1) / 2;
+          const bright = 1 - depth;
+          let idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+          buf[py * COLS + px] = RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Rotozoom (rotating+zooming textured plane) ─── */
+      function drawRotozoom(now) {
+        const t = now * 0.001;
+        const zoom = 0.6 + Math.sin(t * 0.5) * 0.35;
+        const angle = t * 0.8;
+        const ca = Math.cos(angle) * zoom;
+        const sa = Math.sin(angle) * zoom;
+        const cx = COLS / 2, cy = ROWS / 2;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const dx = x - cx, dy = (y - cy) * 1.8;
+            const u = dx * ca - dy * sa;
+            const v = dx * sa + dy * ca;
+            // sample: xor-style pattern
+            const ui = Math.floor(u + t * 30);
+            const vi = Math.floor(v + t * 20);
+            const pat = (ui ^ vi) & 31;
+            const shade = (pat / 31 + Math.sin(u * 0.4 + t) * 0.2 + 0.5) * 0.7;
+            const norm = Math.max(0, Math.min(1, shade));
+            let idx = (norm * RAMP_LEN) | 0;
+            if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Sphere3D (wireframe sphere with latitude/longitude grid) ─── */
+      function drawSphere3d(now) {
+        clearBuf();
+        const A = now * 0.0009, B = now * 0.0013;
+        const cosA = Math.cos(A), sinA = Math.sin(A);
+        const cosB = Math.cos(B), sinB = Math.sin(B);
+        const cx = COLS / 2, cy = ROWS / 2;
+        const R = Math.min(COLS, ROWS * 1.8) * 0.52;
+        const zBufS = new Float32Array(COLS * ROWS);
+        // latitude rings (fewer on mobile)
+        const lats = isMobile ? 8 : 12;
+        const lngs = isMobile ? 14 : 20;
+        for (let la = 1; la < lats; la++) {
+          const theta = (la / lats) * Math.PI;
+          const rr = Math.sin(theta);
+          const zY = Math.cos(theta);
+          for (let lo = 0; lo < lngs * 6; lo++) {
+            const phi = (lo / (lngs * 6)) * Math.PI * 2;
+            let x = rr * Math.cos(phi);
+            let y = zY;
+            let z = rr * Math.sin(phi);
+            // Ry
+            let x1 = x * cosA + z * sinA, z1 = -x * sinA + z * cosA;
+            // Rx
+            let y2 = y * cosB - z1 * sinB, z2 = y * sinB + z1 * cosB;
+            const ooz = 1 / (z2 + 3);
+            const sxp = Math.round(cx + x1 * ooz * R * 2);
+            const syp = Math.round(cy - y2 * ooz * R);
+            if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
+            if (ooz > zBufS[syp * COLS + sxp]) {
+              zBufS[syp * COLS + sxp] = ooz;
+              const bright = Math.max(0.1, 1 - z2 * 0.4);
+              const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+              buf[syp * COLS + sxp] = RAMP.charCodeAt(idx);
+            }
+          }
+        }
+        // longitudes
+        for (let lo = 0; lo < lngs; lo++) {
+          const phi = (lo / lngs) * Math.PI * 2;
+          for (let la = 0; la < lats * 6; la++) {
+            const theta = (la / (lats * 6)) * Math.PI;
+            const rr = Math.sin(theta);
+            const zY = Math.cos(theta);
+            let x = rr * Math.cos(phi);
+            let y = zY;
+            let z = rr * Math.sin(phi);
+            let x1 = x * cosA + z * sinA, z1 = -x * sinA + z * cosA;
+            let y2 = y * cosB - z1 * sinB, z2 = y * sinB + z1 * cosB;
+            const ooz = 1 / (z2 + 3);
+            const sxp = Math.round(cx + x1 * ooz * R * 2);
+            const syp = Math.round(cy - y2 * ooz * R);
+            if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
+            if (ooz > zBufS[syp * COLS + sxp]) {
+              zBufS[syp * COLS + sxp] = ooz;
+              const bright = Math.max(0.1, 1 - z2 * 0.4);
+              const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+              buf[syp * COLS + sxp] = RAMP.charCodeAt(idx);
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Twister (Amiga-style twisting vertical column of 4 dots) ─── */
+      function drawTwister(now) {
+        clearBuf();
+        const cx = COLS / 2;
+        const t = now * 0.001;
+        const width = Math.min(COLS * 0.45, 18);
+        for (let y = 0; y < ROWS; y++) {
+          const angle = t * 2.2 + y * 0.32;
+          for (let corner = 0; corner < 4; corner++) {
+            const a = angle + (corner * Math.PI / 2);
+            const dx = Math.cos(a) * width * 0.5;
+            const sx = Math.round(cx + dx);
+            if (sx < 0 || sx >= COLS) continue;
+            // depth via sin(a): front corners brighter
+            const depth = Math.sin(a) * 0.5 + 0.5;
+            const idx = Math.max(2, Math.min(RAMP_LEN - 1, (depth * RAMP_LEN) | 0));
+            buf[y * COLS + sx] = RAMP.charCodeAt(idx);
+          }
+          // fill between corners (rails)
+          const a0 = angle, a1 = angle + Math.PI / 2;
+          const x0 = cx + Math.cos(a0) * width * 0.5;
+          const x1 = cx + Math.cos(a1) * width * 0.5;
+          const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+          for (let sx = Math.max(0, Math.ceil(lo)); sx <= Math.min(COLS - 1, Math.floor(hi)); sx++) {
+            if (buf[y * COLS + sx] === SPACE) {
+              buf[y * COLS + sx] = 46; // '.'
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Warp (hyperspace radial star streaks) ─── */
+      const warpN = isMobile ? 60 : 110;
+      const warpPart = new Float32Array(warpN * 3); // angle, radius, speed
+      function initWarp() {
+        for (let i = 0; i < warpN; i++) {
+          warpPart[i * 3 + 0] = Math.random() * Math.PI * 2;
+          warpPart[i * 3 + 1] = Math.random() * 2 + 0.1;
+          warpPart[i * 3 + 2] = 0.8 + Math.random() * 1.8;
+        }
+      }
+      initWarp();
+      function drawWarp(now, dt) {
+        clearBuf();
+        const cx = COLS / 2, cy = ROWS / 2;
+        const maxR = Math.sqrt(cx * cx + (cy * 1.8) * (cy * 1.8));
+        const step = (dt || 16) / 1000;
+        for (let i = 0; i < warpN; i++) {
+          const b = i * 3;
+          warpPart[b + 1] += step * warpPart[b + 2] * 8;
+          if (warpPart[b + 1] > maxR) {
+            warpPart[b + 0] = Math.random() * Math.PI * 2;
+            warpPart[b + 1] = 0.1;
+            warpPart[b + 2] = 0.8 + Math.random() * 1.8;
+          }
+          // Draw a short streak: 3 samples along the ray
+          const a = warpPart[b + 0];
+          const r = warpPart[b + 1];
+          const ca = Math.cos(a), sa = Math.sin(a);
+          for (let s = 0; s < 3; s++) {
+            const rr = r - s * 0.9;
+            if (rr <= 0) continue;
+            const sx = Math.round(cx + ca * rr);
+            const sy = Math.round(cy + sa * rr * 0.55);
+            if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS) continue;
+            const bright = Math.max(0.15, Math.min(1, rr / maxR + 0.1)) - s * 0.25;
+            if (bright <= 0) continue;
+            const idx = Math.max(1, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+            buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Moire (two rotating radial patterns interfering) ─── */
+      function drawMoire(now) {
+        const t = now * 0.0009;
+        const ca = Math.cos(t), sa = Math.sin(t);
+        const cb = Math.cos(t * 0.7), sb = Math.sin(t * 0.7);
+        const cx = COLS / 2, cy = ROWS / 2;
+        const ox1 = Math.sin(t * 0.8) * 6;
+        const oy1 = Math.cos(t * 0.8) * 3;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            const dxA = x - cx + ox1, dyA = (y - cy + oy1) * 1.8;
+            const dxB = x - cx - ox1, dyB = (y - cy - oy1) * 1.8;
+            const dA = Math.sqrt(dxA * dxA + dyA * dyA);
+            const dB = Math.sqrt(dxB * dxB + dyB * dyB);
+            const v = Math.sin(dA * 0.7 + t * 3) + Math.sin(dB * 0.7 - t * 2);
+            const norm = (v + 2) / 4;
+            let idx = (norm * RAMP_LEN) | 0;
+            if (idx < 0) idx = 0; if (idx >= RAMP_LEN) idx = RAMP_LEN - 1;
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Landscape (parallax mountain silhouettes) ─── */
+      function drawLandscape(now) {
+        clearBuf();
+        const t = now * 0.0004;
+        const horizon = Math.floor(ROWS * 0.55);
+        // stars above horizon
+        const starN = isMobile ? 14 : 24;
+        for (let i = 0; i < starN; i++) {
+          const sx = (i * 37 + ((t * 6) | 0)) % COLS;
+          const sy = (i * 5 + 1) % Math.max(1, horizon);
+          buf[sy * COLS + sx] = 46; // '.'
+        }
+        // small crescent moon
+        const moonX = Math.floor(COLS * 0.78);
+        const moonY = Math.floor(horizon * 0.45);
+        if (moonX + 1 < COLS && moonY < ROWS) {
+          buf[moonY * COLS + moonX] = 40; // '('
+          buf[moonY * COLS + moonX + 1] = 41; // ')'
+        }
+        // Parallax mountain layers, painted FAR → NEAR so nearer silhouettes
+        // overdraw farther ones and sky peeks through the gaps above.
+        const layers = [
+          { amp: 2.2, freq: 0.30, phase: 1.2, speed: 5,  ch: 46 /*.*/ }, // far (dim)
+          { amp: 3.4, freq: 0.20, phase: 0.6, speed: 9,  ch: 43 /*+*/ },
+          { amp: 5.0, freq: 0.13, phase: 0.1, speed: 14, ch: 35 /*#*/ }, // near (bright)
+        ];
+        for (let l = 0; l < layers.length; l++) {
+          const L = layers[l];
+          for (let x = 0; x < COLS; x++) {
+            const wx = x * L.freq + L.phase + t * L.speed;
+            const raw = Math.sin(wx) * 0.55 + Math.sin(wx * 0.47 + 1.3) * 0.35 + Math.sin(wx * 1.9 + 0.4) * 0.25;
+            const h = (raw * 0.5 + 0.5) * L.amp;
+            const peakY = Math.max(0, Math.min(ROWS - 1, Math.round(horizon - h)));
+            for (let y = peakY; y < ROWS; y++) {
+              buf[y * COLS + x] = L.ch;
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Ribbon (3D undulating ribbon, two edges) ─── */
+      function drawRibbon(now) {
+        clearBuf();
+        const t = now * 0.0011;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const segs = isMobile ? 140 : 220;
+        for (let i = 0; i < segs; i++) {
+          const u = (i / segs) * 4 - 2; // -2..2
+          // ribbon parametric: x(u), y(u), z(u)
+          const x = u * 2;
+          const y0 = Math.sin(u * 1.8 + t * 2.2) * 1.0;
+          const z  = Math.cos(u * 1.5 + t * 1.7) * 1.2;
+          const A = t * 0.7, B = t * 0.5;
+          const cosA = Math.cos(A), sinA = Math.sin(A);
+          const cosB = Math.cos(B), sinB = Math.sin(B);
+          for (let side = -1; side <= 1; side += 2) {
+            const yy = y0 + side * 0.35; // ribbon thickness
+            // Ry
+            let x1 = x * cosA + z * sinA, z1 = -x * sinA + z * cosA;
+            // Rx
+            let y2 = yy * cosB - z1 * sinB, z2 = yy * sinB + z1 * cosB;
+            const ooz = 1 / (z2 + 5);
+            const sxp = Math.round(cx + x1 * ooz * COLS * 0.5);
+            const syp = Math.round(cy - y2 * ooz * ROWS * 1.1);
+            if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
+            const bright = Math.max(0.15, Math.min(1, ooz * 3));
+            const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+            buf[syp * COLS + sxp] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── BBS ticker scroller (bottom -> top) ─── */
+      const tickerEl = document.getElementById('fx-ticker');
+      let tickerY = 0;
+      let tickerHalfHeight = 0;
+      const TICKER_SPEED = isMobile ? 10 : 12; // pixels per second
+      function initTicker() {
+        if (!tickerEl) return;
+        renderTicker(tickerEl);
+        // half-height = one copy
+        tickerHalfHeight = tickerEl.scrollHeight / 2;
+        // start so first line sits at the bottom of the visible band
+        const wrap = tickerEl.parentElement;
+        const visibleH = wrap ? wrap.clientHeight : 0;
+        tickerY = -visibleH;
+        tickerEl.style.transform = 'translateY(' + (-tickerY) + 'px)';
+      }
+      function stepTicker(dt) {
+        if (!tickerEl || !tickerHalfHeight) return;
+        tickerY += (dt / 1000) * TICKER_SPEED;
+        if (tickerY >= tickerHalfHeight) tickerY -= tickerHalfHeight;
+        tickerEl.style.transform = 'translateY(' + (-tickerY) + 'px)';
+      }
+      initTicker();
+
+      /* ─── Commit buf → pre.textContent ─── */
+      function commit() {
+        for (let y = 0; y < ROWS; y++) {
+          const start = y * COLS;
+          rowStrs[y] = String.fromCharCode.apply(null, buf.subarray(start, start + COLS));
+        }
+        canvas.textContent = rowStrs.join('\n');
+      }
+
+      /* ─── Scene director ─── */
+      const SCENES = [
+        { name: 'PLASMA',     fn: drawPlasma,     dur: 7000, cls: 'fx-plasma' },
+        { name: 'CUBE',       fn: drawCube,       dur: 6000, cls: 'fx-cube' },
+        { name: 'STARFIELD',  fn: drawStars,      dur: 6000, cls: 'fx-starfield' },
+        { name: 'WARP',       fn: drawWarp,       dur: 6000, cls: 'fx-warp' },
+        { name: 'VECTORS',    fn: drawVectors,    dur: 7000, cls: 'fx-vectors' },
+        { name: 'RIPPLE',     fn: drawRipple,     dur: 6000, cls: 'fx-ripple' },
+        { name: 'CHECKER',    fn: drawChecker,    dur: 7000, cls: 'fx-checker' },
+        { name: 'FIRE',       fn: drawFire,       dur: 6000, cls: 'fx-fire' },
+        { name: 'LANDSCAPE',  fn: drawLandscape,  dur: 7000, cls: 'fx-landscape' },
+        { name: 'LIFE',       fn: drawLife,       dur: 7000, cls: 'fx-life' },
+        { name: 'TUNNEL',     fn: drawTunnel,     dur: 6000, cls: 'fx-tunnel' },
+        { name: 'VOXEL',      fn: drawVoxel,      dur: 8000, cls: 'fx-voxel' },
+        { name: 'COPPER',     fn: drawCopper,     dur: 6000, cls: 'fx-copper' },
+        { name: 'ROTOZOOM',   fn: drawRotozoom,   dur: 7000, cls: 'fx-rotozoom' },
+        { name: 'TORUS',      fn: drawTorus,      dur: 7000, cls: 'fx-torus' },
+        { name: 'TWISTER',    fn: drawTwister,    dur: 6000, cls: 'fx-twister' },
+        { name: 'KALEIDO',    fn: drawKaleido,    dur: 6000, cls: 'fx-kaleido' },
+        { name: 'SPHERE3D',   fn: drawSphere3d,   dur: 7000, cls: 'fx-sphere3d' },
+        { name: 'MATRIX',     fn: drawMatrix,     dur: 5000, cls: 'fx-matrix' },
+        { name: 'MOIRE',      fn: drawMoire,      dur: 6000, cls: 'fx-moire' },
+        { name: 'CELLULAR',   fn: drawCellular,   dur: 7000, cls: 'fx-cellular' },
+        { name: 'WAVE3D',     fn: drawWave3d,     dur: 7000, cls: 'fx-wave3d' },
+        { name: 'RIBBON',     fn: drawRibbon,     dur: 7000, cls: 'fx-ribbon' },
+        { name: 'METABALLS',  fn: drawMetaballs,  dur: 7000, cls: 'fx-meta' },
+        { name: 'MANDELBROT', fn: drawMandelbrot, dur: 7000, cls: 'fx-mandel' },
+        { name: 'SPIRAL',     fn: drawSpiral,     dur: 6000, cls: 'fx-spiral' },
+      ];
+      let sceneIdx = 0;
+      let sceneStart = 0;
+      let rafId = 0;
+      let lastFrame = 0;
+      let running = true;
+      let skipFrame = false;
+      const DISSOLVE_MS = 900;
+      const startTime = performance.now();
+
+      function setSceneClass(cls) {
+        canvas.className = 'fx-canvas ' + cls;
+      }
+      setSceneClass(SCENES[0].cls);
+      if (sceneLabel) sceneLabel.textContent = SCENES[0].name;
+
+      function frame(now) {
+        if (!running) return;
+        const dt = lastFrame ? Math.min(64, now - lastFrame) : 16;
+        lastFrame = now;
+        if (!sceneStart) sceneStart = now;
+        const elapsed = now - sceneStart;
+        const cur = SCENES[sceneIdx];
+
+        // Advance scene
+        if (elapsed >= cur.dur) {
+          // snapshot previous
+          prevBuf.set(buf);
+          hasPrev = true;
+          sceneIdx = (sceneIdx + 1) % SCENES.length;
+          sceneStart = now;
+          const next = SCENES[sceneIdx];
+          setSceneClass(next.cls);
+          if (sceneLabel) sceneLabel.textContent = next.name;
+        }
+
+        // Mobile frame-skip: if dt > 28ms and we haven't just skipped, render scene but allow skipping next
+        if (isMobile && dt > 30 && !skipFrame) {
+          skipFrame = true;
+          rafId = requestAnimationFrame(frame);
+          return;
+        }
+        skipFrame = false;
+
+        // Draw current scene
+        SCENES[sceneIdx].fn(now, dt);
+
+        // Dissolve from previous scene during first DISSOLVE_MS
+        if (hasPrev) {
+          const wipeElapsed = now - sceneStart;
+          if (wipeElapsed < DISSOLVE_MS) {
+            const p = 1 - (wipeElapsed / DISSOLVE_MS);
+            const sz = buf.length;
+            for (let i = 0; i < sz; i++) {
+              if (Math.random() < p) buf[i] = prevBuf[i];
+            }
+          } else {
+            hasPrev = false;
+          }
+        }
+
+        commit();
+        stepTicker(dt);
+
+        if (timerLabel) {
+          const secs = ((now - startTime) / 1000).toFixed(1);
+          timerLabel.textContent = 'T+' + secs + 's';
+        }
+
+        rafId = requestAnimationFrame(frame);
+      }
+
+      function teardown() {
+        running = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+      }
+
+      // Debug hook: jump to any scene by name. Used by the test harness.
+      window.__fxJump = function(name) {
+        const i = SCENES.findIndex(s => s.name === name);
+        if (i < 0) return false;
+        prevBuf.set(buf);
+        hasPrev = true;
+        sceneIdx = i;
+        sceneStart = performance.now();
+        setSceneClass(SCENES[i].cls);
+        if (sceneLabel) sceneLabel.textContent = SCENES[i].name;
+        return true;
+      };
+      // Freeze on a scene so cycling doesn't race the test harness.
+      window.__fxFreeze = function(name) {
+        for (const s of SCENES) s.dur = 9_999_999;
+        if (name) return window.__fxJump(name);
+        return true;
+      };
+      window.__fxList = () => SCENES.map(s => s.name);
+
+      if (reducedMotion) {
+        // Static: one frame of plasma, no animation loop, ticker stays at top
+        drawPlasma(performance.now());
+        commit();
+        if (sceneLabel) sceneLabel.textContent = 'STATIC';
+      } else {
+        // Seed with one frame so the box isn't empty during first paint
+        drawPlasma(performance.now());
+        commit();
+        rafId = requestAnimationFrame(frame);
+      }
+
+      // Stop animation as soon as the entry gate is dismissed
+      if (gate) {
+        const obs = new MutationObserver(function() {
+          if (gate.classList.contains('dismissing')) {
+            teardown();
+            obs.disconnect();
+          }
+        });
+        obs.observe(gate, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      // Pause when tab hidden to save CPU
+      document.addEventListener('visibilitychange', function() {
+        if (!running) return;
+        if (document.hidden) {
+          if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        } else {
+          if (!rafId) {
+            lastFrame = 0;
+            rafId = requestAnimationFrame(frame);
+          }
+        }
+      });
+    })();
+  </script>
+
   <!-- Advanced Desktop Cat -->
   <div class="desktop-cat" id="desktop-cat">
     <div class="cat-sprite">
@@ -3191,6 +4855,7 @@
           }
 
           init() {
+            this.relocateAwayFromMusic();
             this.scheduleNext();
             this.cat.addEventListener('click', () => this.handleInteraction());
 
@@ -3572,13 +5237,81 @@
 
           // ─── Movement ───
 
+          // Snap the cat to a safe spot if its current (or default) position overlaps the music window.
+          relocateAwayFromMusic() {
+            // Defer one frame so the music player IIFE (which may minimize on mobile) finishes first.
+            requestAnimationFrame(() => {
+              const curR = parseInt(this.cat.style.right) || 30;
+              const curB = parseInt(this.cat.style.bottom) || 50;
+              const safe = this.avoidMusicWindow(curR, curB);
+              if (safe.right !== curR || safe.bottom !== curB) {
+                this.cat.style.transition = 'none';
+                this.cat.style.right = safe.right + 'px';
+                this.cat.style.bottom = safe.bottom + 'px';
+                void this.cat.offsetWidth;
+                this.cat.style.transition = '';
+              }
+            });
+          }
+
+          // Return the visible music-window rect (with padding) the cat should avoid, or null.
+          getAvoidRect() {
+            const w = document.getElementById('music-window');
+            if (!w) return null;
+            if (w.classList.contains('hidden')) return null;
+            if (w.style.display === 'none') return null; // minimized
+            const r = w.getBoundingClientRect();
+            if (!r.width || !r.height) return null;
+            const pad = 18;
+            return { left: r.left - pad, right: r.right + pad, top: r.top - pad, bottom: r.bottom + pad };
+          }
+
+          // Given a target CSS right/bottom pair, return a reroute that keeps the cat's
+          // bounding box out of the music window. Falls back to the original target if
+          // no valid detour fits on-screen.
+          avoidMusicWindow(targetRight, targetBottom) {
+            const avoid = this.getAvoidRect();
+            if (!avoid) return { right: targetRight, bottom: targetBottom };
+            const catRect = this.cat.getBoundingClientRect();
+            const catW = catRect.width || 80;
+            const catH = catRect.height || 60;
+            const minR = 30, maxR = window.innerWidth - 100;
+            const minB = 50, maxB = 300;
+            const overlaps = (r, b) => {
+              const left = window.innerWidth - r - catW;
+              const top = window.innerHeight - b - catH;
+              return !(left + catW < avoid.left || left > avoid.right || top + catH < avoid.top || top > avoid.bottom);
+            };
+            if (!overlaps(targetRight, targetBottom)) return { right: targetRight, bottom: targetBottom };
+            const rLeftOfMusic = Math.min(maxR, Math.max(minR, window.innerWidth - avoid.left + 4));
+            const rRightOfMusic = Math.min(maxR, Math.max(minR, window.innerWidth - avoid.right - catW - 4));
+            const bAboveMusic = Math.min(maxB, Math.max(minB, window.innerHeight - avoid.top + 4));
+            const bBelowMusic = Math.min(maxB, Math.max(minB, window.innerHeight - avoid.bottom - catH - 4));
+            const candidates = [
+              { right: rLeftOfMusic,  bottom: targetBottom },
+              { right: rRightOfMusic, bottom: targetBottom },
+              { right: targetRight,   bottom: bAboveMusic },
+              { right: targetRight,   bottom: bBelowMusic },
+            ];
+            let best = null, bestDist = Infinity;
+            for (const c of candidates) {
+              if (overlaps(c.right, c.bottom)) continue;
+              const d = Math.abs(c.right - targetRight) + Math.abs(c.bottom - targetBottom);
+              if (d < bestDist) { bestDist = d; best = c; }
+            }
+            return best || { right: targetRight, bottom: targetBottom };
+          }
+
           moveWalk(dur) {
             if (this.isMoving) return;
             this.isMoving = true;
             const distance = Math.random() * 300 + 100;
             const currentRight = parseInt(this.cat.style.right) || 30;
+            const currentBottom = parseInt(this.cat.style.bottom) || 50;
             const walkDir = Math.random() < 0.5 ? 1 : -1;
-            const newRight = Math.max(30, Math.min(window.innerWidth - 100, currentRight + (walkDir * distance)));
+            const rawRight = Math.max(30, Math.min(window.innerWidth - 100, currentRight + (walkDir * distance)));
+            const safe = this.avoidMusicWindow(rawRight, currentBottom);
+            const newRight = safe.right;
             this.direction = newRight > currentRight ? -1 : 1;
             this.setState('walking'); // setState calls updateDirection
             this.cat.style.transition = `right ${dur}ms linear`;
@@ -3591,8 +5324,11 @@
             if (this.isMoving) return;
             this.isMoving = true;
             const currentRight = parseInt(this.cat.style.right) || 30;
-            const targetX = Math.random() * (window.innerWidth - 130) + 30;
-            const targetY = Math.random() * 150 + 50;
+            const rawX = Math.random() * (window.innerWidth - 130) + 30;
+            const rawY = Math.random() * 150 + 50;
+            const safe = this.avoidMusicWindow(rawX, rawY);
+            const targetX = safe.right;
+            const targetY = safe.bottom;
             this.direction = targetX > currentRight ? -1 : 1;
             this.setState('walking');
             this.cat.style.transition = `all ${dur}ms ease-in-out`;
@@ -3616,10 +5352,13 @@
               this.updateDirection();
               const targetX = window.innerWidth - x - 30;
               const targetY = window.innerHeight - y - 30;
+              const clampedR = Math.max(30, Math.min(window.innerWidth - 100, targetX));
+              const clampedB = Math.max(50, Math.min(300, targetY));
+              const safe = this.avoidMusicWindow(clampedR, clampedB);
               const dur = 2000;
               this.cat.style.transition = `all ${dur}ms ease-out`;
-              this.cat.style.right = Math.max(30, Math.min(window.innerWidth - 100, targetX)) + 'px';
-              this.cat.style.bottom = Math.max(50, Math.min(300, targetY)) + 'px';
+              this.cat.style.right = safe.right + 'px';
+              this.cat.style.bottom = safe.bottom + 'px';
               this.animateFrames(200, dur);
               setTimeout(() => {
                 this.isMoving = false;
@@ -3732,8 +5471,11 @@
               this.direction = runDir;
               this.updateDirection();
               const currentRight = parseInt(this.cat.style.right) || 30;
+              const currentBottom = parseInt(this.cat.style.bottom) || 50;
               let newRight = currentRight + (this.direction * 400);
               newRight = Math.max(30, Math.min(window.innerWidth - 100, newRight));
+              const safe = this.avoidMusicWindow(newRight, currentBottom);
+              newRight = safe.right;
               const dur = 1200;
               this.cat.style.transition = `right ${dur}ms cubic-bezier(0.4, 0, 0.2, 1)`;
               this.cat.style.right = newRight + 'px';
@@ -4613,6 +6355,25 @@
         renderPlaylist();
       });
 
+      // ─── Auto-start hook (triggered from entry gate user gesture) ───
+      var pendingAutoStart = false;
+      window.startMusicPlayback = function() {
+        if (!playlist.length) { pendingAutoStart = true; return; }
+        if (isPlaying) return;
+        if (!player) initPlayer();
+        if (player) {
+          try { if (player.context && player.context.state === 'suspended') player.context.resume(); } catch(e) {}
+          loadAndPlay();
+        }
+      };
+
+      function maybeAutoStart() {
+        if (pendingAutoStart && playlist.length) {
+          pendingAutoStart = false;
+          window.startMusicPlayback();
+        }
+      }
+
       // ─── Fetch playlist from server ───
       fetch('/api/playlist')
         .then(function(r) { return r.json(); })
@@ -4623,10 +6384,12 @@
             updateInfo();
             renderPlaylist();
           }
+          maybeAutoStart();
         })
         .catch(function() {
           playlist = [{ url: '/music/elysium.mod', name: 'Elysium' }];
           updateInfo();
+          maybeAutoStart();
         });
 
       function renderPlaylist() {
