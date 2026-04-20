@@ -6853,8 +6853,23 @@
           contentEl.appendChild(iframe);
         }
 
+        function recenter() {
+          // Drop any inline position styles left over from a prior drag so the
+          // CSS rule (left:50%; transform:translateX(-50%)) takes over again.
+          win.style.left = '';
+          win.style.top = '';
+          win.style.right = '';
+          win.style.bottom = '';
+          win.style.width = '';
+          win.style.height = '';
+          win.style.position = '';
+          win.style.margin = '';
+          win.style.transform = '';
+        }
+
         function showWindow() {
           if (isMax) { win.classList.remove('maximized'); isMax = false; }
+          recenter();
           win.classList.remove('hidden');
           win.style.display = '';
           win.classList.add('restoring');
