@@ -259,7 +259,7 @@ def generate():
                            radius=4, outline=(0, 255, 153, 80),
                            fill=(0, 20, 15, 220))
     start_font = bold(15)
-    start_text = "root@kd"
+    start_text = "vault@kd"
     stw = draw.textlength(start_text, font=start_font)
     st_bbox = draw.textbbox((0, 0), start_text, font=start_font)
     sth = st_bbox[3] - st_bbox[1]
@@ -294,7 +294,7 @@ def generate():
     tray_sep_bot = bar_y + bar_h - 10
 
     tray_x = W - 18
-    tray_items = ["5W", "ARM64", "1.8TB"]
+    tray_items = ["30W", "ARM64", "12TB"]
     for i, item in enumerate(reversed(tray_items)):
         iw = draw.textlength(item, font=tray_font)
         tray_x -= iw
