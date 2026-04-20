@@ -1760,6 +1760,21 @@
       padding: 0 16px 14px;
     }
 
+    .info-section[data-section="infra"] .info-body.show {
+      max-height: 1000px;
+    }
+
+    .infra-media {
+      display: block;
+      width: 100%;
+      max-width: 520px;
+      height: auto;
+      margin: 14px auto 4px;
+      border-radius: 4px;
+      filter: url(#infra-key-white) contrast(1.02);
+      image-rendering: auto;
+    }
+
     /* Advanced animated desktop cat */
     .desktop-cat {
       position: fixed;
@@ -2900,6 +2915,29 @@
 </head>
 
 <body class="entry-gate-locked">
+  <!-- Shared SVG filter: keys bright pixels (white + near-white) to
+       transparent via alpha = clamp(2.2 - (R+G+B)), preserving RGB.
+       White (1,1,1) → -0.8 → 0; (0.8,0.8,0.8) → -0.2 → 0; mid gray
+       (0.5,0.5,0.5) → 0.7; black (0,0,0) → 1. Saturated colors
+       stay fully opaque (any channel at 1 + others near 0 → ≥1). A
+       feComponentTransfer stage first pushes near-whites past the
+       keying threshold so JPEG haze around edges also clears out. -->
+  <svg width="0" height="0" style="position:absolute; width:0; height:0; overflow:hidden;" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="infra-key-white" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+        <feComponentTransfer>
+          <feFuncR type="linear" slope="1.08" intercept="-0.04"/>
+          <feFuncG type="linear" slope="1.08" intercept="-0.04"/>
+          <feFuncB type="linear" slope="1.08" intercept="-0.04"/>
+        </feComponentTransfer>
+        <feColorMatrix type="matrix" values="
+          1  0  0  0  0
+          0  1  0  0  0
+          0  0  1  0  0
+          -1 -1 -1 0  2.2"/>
+      </filter>
+    </defs>
+  </svg>
   <!-- Entry gate: user gesture unlocks audio playback -->
   <div class="entry-gate" id="entry-gate" role="dialog" aria-modal="true" aria-labelledby="entry-gate-title">
     <div class="entry-gate-glass">
@@ -4136,7 +4174,7 @@
       const tickerEl = document.getElementById('fx-ticker');
       let tickerY = 0;
       let tickerHalfHeight = 0;
-      const TICKER_SPEED = isMobile ? 10 : 12; // pixels per second
+      const TICKER_SPEED = isMobile ? 16 : 20; // pixels per second
       function initTicker() {
         if (!tickerEl) return;
         renderTicker(tickerEl);
@@ -4595,6 +4633,7 @@
                   doesn't require a data centre — just determination, a shelf, and enough panels to cover
                   the draw.
                 </small>
+                <img class="infra-media" src="/infra.webp" alt="Homelab hardware stack" loading="lazy" decoding="async" width="480" height="270">
               </div>
             </div>
 
