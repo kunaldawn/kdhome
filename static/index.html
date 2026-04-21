@@ -1832,6 +1832,75 @@
     }
 
 
+    /* ═══ Demoscene window ═══ */
+    .demo-window {
+      position: fixed;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(640px, 94vw);
+      z-index: 999;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 255, 150, 0.15);
+      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.02),
+        0 0 60px rgba(0, 255, 150, 0.05);
+      display: flex;
+      flex-direction: column;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .demo-window.hidden { display: none; }
+
+    .demo-window.dragged { transform: none; margin: 0; }
+
+    .demo-window.maximized {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 44px !important;
+      width: 100% !important;
+      height: calc(100vh - 44px) !important;
+      transform: none !important;
+      border-radius: 0;
+      margin: 0 !important;
+    }
+
+    .demo-window.minimizing { animation: minimizeToTaskbar 0.5s ease-in-out forwards; }
+    .demo-window.restoring  { animation: restoreFromTaskbar 0.5s ease-in-out forwards; }
+
+    .demo-content {
+      padding: 14px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .demo-window.maximized .demo-content { flex: 1; }
+
+    /* Taller ticker inside the demo window so more scrolling text is visible */
+    .demo-window .fx-ticker-wrap {
+      height: calc(13px * 1.5 * 14);
+    }
+
+    .demo-window.maximized .fx-ticker-wrap {
+      height: auto;
+      flex: 1;
+      min-height: 200px;
+    }
+
+    .demo-window.maximized .fx-wrap {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
     /* Responsive */
     @media (max-width: 800px) {
       .music-window {
@@ -1844,6 +1913,14 @@
         top: 8px;
         width: calc(100vw - 12px);
         height: calc(100vh - 60px);
+      }
+
+      .demo-window {
+        top: 8px;
+        width: calc(100vw - 12px);
+      }
+      .demo-window .fx-ticker-wrap {
+        height: calc(11px * 1.45 * 10);
       }
 
       .browser-toolbar {
@@ -3165,12 +3242,13 @@
   </script>
   <script>
     /* ═══ Demoscene ASCII intro (bb/aalib-inspired) ═══ */
-    (function() {
-      const canvas = document.getElementById('fx-canvas');
-      if (!canvas) return;
-      const sceneLabel = document.querySelector('.fx-scene');
-      const timerLabel = document.getElementById('fx-timer');
-      const gate = document.getElementById('entry-gate');
+    window.createFxInstance = function(cfg) {
+      cfg = cfg || {};
+      const canvas = cfg.canvas || document.getElementById('fx-canvas');
+      if (!canvas) return { stop: function(){} };
+      const sceneLabel = cfg.sceneLabel || document.querySelector('.fx-scene');
+      const timerLabel = cfg.timerLabel || document.getElementById('fx-timer');
+      const gate = cfg.gate || null;
 
       const isMobile = window.matchMedia('(max-width: 520px)').matches;
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -4330,7 +4408,7 @@
       }
 
       /* ─── BBS ticker scroller (bottom -> top) ─── */
-      const tickerEl = document.getElementById('fx-ticker');
+      const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
       let tickerHalfHeight = 0;
       const TICKER_SPEED = isMobile ? 16 : 20; // pixels per second
@@ -4402,7 +4480,7 @@
 
       // Bag-style random scene picker: play through every scene once before any repeats.
       let sceneBag = [];
-      window.__fxBagHistory = [];
+      if (cfg.installDebug) window.__fxBagHistory = [];
       function refillBag(excludeIdx) {
         sceneBag = SCENES.map((_, i) => i);
         for (let i = sceneBag.length - 1; i > 0; i--) {
@@ -4414,7 +4492,7 @@
         if (sceneBag.length > 1 && sceneBag[sceneBag.length - 1] === excludeIdx) {
           const t = sceneBag[0]; sceneBag[0] = sceneBag[sceneBag.length - 1]; sceneBag[sceneBag.length - 1] = t;
         }
-        window.__fxBagHistory.push({ size: sceneBag.length, snapshot: sceneBag.slice(), excludeIdx });
+        if (cfg.installDebug) window.__fxBagHistory.push({ size: sceneBag.length, snapshot: sceneBag.slice(), excludeIdx });
       }
       function nextSceneFromBag() {
         if (sceneBag.length === 0) refillBag(sceneIdx);
@@ -4446,7 +4524,7 @@
           const next = SCENES[sceneIdx];
           setSceneClass(next.cls);
           if (sceneLabel) sceneLabel.textContent = next.name;
-          if (window.__fxTransitionLog) window.__fxTransitionLog.push(next.name);
+          if (cfg.installDebug && window.__fxTransitionLog) window.__fxTransitionLog.push(next.name);
         }
 
         // Mobile frame-skip: if dt > 28ms and we haven't just skipped, render scene but allow skipping next
@@ -4488,35 +4566,38 @@
       function teardown() {
         running = false;
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        document.removeEventListener('visibilitychange', onVisibility);
       }
 
-      // Debug hook: jump to any scene by name. Used by the test harness.
-      window.__fxJump = function(name) {
-        const i = SCENES.findIndex(s => s.name === name);
-        if (i < 0) return false;
-        prevBuf.set(buf);
-        hasPrev = true;
-        sceneIdx = i;
-        sceneStart = performance.now();
-        setSceneClass(SCENES[i].cls);
-        if (sceneLabel) sceneLabel.textContent = SCENES[i].name;
-        return true;
-      };
-      // Freeze on a scene so cycling doesn't race the test harness.
-      window.__fxFreeze = function(name) {
-        for (const s of SCENES) s.dur = 9_999_999;
-        if (name) return window.__fxJump(name);
-        return true;
-      };
-      // Force every scene to a given duration in ms — used by the test harness
-      // to observe many transitions quickly.
-      window.__fxSpeedMs = function(ms) {
-        for (const s of SCENES) s.dur = ms;
-        return true;
-      };
-      window.__fxList = () => SCENES.map(s => s.name);
-      window.__fxBag = () => sceneBag.map(i => SCENES[i].name);
-      window.__fxBagSize = () => sceneBag.length;
+      if (cfg.installDebug) {
+        // Debug hook: jump to any scene by name. Used by the test harness.
+        window.__fxJump = function(name) {
+          const i = SCENES.findIndex(s => s.name === name);
+          if (i < 0) return false;
+          prevBuf.set(buf);
+          hasPrev = true;
+          sceneIdx = i;
+          sceneStart = performance.now();
+          setSceneClass(SCENES[i].cls);
+          if (sceneLabel) sceneLabel.textContent = SCENES[i].name;
+          return true;
+        };
+        // Freeze on a scene so cycling doesn't race the test harness.
+        window.__fxFreeze = function(name) {
+          for (const s of SCENES) s.dur = 9_999_999;
+          if (name) return window.__fxJump(name);
+          return true;
+        };
+        // Force every scene to a given duration in ms — used by the test harness
+        // to observe many transitions quickly.
+        window.__fxSpeedMs = function(ms) {
+          for (const s of SCENES) s.dur = ms;
+          return true;
+        };
+        window.__fxList = () => SCENES.map(s => s.name);
+        window.__fxBag = () => sceneBag.map(i => SCENES[i].name);
+        window.__fxBagSize = () => sceneBag.length;
+      }
 
       if (reducedMotion) {
         // Static: one frame of plasma, no animation loop, ticker stays at top
@@ -4542,7 +4623,7 @@
       }
 
       // Pause when tab hidden to save CPU
-      document.addEventListener('visibilitychange', function() {
+      function onVisibility() {
         if (!running) return;
         if (document.hidden) {
           if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
@@ -4552,6 +4633,22 @@
             rafId = requestAnimationFrame(frame);
           }
         }
+      }
+      document.addEventListener('visibilitychange', onVisibility);
+
+      return { stop: teardown };
+    };
+
+    // Boot the entry-gate FX instance (debug hooks enabled for tests)
+    (function() {
+      if (!document.getElementById('fx-canvas')) return;
+      window.createFxInstance({
+        canvas: document.getElementById('fx-canvas'),
+        ticker: document.getElementById('fx-ticker'),
+        sceneLabel: document.querySelector('.fx-scene'),
+        timerLabel: document.getElementById('fx-timer'),
+        gate: document.getElementById('entry-gate'),
+        installDebug: true
       });
     })();
   </script>
@@ -4590,6 +4687,10 @@
           <div class="menu-item" onclick="openChiptunes()">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
             <span>Chiptunes</span>
+          </div>
+          <div class="menu-item" onclick="openDemoWindow()">
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
+            <span>Demo</span>
           </div>
         </div>
         <div class="menu-column right">
@@ -4690,6 +4791,35 @@
       <div class="browser-content" id="browser-content"></div>
     </div>
 
+    <!-- Demoscene window -->
+    <div class="demo-window hidden" id="demo-window">
+      <div class="vault-titlebar" id="demo-titlebar">
+        <div class="vault-titlebar-controls">
+          <div class="window-btn close" onclick="closeDemoWindow()" title="Close"></div>
+          <div class="window-btn minimize" onclick="minimizeDemoWindow()" title="Minimize"></div>
+          <div class="window-btn maximize" onclick="maximizeDemoWindow()" title="Maximize"></div>
+        </div>
+        <span class="vault-titlebar-title">demo@kd:~/scene</span>
+      </div>
+      <div class="demo-content">
+        <div class="fx-wrap" aria-hidden="true">
+          <div class="fx-header">
+            <span class="fx-tag">KD/HOMEBREW</span>
+            <span class="fx-mid">DEMOSCENE/0x01</span>
+            <span class="fx-fx">FX:<span class="fx-scene" id="demo-fx-scene">PLASMA</span></span>
+          </div>
+          <pre class="fx-canvas fx-plasma" id="demo-fx-canvas"></pre>
+          <div class="fx-ticker-wrap">
+            <pre class="fx-ticker" id="demo-fx-ticker"></pre>
+          </div>
+          <div class="fx-footer">
+            <span class="fx-chan">&gt; bbs/kd ·  node 01</span>
+            <span class="fx-timer" id="demo-fx-timer">T+0.0s</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Windows-style Taskbar -->
     <div class="taskbar">
       <button class="start-button" onclick="toggleStartMenu()">
@@ -4709,6 +4839,10 @@
         <div class="taskbar-item" id="browser-taskbar" onclick="toggleBrowserWindow()" style="display:none">
           <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
           <span id="browser-taskbar-label">Browser</span>
+        </div>
+        <div class="taskbar-item" id="demo-taskbar" onclick="toggleDemoWindow()" style="display:none">
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
+          <span>Demo</span>
         </div>
       </div>
 
@@ -6338,7 +6472,7 @@
 
         // On resize, clamp all positioned windows back into view
         window.addEventListener('resize', () => {
-          document.querySelectorAll('.vault, .music-window, .browser-window').forEach(clampWindowBounds);
+          document.querySelectorAll('.vault, .music-window, .browser-window, .demo-window').forEach(clampWindowBounds);
           if (window._chipSizeCanvas) window._chipSizeCanvas();
         });
 
@@ -6977,6 +7111,143 @@
         titlebar.addEventListener('dblclick', function(e) {
           if (e.target.closest('.window-btn')) return;
           maximizeBrowserWindow();
+        });
+      })();
+    </script>
+
+    <!-- Demoscene window controls -->
+    <script>
+      (function() {
+        var win = document.getElementById('demo-window');
+        var titlebar = document.getElementById('demo-titlebar');
+        var taskbar = document.getElementById('demo-taskbar');
+        var fxInstance = null;
+        var isMax = false;
+        var prevStyles = {};
+
+        if (window.makeDraggable) window.makeDraggable(win, titlebar);
+
+        function recenter() {
+          win.style.left = '';
+          win.style.top = '';
+          win.style.right = '';
+          win.style.bottom = '';
+          win.style.width = '';
+          win.style.height = '';
+          win.style.position = '';
+          win.style.margin = '';
+          win.style.transform = '';
+        }
+
+        function startFx() {
+          if (fxInstance) return;
+          if (typeof window.createFxInstance !== 'function') return;
+          fxInstance = window.createFxInstance({
+            canvas: document.getElementById('demo-fx-canvas'),
+            ticker: document.getElementById('demo-fx-ticker'),
+            sceneLabel: document.getElementById('demo-fx-scene'),
+            timerLabel: document.getElementById('demo-fx-timer')
+          });
+        }
+
+        function stopFx() {
+          if (fxInstance && typeof fxInstance.stop === 'function') fxInstance.stop();
+          fxInstance = null;
+          var canvas = document.getElementById('demo-fx-canvas');
+          if (canvas) canvas.textContent = '';
+          var ticker = document.getElementById('demo-fx-ticker');
+          if (ticker) { ticker.innerHTML = ''; ticker.style.transform = ''; }
+        }
+
+        window.openDemoWindow = function() {
+          if (isMax) { win.classList.remove('maximized'); isMax = false; }
+          recenter();
+          win.classList.remove('hidden');
+          win.style.display = '';
+          win.classList.add('restoring');
+          taskbar.style.display = '';
+          taskbar.classList.remove('minimized');
+          taskbar.classList.add('active');
+          setTimeout(function() { win.classList.remove('restoring'); }, 500);
+          var menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show')) toggleStartMenu();
+          // Start (or restart) the fx instance so the animation is fresh on open
+          stopFx();
+          startFx();
+          if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+            maximizeDemoWindow();
+          }
+        };
+
+        window.closeDemoWindow = function() {
+          win.style.transition = 'opacity 0.3s, transform 0.3s';
+          win.style.opacity = '0';
+          win.style.transform = (win.style.transform || 'translateX(-50%)') + ' scale(0.95)';
+          setTimeout(function() {
+            win.classList.add('hidden');
+            win.style.display = 'none';
+            win.style.opacity = '';
+            win.style.transform = '';
+            win.style.transition = '';
+            taskbar.style.display = 'none';
+            taskbar.classList.remove('active', 'minimized');
+            if (isMax) { win.classList.remove('maximized'); isMax = false; }
+            stopFx();
+          }, 300);
+        };
+
+        window.minimizeDemoWindow = function() {
+          win.classList.add('minimizing');
+          taskbar.classList.add('minimized');
+          taskbar.classList.remove('active');
+          setTimeout(function() {
+            win.style.display = 'none';
+            win.classList.remove('minimizing');
+          }, 500);
+        };
+
+        window.toggleDemoWindow = function() {
+          if (win.classList.contains('hidden')) return;
+          if (win.style.display === 'none' || taskbar.classList.contains('minimized')) {
+            win.style.display = '';
+            win.classList.add('restoring');
+            taskbar.classList.remove('minimized');
+            taskbar.classList.add('active');
+            setTimeout(function() { win.classList.remove('restoring'); }, 500);
+          } else if (taskbar.classList.contains('active')) {
+            minimizeDemoWindow();
+          }
+        };
+
+        window.maximizeDemoWindow = function() {
+          if (!isMax) {
+            prevStyles = {
+              left: win.style.left, top: win.style.top,
+              right: win.style.right, bottom: win.style.bottom,
+              width: win.style.width, height: win.style.height,
+              position: win.style.position,
+              margin: win.style.margin, transform: win.style.transform
+            };
+            win.classList.add('maximized');
+            isMax = true;
+          } else {
+            win.classList.remove('maximized');
+            win.style.left = prevStyles.left || '';
+            win.style.top = prevStyles.top || '';
+            win.style.right = prevStyles.right || '';
+            win.style.bottom = prevStyles.bottom || '';
+            win.style.width = prevStyles.width || '';
+            win.style.height = prevStyles.height || '';
+            win.style.position = prevStyles.position || '';
+            win.style.margin = prevStyles.margin || '';
+            win.style.transform = prevStyles.transform || '';
+            isMax = false;
+          }
+        };
+
+        titlebar.addEventListener('dblclick', function(e) {
+          if (e.target.closest('.window-btn')) return;
+          maximizeDemoWindow();
         });
       })();
     </script>
