@@ -491,7 +491,7 @@
       opacity: 0;
       transform: translateY(100%);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      z-index: 999;
+      z-index: 2000;
       pointer-events: none;
       backdrop-filter: blur(20px);
       overflow: hidden;
@@ -6314,6 +6314,7 @@
             setTimeout(() => {
               vault.classList.remove('restoring');
             }, 500);
+            if (window.bringToFront) window.bringToFront(vault);
           }
           // If window is minimized, restore it
           else if (taskbarItem.classList.contains('minimized')) {
@@ -6325,17 +6326,22 @@
             setTimeout(() => {
               vault.classList.remove('restoring');
             }, 500);
+            if (window.bringToFront) window.bringToFront(vault);
           }
-          // If window is active and visible, minimize it
+          // If visible: focus it if not already focused, otherwise minimize
           else if (taskbarItem.classList.contains('active') && vault.style.display !== 'none') {
-            vault.classList.add('minimizing');
-            taskbarItem.classList.add('minimized');
-            taskbarItem.classList.remove('active');
+            if (window.__focusedWindow !== vault) {
+              window.bringToFront(vault);
+            } else {
+              vault.classList.add('minimizing');
+              taskbarItem.classList.add('minimized');
+              taskbarItem.classList.remove('active');
 
-            setTimeout(() => {
-              vault.style.display = 'none';
-              vault.classList.remove('minimizing');
-            }, 500);
+              setTimeout(() => {
+                vault.style.display = 'none';
+                vault.classList.remove('minimizing');
+              }, 500);
+            }
           }
         };
 
@@ -6393,6 +6399,28 @@
             el.style.top = top + 'px';
           }
         }
+
+        // Shared focus / z-stack helper — brings a window above all others.
+        const WINDOW_SELECTOR = '.vault, .music-window, .browser-window, .demo-window';
+        window.__focusedWindow = null;
+        window.bringToFront = function(el) {
+          if (!el) return;
+          document.querySelectorAll(WINDOW_SELECTOR).forEach(function(w) {
+            if (w !== el) w.style.zIndex = '';
+          });
+          el.style.zIndex = '1005';
+          window.__focusedWindow = el;
+        };
+
+        // Focus any window on mousedown/touchstart so clicking brings it to front.
+        document.addEventListener('mousedown', function(e) {
+          const win = e.target.closest(WINDOW_SELECTOR);
+          if (win) window.bringToFront(win);
+        }, true);
+        document.addEventListener('touchstart', function(e) {
+          const win = e.target.closest(WINDOW_SELECTOR);
+          if (win) window.bringToFront(win);
+        }, { capture: true, passive: true });
 
         window.makeDraggable = function makeDraggable(windowEl, handleEl) {
           let isDragging = false;
@@ -6499,6 +6527,7 @@
               vault.classList.remove('restoring');
             }, 500);
           }
+          if (window.bringToFront) window.bringToFront(vault);
           // Only close start menu if it's open, don't toggle (which would open it)
           const menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) {
@@ -7011,6 +7040,7 @@
           taskbar.classList.remove('minimized');
           taskbar.classList.add('active');
           setTimeout(function() { win.classList.remove('restoring'); }, 500);
+          if (window.bringToFront) window.bringToFront(win);
           var menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) toggleStartMenu();
           // Auto-maximize on mobile / narrow viewports
@@ -7070,8 +7100,13 @@
             taskbar.classList.remove('minimized');
             taskbar.classList.add('active');
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
+            if (window.bringToFront) window.bringToFront(win);
           } else if (taskbar.classList.contains('active')) {
-            minimizeBrowserWindow();
+            if (window.__focusedWindow !== win) {
+              window.bringToFront(win);
+            } else {
+              minimizeBrowserWindow();
+            }
           }
         };
 
@@ -7169,6 +7204,7 @@
           taskbar.classList.remove('minimized');
           taskbar.classList.add('active');
           setTimeout(function() { win.classList.remove('restoring'); }, 500);
+          if (window.bringToFront) window.bringToFront(win);
           var menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) toggleStartMenu();
           // Start (or restart) the fx instance so the animation is fresh on open
@@ -7214,8 +7250,13 @@
             taskbar.classList.remove('minimized');
             taskbar.classList.add('active');
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
+            if (window.bringToFront) window.bringToFront(win);
           } else if (taskbar.classList.contains('active')) {
-            minimizeDemoWindow();
+            if (window.__focusedWindow !== win) {
+              window.bringToFront(win);
+            } else {
+              minimizeDemoWindow();
+            }
           }
         };
 
@@ -7361,6 +7402,7 @@
         chipTaskbar.style.display = '';
         chipTaskbar.classList.remove('minimized');
         chipTaskbar.classList.add('active');
+        if (window.bringToFront) window.bringToFront(win);
         var menu = document.getElementById('startMenu');
         if (menu && menu.classList.contains('show')) toggleStartMenu();
       };
@@ -7403,9 +7445,14 @@
           win.style.display = '';
           chipTaskbar.classList.remove('minimized');
           chipTaskbar.classList.add('active');
+          if (window.bringToFront) window.bringToFront(win);
         } else if (chipTaskbar.classList.contains('active')) {
-          // Minimize
-          minimizeChiptunes();
+          // If visible but not focused, just bring to front; if already focused, minimize
+          if (window.__focusedWindow !== win) {
+            window.bringToFront(win);
+          } else {
+            minimizeChiptunes();
+          }
         }
       };
 
