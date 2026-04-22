@@ -182,7 +182,9 @@
     .vault {
       width: 100%;
       max-width: 1200px;
-      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
       border-radius: 10px;
       box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.7),
@@ -191,6 +193,7 @@
         0 0 120px rgba(0, 255, 150, 0.02);
       padding: 0;
       position: relative;
+      z-index: 2;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
       min-height: 40px;
@@ -794,7 +797,7 @@
       border-left: 1px solid rgba(0, 255, 150, 0.1);
     }
 
-    /* Minimize animation */
+    /* Minimize / restore animations (non-centered windows: .vault, .music-window) */
     @keyframes minimizeToTaskbar {
       0% {
         transform: scale(1) translateY(0);
@@ -809,22 +812,60 @@
 
     @keyframes restoreFromTaskbar {
       0% {
-        transform: scale(0.1) translateY(100vh);
+        transform: scale(0.88) translateY(30px);
         opacity: 0;
+        filter: blur(6px);
+      }
+
+      60% {
+        opacity: 1;
       }
 
       100% {
         transform: scale(1) translateY(0);
         opacity: 1;
+        filter: blur(0);
+      }
+    }
+
+    /* Centered-window variants preserve translateX(-50%) throughout so there's no
+       snap-back when the animation class is removed (used by browser/demo windows). */
+    @keyframes minimizeToTaskbarCentered {
+      0% {
+        transform: translateX(-50%) scale(1) translateY(0);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateX(-50%) scale(0.1) translateY(100vh);
+        opacity: 0;
+      }
+    }
+
+    @keyframes restoreFromTaskbarCentered {
+      0% {
+        transform: translateX(-50%) scale(0.88) translateY(30px);
+        opacity: 0;
+        filter: blur(6px);
+      }
+
+      60% {
+        opacity: 1;
+      }
+
+      100% {
+        transform: translateX(-50%) scale(1) translateY(0);
+        opacity: 1;
+        filter: blur(0);
       }
     }
 
     .vault.minimizing {
-      animation: minimizeToTaskbar 0.5s ease-in-out forwards;
+      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
     }
 
     .vault.restoring {
-      animation: restoreFromTaskbar 0.5s ease-in-out forwards;
+      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
     .flicker {
@@ -1419,7 +1460,9 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 255, 150, 0.04);
     }
 
@@ -1719,7 +1762,9 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.7),
         inset 0 1px 0 rgba(255, 255, 255, 0.02),
@@ -1749,11 +1794,24 @@
     }
 
     .browser-window.minimizing {
-      animation: minimizeToTaskbar 0.5s ease-in-out forwards;
+      animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
     }
 
     .browser-window.restoring {
-      animation: restoreFromTaskbar 0.5s ease-in-out forwards;
+      animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* When the window has been dragged or maximized, translateX(-50%) is no
+       longer its natural resting transform, so use the non-centered keyframes
+       to avoid an unwanted horizontal shift. */
+    .browser-window.dragged.minimizing,
+    .browser-window.maximized.minimizing {
+      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
+    }
+
+    .browser-window.dragged.restoring,
+    .browser-window.maximized.restoring {
+      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
     }
 
     .browser-toolbar {
@@ -1843,7 +1901,9 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, var(--panel), #031018 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.7),
         inset 0 1px 0 rgba(255, 255, 255, 0.02),
@@ -1869,8 +1929,12 @@
       margin: 0 !important;
     }
 
-    .demo-window.minimizing { animation: minimizeToTaskbar 0.5s ease-in-out forwards; }
-    .demo-window.restoring  { animation: restoreFromTaskbar 0.5s ease-in-out forwards; }
+    .demo-window.minimizing { animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) forwards; }
+    .demo-window.restoring  { animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .demo-window.dragged.minimizing,
+    .demo-window.maximized.minimizing { animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards; }
+    .demo-window.dragged.restoring,
+    .demo-window.maximized.restoring  { animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 
     .demo-content {
       padding: 14px;
