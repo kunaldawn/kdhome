@@ -182,7 +182,7 @@
     .vault {
       width: 100%;
       max-width: 1200px;
-      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
       backdrop-filter: blur(12px) saturate(1.3);
       -webkit-backdrop-filter: blur(12px) saturate(1.3);
       border-radius: 10px;
@@ -861,11 +861,11 @@
     }
 
     .vault.minimizing {
-      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
+      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) both;
     }
 
     .vault.restoring {
-      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .flicker {
@@ -1460,7 +1460,7 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
       backdrop-filter: blur(12px) saturate(1.3);
       -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 255, 150, 0.04);
@@ -1762,7 +1762,7 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
       backdrop-filter: blur(12px) saturate(1.3);
       -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow:
@@ -1794,11 +1794,11 @@
     }
 
     .browser-window.minimizing {
-      animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
+      animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) both;
     }
 
     .browser-window.restoring {
-      animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     /* When the window has been dragged or maximized, translateX(-50%) is no
@@ -1806,12 +1806,12 @@
        to avoid an unwanted horizontal shift. */
     .browser-window.dragged.minimizing,
     .browser-window.maximized.minimizing {
-      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards;
+      animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) both;
     }
 
     .browser-window.dragged.restoring,
     .browser-window.maximized.restoring {
-      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .browser-toolbar {
@@ -1901,7 +1901,7 @@
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(0, 255, 150, 0.15);
-      background: linear-gradient(180deg, rgba(7, 24, 35, 0.55), rgba(3, 16, 24, 0.65) 140%);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
       backdrop-filter: blur(12px) saturate(1.3);
       -webkit-backdrop-filter: blur(12px) saturate(1.3);
       box-shadow:
@@ -1929,12 +1929,12 @@
       margin: 0 !important;
     }
 
-    .demo-window.minimizing { animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) forwards; }
-    .demo-window.restoring  { animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .demo-window.minimizing { animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) both; }
+    .demo-window.restoring  { animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
     .demo-window.dragged.minimizing,
-    .demo-window.maximized.minimizing { animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) forwards; }
+    .demo-window.maximized.minimizing { animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) both; }
     .demo-window.dragged.restoring,
-    .demo-window.maximized.restoring  { animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .demo-window.maximized.restoring  { animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
     .demo-content {
       padding: 14px;
