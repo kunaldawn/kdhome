@@ -7908,18 +7908,46 @@
           vizCtx.clearRect(0, 0, cw, ch);
 
           if (mode === 'SCOPE') {
-            // ─── Oscilloscope ───
+            // ─── Oscilloscope — bass thickens the trace, mid shifts hue, glow fills below ───
             analyser.getByteTimeDomainData(waveData);
-            vizCtx.beginPath();
-            vizCtx.strokeStyle = '#00ff99';
-            vizCtx.lineWidth = 1.5 * dpr;
-            vizCtx.shadowColor = '#00ff99'; vizCtx.shadowBlur = 4;
+            analyser.getByteFrequencyData(freqData);
+            var bass = 0, mid = 0, high = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
+            for (var i = 40; i < freqData.length; i++) high += freqData[i]; high /= (freqData.length - 40) * 255;
+            var peak = 0;
+            for (var i = 0; i < waveData.length; i++) {
+              var v = Math.abs(waveData[i] - 128) / 128;
+              if (v > peak) peak = v;
+            }
+            var hue = (140 + mid * 140) % 360;
             var sliceW = cw / waveData.length;
+            // Filled envelope under the trace pulses with peak amplitude
+            var grad = vizCtx.createLinearGradient(0, ch * 0.25, 0, ch * 0.75);
+            grad.addColorStop(0, 'hsla(' + hue + ',100%,60%,0)');
+            grad.addColorStop(0.5, 'hsla(' + hue + ',100%,60%,' + (0.1 + peak * 0.35) + ')');
+            grad.addColorStop(1, 'hsla(' + hue + ',100%,60%,0)');
+            vizCtx.beginPath();
+            vizCtx.moveTo(0, ch / 2);
+            for (var i = 0; i < waveData.length; i++) {
+              vizCtx.lineTo(i * sliceW, (waveData[i] / 128.0) * ch / 2);
+            }
+            vizCtx.lineTo(cw, ch / 2);
+            vizCtx.closePath();
+            vizCtx.fillStyle = grad;
+            vizCtx.fill();
+            // Main scope line
+            vizCtx.beginPath();
             for (var i = 0; i < waveData.length; i++) {
               var y = (waveData[i] / 128.0) * ch / 2;
               i === 0 ? vizCtx.moveTo(0, y) : vizCtx.lineTo(i * sliceW, y);
             }
-            vizCtx.stroke(); vizCtx.shadowBlur = 0;
+            vizCtx.strokeStyle = 'hsl(' + hue + ',100%,' + (55 + peak * 20) + '%)';
+            vizCtx.lineWidth = (1.5 + bass * 4 + peak * 2) * dpr;
+            vizCtx.shadowColor = 'hsl(' + hue + ',100%,60%)';
+            vizCtx.shadowBlur = 6 + bass * 20 + high * 8;
+            vizCtx.stroke();
+            vizCtx.shadowBlur = 0;
 
           } else if (mode === 'MIRROR') {
             // ─── Mirrored spectrum ───
@@ -7934,38 +7962,107 @@
             }
 
           } else if (mode === 'DOTS') {
-            // ─── Dot scatter ───
+            // ─── Dot scatter — per-bin hue, bass-scaled dots, connection polyline + mirror ───
             analyser.getByteFrequencyData(freqData);
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            // Connecting polyline between active bins (draws the shape of the spectrum)
+            vizCtx.beginPath();
+            var started = false;
             for (var i = 0; i < freqData.length; i++) {
               var val = freqData[i] / 255;
               if (val < 0.05) continue;
+              var x = (i / freqData.length) * cw;
+              var y = ch - val * ch;
+              started ? vizCtx.lineTo(x, y) : vizCtx.moveTo(x, y);
+              started = true;
+            }
+            vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.15 + bass * 0.3) + ')';
+            vizCtx.lineWidth = (1 + bass * 1.5) * dpr;
+            vizCtx.stroke();
+            // Dots + mirrored reflection
+            for (var i = 0; i < freqData.length; i++) {
+              var val = freqData[i] / 255;
+              if (val < 0.05) continue;
+              var p = i / freqData.length;
+              var hue = (120 + p * 200) % 360; // green → cyan → blue → magenta across spectrum
+              var x = p * cw;
+              var y = ch - val * ch;
+              var r = (1.5 + val * 4 + bass * 2) * dpr;
+              // Glow halo
               vizCtx.beginPath();
-              vizCtx.arc((i / freqData.length) * cw, ch - val * ch, (1 + val * 2.5) * dpr, 0, 6.28);
-              vizCtx.fillStyle = 'rgba(0,255,153,' + (0.2 + val * 0.8) + ')';
+              vizCtx.arc(x, y, r * 2.2, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + hue + ',100%,65%,' + (val * 0.18) + ')';
+              vizCtx.fill();
+              // Core dot
+              vizCtx.beginPath();
+              vizCtx.arc(x, y, r, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + hue + ',100%,70%,' + (0.4 + val * 0.6) + ')';
+              vizCtx.fill();
+              // Mirror reflection at bottom edge
+              vizCtx.beginPath();
+              vizCtx.arc(x, ch - val * ch * 0.25, r * 0.55, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + hue + ',100%,60%,' + (val * 0.25) + ')';
               vizCtx.fill();
             }
 
           } else if (mode === 'RING') {
-            // ─── Radial frequency ring ───
+            // ─── Radial frequency rings — 3 concentric rings, bass-reactive spokes, pulsing core ───
             analyser.getByteFrequencyData(freqData);
-            var cx = cw / 2, cy = ch / 2, baseR = ch * 0.25;
-            var segs = 48, step = Math.floor(freqData.length / segs);
-            vizCtx.beginPath();
-            for (var i = 0; i <= segs; i++) {
-              var val = freqData[Math.min(i * step, freqData.length - 1)] / 255;
-              var angle = (i / segs) * Math.PI * 2 - Math.PI / 2;
-              var r = baseR + val * ch * 0.25;
-              var x = cx + Math.cos(angle) * r;
-              var y = cy + Math.sin(angle) * r;
-              i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+            analyser.getByteTimeDomainData(waveData);
+            var bass = 0, mid = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
+            var cx = cw / 2, cy = ch / 2;
+            var minR = Math.min(cx, cy);
+            var nowT = performance.now() * 0.001;
+            // 3 concentric freq rings, counter-rotating, each hue-shifted
+            for (var k = 0; k < 3; k++) {
+              var baseR = minR * (0.20 + k * 0.22) * (1 + bass * 0.3);
+              var segs = 72, step = Math.max(1, Math.floor(freqData.length / segs));
+              vizCtx.beginPath();
+              for (var i = 0; i <= segs; i++) {
+                var p = i / segs;
+                var val = freqData[Math.min(i * step, freqData.length - 1)] / 255;
+                var wv = waveData[Math.floor(p * (waveData.length - 1))] / 128.0 - 1;
+                var angle = p * Math.PI * 2 - Math.PI / 2 + nowT * (k % 2 === 0 ? 0.4 : -0.5);
+                var r = baseR + val * minR * 0.35 + wv * (8 + k * 6);
+                var x = cx + Math.cos(angle) * r;
+                var y = cy + Math.sin(angle) * r;
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.closePath();
+              var hue = (140 + k * 60 + nowT * 40) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + bass * 15) + '%,' + (0.55 + bass * 0.35) + ')';
+              vizCtx.lineWidth = (1.5 + bass * 3.5 + k * 0.4) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.7)';
+              vizCtx.shadowBlur = 6 + bass * 20;
+              vizCtx.stroke();
             }
-            vizCtx.closePath();
-            vizCtx.strokeStyle = '#00ff99'; vizCtx.lineWidth = 1.5 * dpr;
-            vizCtx.shadowColor = '#00ff99'; vizCtx.shadowBlur = 6;
-            vizCtx.stroke(); vizCtx.shadowBlur = 0;
-            // Center dot
-            vizCtx.beginPath(); vizCtx.arc(cx, cy, 2 * dpr, 0, 6.28);
-            vizCtx.fillStyle = 'rgba(0,255,153,0.5)'; vizCtx.fill();
+            vizCtx.shadowBlur = 0;
+            // Radial spokes on bass (fade in above a threshold)
+            if (bass > 0.08) {
+              var spokes = 12;
+              for (var i = 0; i < spokes; i++) {
+                var angle = (i / spokes) * Math.PI * 2 + nowT * 0.6;
+                var innerR = minR * 0.12;
+                var outerR = minR * (0.85 + bass * 0.15);
+                vizCtx.strokeStyle = 'rgba(0,255,180,' + (bass * 0.5) + ')';
+                vizCtx.lineWidth = (1 + bass * 2.5) * dpr;
+                vizCtx.beginPath();
+                vizCtx.moveTo(cx + Math.cos(angle) * innerR, cy + Math.sin(angle) * innerR);
+                vizCtx.lineTo(cx + Math.cos(angle) * outerR, cy + Math.sin(angle) * outerR);
+                vizCtx.stroke();
+              }
+            }
+            // Pulsing center glow
+            var coreR = (12 + bass * 40 + mid * 18) * dpr;
+            var cgrad = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+            cgrad.addColorStop(0, 'rgba(180,255,220,' + (0.5 + bass * 0.5) + ')');
+            cgrad.addColorStop(0.5, 'rgba(0,255,170,' + (0.25 + bass * 0.3) + ')');
+            cgrad.addColorStop(1, 'rgba(0,255,153,0)');
+            vizCtx.fillStyle = cgrad;
+            vizCtx.fillRect(cx - coreR, cy - coreR, coreR * 2, coreR * 2);
 
           } else if (mode === 'FLAME') {
             // ─── Flame / heat bars rising ───
@@ -8043,58 +8140,85 @@
             }
 
           } else if (mode === 'STARS') {
-            // ─── Starfield warp — bass punches the warp speed, stars draw a short trail ───
+            // ─── Hyperspace warp — bass punches speed/size, beats flash warm, center bursts on bass ───
             analyser.getByteFrequencyData(freqData);
-            var avg = 0, bass = 0;
+            var avg = 0, bass = 0, mid = 0;
             for (var i = 0; i < freqData.length; i++) avg += freqData[i];
             avg = avg / freqData.length / 255;
-            for (var i = 0; i < 8; i++) bass += freqData[i];
-            bass = bass / 8 / 255;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
             var cx = cw / 2, cy = ch / 2;
             var t = performance.now() / 50;
-            var count = 160;
-            var speed = 0.3 + avg * 2 + bass * 2.5;
+            var count = 220;
+            // Bass slams the warp speed dramatically; avg lifts the floor.
+            var speed = 0.25 + avg * 2.2 + bass * 6.0;
+            var reach = Math.max(cw, ch) * 0.85;
+            // Bass-reactive center burst (subtle at idle, punchy on beat)
+            if (bass > 0.05) {
+              var cg = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, 40 + bass * 120);
+              cg.addColorStop(0, 'hsla(' + (45 - bass * 15) + ',100%,70%,' + (bass * 0.45) + ')');
+              cg.addColorStop(1, 'hsla(' + (45 - bass * 15) + ',100%,60%,0)');
+              vizCtx.fillStyle = cg;
+              vizCtx.fillRect(0, 0, cw, ch);
+            }
+            // Star color shifts cool→warm with bass (white → warm amber on beat)
+            var starHue = 180 - bass * 135;       // 180 (ice) → 45 (amber)
+            var starSat = Math.min(100, bass * 120);
             for (var i = 0; i < count; i++) {
               var seed = i * 127.1 + 311.7;
               var angle = (seed * 2.31) % (Math.PI * 2);
               var dist = ((t * speed + seed * 0.7) % 1.0);
-              var reach = Math.max(cw, ch) * 0.75;
               var x = cx + Math.cos(angle) * dist * reach;
               var y = cy + Math.sin(angle) * dist * reach;
-              // Trail from previous frame position gives motion direction.
-              var prev = Math.max(0, dist - 0.04 - bass * 0.05);
+              // Trail length scales with dist + bass for big motion-blur stripes on beats
+              var prev = Math.max(0, dist - 0.035 - bass * 0.11 - mid * 0.03);
               var px = cx + Math.cos(angle) * prev * reach;
               var py = cy + Math.sin(angle) * prev * reach;
-              var r = (0.6 + dist * 3 + bass * 1.5) * dpr;
-              var a = Math.min(1, dist * (0.5 + avg * 0.8 + bass * 0.6));
-              vizCtx.strokeStyle = 'rgba(200,255,220,' + (a * 0.5) + ')';
-              vizCtx.lineWidth = r * 0.7;
+              var r = (0.6 + dist * 3.2 + bass * 3.5) * dpr;
+              var a = Math.min(1, dist * (0.5 + avg * 0.9 + bass * 0.9));
+              // Streak line (thicker + warmer on bass)
+              vizCtx.strokeStyle = 'hsla(' + starHue + ',' + starSat + '%,' + (70 + bass * 20) + '%,' + (a * 0.55) + ')';
+              vizCtx.lineWidth = r * (0.65 + bass * 0.8);
               vizCtx.beginPath(); vizCtx.moveTo(px, py); vizCtx.lineTo(x, y); vizCtx.stroke();
-              vizCtx.fillStyle = 'rgba(255,255,255,' + a + ')';
+              // Bright head (core) of the star
+              vizCtx.fillStyle = 'hsla(' + starHue + ',' + starSat + '%,' + (85 + bass * 10) + '%,' + a + ')';
               vizCtx.beginPath(); vizCtx.arc(x, y, r, 0, 6.28); vizCtx.fill();
             }
 
           } else if (mode === 'WAVE3D') {
-            // ─── Layered sine waves ───
+            // ─── Layered sine waves — each layer locked to a different frequency band ───
             analyser.getByteFrequencyData(freqData);
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
             var t = performance.now() / 300;
-            var layers = 5;
+            var layers = 7;
             for (var l = 0; l < layers; l++) {
-              var a = 0.15 + (l / layers) * 0.35;
+              var layerP = l / (layers - 1);
+              // Each layer reads a different band of the spectrum (low → high)
+              var bandStart = Math.floor(layerP * freqData.length * 0.55);
+              var bandEnd = Math.min(freqData.length, bandStart + 10);
+              var bandSum = 0;
+              for (var j = bandStart; j < bandEnd; j++) bandSum += freqData[j];
+              var bandAvg = bandSum / (bandEnd - bandStart) / 255;
+              var hue = (120 + l * 25) % 360;
               vizCtx.beginPath();
-              vizCtx.strokeStyle = 'rgba(0,255,153,' + a + ')';
-              vizCtx.lineWidth = (1 + l * 0.3) * dpr;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + bandAvg * 25) + '%,' + (0.35 + bandAvg * 0.45) + ')';
+              vizCtx.lineWidth = (1 + l * 0.35 + bass * 2.2) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.6)';
+              vizCtx.shadowBlur = 3 + bass * 12;
               for (var x = 0; x <= cw; x += 2 * dpr) {
                 var p = x / cw;
                 var idx = Math.floor(p * (freqData.length - 1));
                 var val = freqData[idx] / 255;
-                var freq = 2 + l;
-                var amp = ch * 0.15 * (1 + val * 1.5);
-                var y = ch / 2 + Math.sin(p * Math.PI * freq + t + l * 0.8) * amp * (0.5 + l / layers * 0.5);
+                var freq = 2 + l * 0.6;
+                // Amplitude: tiny base + layer band + peak bin + bass punch
+                var amp = ch * (0.04 + bandAvg * 0.18 + val * 0.16 + bass * 0.10);
+                var y = ch / 2 + Math.sin(p * Math.PI * freq + t + l * 0.7) * amp * (0.5 + l / layers * 0.5);
                 x === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
               vizCtx.stroke();
             }
+            vizCtx.shadowBlur = 0;
 
           } else if (mode === 'PIXEL') {
             // ─── Pixel art blocks ───
@@ -8112,25 +8236,34 @@
             }
 
           } else if (mode === 'SINE') {
-            // ─── Dual sine interference ───
+            // ─── Dual sine interference — 4 hue-shifted passes, bass drives amplitude + glow ───
             analyser.getByteTimeDomainData(waveData);
             analyser.getByteFrequencyData(freqData);
-            var avg = 0;
-            for (var i = 0; i < 32; i++) avg += freqData[i];
-            avg = avg / 32 / 255;
+            var bass = 0, mid = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
             var t = performance.now() / 200;
-            for (var pass = 0; pass < 2; pass++) {
+            var passes = 4;
+            for (var pass = 0; pass < passes; pass++) {
+              var hue = (140 + pass * 50 + performance.now() * 0.03) % 360;
               vizCtx.beginPath();
-              vizCtx.strokeStyle = pass === 0 ? 'rgba(0,255,153,0.6)' : 'rgba(0,200,255,0.4)';
-              vizCtx.lineWidth = 1.5 * dpr;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,65%,' + (0.4 + bass * 0.4) + ')';
+              vizCtx.lineWidth = (1.2 + bass * 3 + pass * 0.3) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.6)';
+              vizCtx.shadowBlur = 4 + bass * 16;
+              var phase = pass * Math.PI / 2;
               for (var x = 0; x <= cw; x += 2 * dpr) {
                 var p = x / cw;
                 var w = waveData[Math.floor(p * (waveData.length - 1))] / 128.0 - 1;
-                var y = ch / 2 + w * ch * 0.3 + Math.sin(p * 8 + t + pass * 2) * ch * 0.08 * avg;
+                // Waveform deflection scales with bass; mid drives the ripple frequency + magnitude.
+                var y = ch / 2
+                      + w * ch * (0.22 + bass * 0.28)
+                      + Math.sin(p * (6 + mid * 14) + t + phase) * ch * (0.05 + mid * 0.14);
                 x === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
               vizCtx.stroke();
             }
+            vizCtx.shadowBlur = 0;
 
           } else if (mode === 'HEX') {
             // ─── Hex grid pulsing ───
