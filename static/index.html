@@ -548,11 +548,12 @@
       left: 0;
       width: 400px;
       max-width: 90vw;
-      background: linear-gradient(180deg, rgba(0, 20, 15, 0.98), rgba(0, 0, 0, 0.99));
+      /* Glassy: low-alpha tint so the backdrop blur actually shows the matrix/grid through. */
+      background: linear-gradient(180deg, rgba(0, 20, 15, 0.48), rgba(0, 0, 0, 0.58));
       border: 1px solid rgba(0, 255, 150, 0.4);
       border-radius: 8px 8px 0 0;
       box-shadow:
-        0 -10px 40px rgba(0, 0, 0, 0.8),
+        0 -10px 40px rgba(0, 0, 0, 0.6),
         0 0 60px rgba(0, 255, 150, 0.1),
         inset 0 0 30px rgba(0, 255, 150, 0.05);
       opacity: 0;
@@ -560,7 +561,8 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       z-index: 2000;
       pointer-events: none;
-      backdrop-filter: blur(20px);
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
       overflow: hidden;
     }
 
@@ -758,14 +760,16 @@
       left: 0;
       right: 0;
       height: 44px;
-      background: linear-gradient(180deg, rgba(0, 30, 20, 0.92), rgba(0, 5, 3, 0.98));
+      /* Glassy: low-alpha tint + heavy backdrop blur lets the matrix/grid bleed through. */
+      background: linear-gradient(180deg, rgba(0, 30, 20, 0.42), rgba(0, 5, 3, 0.52));
       border-top: 1px solid rgba(0, 255, 150, 0.2);
       display: flex;
       align-items: center;
       padding: 0 12px;
       /* Above any window, including one focused via bringToFront (z-index 1005). */
       z-index: 5000;
-      backdrop-filter: blur(16px) saturate(1.5);
+      backdrop-filter: blur(18px) saturate(1.5);
+      -webkit-backdrop-filter: blur(18px) saturate(1.5);
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
     }
 
