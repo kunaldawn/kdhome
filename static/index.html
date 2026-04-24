@@ -8000,58 +8000,78 @@
             }
 
           } else if (mode === 'HELIX') {
-            // ─── DNA double helix ───
+            // ─── DNA double helix — amplitude driven dominantly by the spectrum ───
             analyser.getByteFrequencyData(freqData);
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
             var t = performance.now() / 400;
-            var segs = 40;
-            vizCtx.lineWidth = 1.5 * dpr;
+            var segs = 64;
             for (var strand = 0; strand < 2; strand++) {
               vizCtx.beginPath();
-              vizCtx.strokeStyle = strand === 0 ? 'rgba(0,255,153,0.7)' : 'rgba(0,180,100,0.5)';
+              vizCtx.strokeStyle = strand === 0 ? 'rgba(0,255,153,' + (0.75 + bass * 0.25) + ')' : 'rgba(80,200,255,' + (0.6 + bass * 0.3) + ')';
+              vizCtx.lineWidth = (2 + bass * 3.5) * dpr;
+              vizCtx.shadowColor = strand === 0 ? '#00ff99' : '#50c8ff';
+              vizCtx.shadowBlur = 8 + bass * 16;
               for (var i = 0; i <= segs; i++) {
                 var p = i / segs;
                 var idx = Math.floor(p * (freqData.length - 1));
                 var val = freqData[idx] / 255;
                 var x = p * cw;
-                var wave = Math.sin(p * Math.PI * 4 + t + strand * Math.PI) * (ch * 0.3 + val * ch * 0.15);
+                // Audio dominates: only 10% base amplitude, the rest (up to 40%) is freq-driven.
+                var amp = ch * (0.10 + val * 0.40 + bass * 0.10);
+                var wave = Math.sin(p * Math.PI * 4 + t + strand * Math.PI) * amp;
                 var y = ch / 2 + wave;
                 i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
               vizCtx.stroke();
             }
-            // Cross-links
-            for (var i = 0; i < 12; i++) {
-              var p = (i + 0.5) / 12;
+            vizCtx.shadowBlur = 0;
+            // Cross-links pulse with the spectrum under each rung
+            for (var i = 0; i < 16; i++) {
+              var p = (i + 0.5) / 16;
               var idx = Math.floor(p * (freqData.length - 1));
               var val = freqData[idx] / 255;
-              if (val < 0.1) continue;
+              if (val < 0.08) continue;
               var x = p * cw;
-              var y1 = ch / 2 + Math.sin(p * Math.PI * 4 + t) * ch * 0.3;
-              var y2 = ch / 2 + Math.sin(p * Math.PI * 4 + t + Math.PI) * ch * 0.3;
-              vizCtx.strokeStyle = 'rgba(0,255,153,' + (val * 0.4) + ')';
+              var amp = ch * (0.10 + val * 0.40 + bass * 0.10);
+              var y1 = ch / 2 + Math.sin(p * Math.PI * 4 + t) * amp;
+              var y2 = ch / 2 + Math.sin(p * Math.PI * 4 + t + Math.PI) * amp;
+              vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.2 + val * 0.6) + ')';
+              vizCtx.lineWidth = (1 + val * 2) * dpr;
               vizCtx.beginPath(); vizCtx.moveTo(x, y1); vizCtx.lineTo(x, y2); vizCtx.stroke();
             }
 
           } else if (mode === 'STARS') {
-            // ─── Starfield warp ───
+            // ─── Starfield warp — bass punches the warp speed, stars draw a short trail ───
             analyser.getByteFrequencyData(freqData);
-            var avg = 0;
+            var avg = 0, bass = 0;
             for (var i = 0; i < freqData.length; i++) avg += freqData[i];
             avg = avg / freqData.length / 255;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
             var cx = cw / 2, cy = ch / 2;
             var t = performance.now() / 50;
-            var count = 60;
+            var count = 160;
+            var speed = 0.3 + avg * 2 + bass * 2.5;
             for (var i = 0; i < count; i++) {
               var seed = i * 127.1 + 311.7;
               var angle = (seed * 2.31) % (Math.PI * 2);
-              var speed = 0.3 + avg * 2;
               var dist = ((t * speed + seed * 0.7) % 1.0);
-              var x = cx + Math.cos(angle) * dist * cw * 0.6;
-              var y = cy + Math.sin(angle) * dist * ch * 0.6;
-              var r = (0.5 + dist * 2) * dpr;
-              var a = dist * (0.3 + avg * 0.7);
-              vizCtx.beginPath(); vizCtx.arc(x, y, r, 0, 6.28);
-              vizCtx.fillStyle = 'rgba(0,255,153,' + a + ')'; vizCtx.fill();
+              var reach = Math.max(cw, ch) * 0.75;
+              var x = cx + Math.cos(angle) * dist * reach;
+              var y = cy + Math.sin(angle) * dist * reach;
+              // Trail from previous frame position gives motion direction.
+              var prev = Math.max(0, dist - 0.04 - bass * 0.05);
+              var px = cx + Math.cos(angle) * prev * reach;
+              var py = cy + Math.sin(angle) * prev * reach;
+              var r = (0.6 + dist * 3 + bass * 1.5) * dpr;
+              var a = Math.min(1, dist * (0.5 + avg * 0.8 + bass * 0.6));
+              vizCtx.strokeStyle = 'rgba(200,255,220,' + (a * 0.5) + ')';
+              vizCtx.lineWidth = r * 0.7;
+              vizCtx.beginPath(); vizCtx.moveTo(px, py); vizCtx.lineTo(x, y); vizCtx.stroke();
+              vizCtx.fillStyle = 'rgba(255,255,255,' + a + ')';
+              vizCtx.beginPath(); vizCtx.arc(x, y, r, 0, 6.28); vizCtx.fill();
             }
 
           } else if (mode === 'WAVE3D') {
@@ -8169,34 +8189,52 @@
             }
 
           } else if (mode === 'PLASMA') {
-            // ─── Milkdrop: Reactive plasma field ───
+            // ─── Reactive plasma field — full-spectrum HSV palette, strong audio coupling ───
             analyser.getByteFrequencyData(freqData);
             mdFrame++;
             var t = mdFrame * 0.03;
-            var avg = 0;
+            var bass = 0, avg = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
             for (var i = 0; i < 32; i++) avg += freqData[i];
             avg = avg / 32 / 255;
-            var step = Math.max(4, Math.floor(6 * dpr));
+            var step = Math.max(3, Math.floor(5 * dpr));
             var imgData = vizCtx.createImageData(cw, ch);
             var d = imgData.data;
+            var hueBase = (mdFrame * 0.8) % 360;
             for (var py = 0; py < ch; py += step) {
               for (var px = 0; px < cw; px += step) {
                 var nx = px / cw, ny = py / ch;
                 var freqIdx = Math.floor(nx * (freqData.length - 1));
                 var val = freqData[freqIdx] / 255;
-                var v1 = Math.sin(nx * 6 + t);
-                var v2 = Math.sin(ny * 8 - t * 1.3 + val * 3);
-                var v3 = Math.sin((nx + ny) * 4 + t * 0.7);
-                var v4 = Math.sin(Math.sqrt((nx - 0.5) * (nx - 0.5) + (ny - 0.5) * (ny - 0.5)) * 12 - t * 2);
-                var v = (v1 + v2 + v3 + v4) / 4;
-                var intensity = (v * 0.5 + 0.5) * (0.4 + val * 0.6 + avg * 0.3);
-                var rr = Math.floor(intensity * 30);
-                var gg = Math.floor(intensity * 255);
-                var bb = Math.floor(intensity * 150);
+                // Animate plasma faster on bass hit.
+                var ta = t * (1 + bass * 1.5);
+                var v1 = Math.sin(nx * 6 + ta);
+                var v2 = Math.sin(ny * 8 - ta * 1.3 + val * 4);
+                var v3 = Math.sin((nx + ny) * 4 + ta * 0.7);
+                var dx = nx - 0.5, dy = ny - 0.5;
+                var v4 = Math.sin(Math.sqrt(dx * dx + dy * dy) * (10 + bass * 12) - ta * 2);
+                var v = (v1 + v2 + v3 + v4) / 4; // -1..1
+                // Intensity: baseline 0.35, plus strong audio response.
+                var intensity = Math.min(1, (v * 0.5 + 0.5) * (0.55 + val * 0.8 + avg * 0.4 + bass * 0.3));
+                // HSV → RGB: hue cycles with plasma value + global rotation.
+                var hue = (hueBase + (v * 0.5 + 0.5) * 180 + val * 60) % 360;
+                var h6 = hue / 60;
+                var c = intensity; // saturation 1
+                var xcol = c * (1 - Math.abs((h6 % 2) - 1));
+                var rr, gg, bb;
+                if (h6 < 1)      { rr = c; gg = xcol; bb = 0; }
+                else if (h6 < 2) { rr = xcol; gg = c; bb = 0; }
+                else if (h6 < 3) { rr = 0; gg = c; bb = xcol; }
+                else if (h6 < 4) { rr = 0; gg = xcol; bb = c; }
+                else if (h6 < 5) { rr = xcol; gg = 0; bb = c; }
+                else             { rr = c; gg = 0; bb = xcol; }
+                rr = Math.floor(rr * 255); gg = Math.floor(gg * 255); bb = Math.floor(bb * 255);
+                var alpha = Math.floor(Math.min(255, intensity * 255));
                 for (var sy = 0; sy < step && py + sy < ch; sy++) {
                   for (var sx = 0; sx < step && px + sx < cw; sx++) {
                     var idx = ((py + sy) * cw + (px + sx)) * 4;
-                    d[idx] = rr; d[idx + 1] = gg; d[idx + 2] = bb; d[idx + 3] = Math.floor(intensity * 200);
+                    d[idx] = rr; d[idx + 1] = gg; d[idx + 2] = bb; d[idx + 3] = alpha;
                   }
                 }
               }
@@ -8204,49 +8242,55 @@
             vizCtx.putImageData(imgData, 0, 0);
 
           } else if (mode === 'KALEIDO') {
-            // ─── Milkdrop: Kaleidoscope symmetry ───
+            // ─── Kaleidoscope symmetry — twice as many slices, full-reach arms, bass-thick strokes ───
             analyser.getByteFrequencyData(freqData);
             analyser.getByteTimeDomainData(waveData);
             mdFrame++;
             var cx = cw / 2, cy = ch / 2;
-            var t = mdFrame * 0.015;
-            var slices = 8;
-            var avg = 0;
+            var t = mdFrame * 0.02;
+            var slices = 12;
+            var avg = 0, bass = 0;
             for (var i = 0; i < 16; i++) avg += freqData[i];
             avg = avg / 16 / 255;
-            // Fade trail
-            vizCtx.fillStyle = 'rgba(0,0,0,0.08)';
+            for (var i = 0; i < 8; i++) bass += freqData[i];
+            bass = bass / 8 / 255;
+            // Fade trail — slightly stronger so old strokes clear sooner when music gets loud
+            vizCtx.fillStyle = 'rgba(0,0,0,' + (0.06 + bass * 0.06) + ')';
             vizCtx.fillRect(0, 0, cw, ch);
             vizCtx.save();
             vizCtx.translate(cx, cy);
+            var reach = Math.min(cx, cy);
             for (var s = 0; s < slices; s++) {
               vizCtx.save();
               vizCtx.rotate((s / slices) * Math.PI * 2);
               if (s % 2 === 1) vizCtx.scale(1, -1);
-              // Draw reactive curves
               vizCtx.beginPath();
-              var pts = 32;
+              var pts = 48;
               for (var i = 0; i <= pts; i++) {
                 var p = i / pts;
                 var freqIdx = Math.floor(p * (freqData.length / 2));
                 var val = freqData[freqIdx] / 255;
                 var wv = (waveData[Math.floor(p * waveData.length)] / 128.0 - 1);
-                var r = 20 + p * Math.min(cx, cy) * 0.8;
-                var angle = p * Math.PI * 0.5 + wv * 0.3 + val * 0.5;
-                var x = Math.cos(angle + t) * r * (0.8 + val * 0.4);
-                var y = Math.sin(angle + t) * r * (0.8 + val * 0.4);
+                // Full-reach arms: grow from 10% to 110% of min dim (extends past edge).
+                var r = reach * (0.1 + p * 1.0) * (0.85 + val * 0.45 + bass * 0.15);
+                var angle = p * Math.PI * 0.5 + wv * 0.35 + val * 0.6;
+                var x = Math.cos(angle + t) * r;
+                var y = Math.sin(angle + t) * r;
                 i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
-              var hue = (140 + s * 20 + mdFrame * 0.3) % 360;
-              vizCtx.strokeStyle = 'hsla(' + hue + ',90%,' + (45 + avg * 25) + '%,0.6)';
-              vizCtx.lineWidth = (1 + avg * 2) * dpr;
+              var hue = (140 + s * 30 + mdFrame * 0.6) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',95%,' + (55 + avg * 20) + '%,' + (0.75 + bass * 0.2) + ')';
+              vizCtx.lineWidth = (1.5 + avg * 2.5 + bass * 2.5) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.5)';
+              vizCtx.shadowBlur = 4 + bass * 10;
               vizCtx.stroke();
+              vizCtx.shadowBlur = 0;
               vizCtx.restore();
             }
             vizCtx.restore();
 
           } else if (mode === 'WARP') {
-            // ─── Milkdrop: Motion warp with feedback ───
+            // ─── Hyperspace warp — aggressive feedback zoom, nested wave rings, outward streaks ───
             analyser.getByteFrequencyData(freqData);
             analyser.getByteTimeDomainData(waveData);
             mdFrame++;
@@ -8258,7 +8302,7 @@
             mid = mid / 32 / 255;
             for (var i = 40; i < freqData.length; i++) high += freqData[i];
             high = high / (freqData.length - 40) / 255;
-            // Feedback: scale+rotate previous frame
+            // Feedback buffer
             if (!mdFeedback || mdFeedback.width !== cw || mdFeedback.height !== ch) {
               mdFeedback = document.createElement('canvas');
               mdFeedback.width = cw; mdFeedback.height = ch;
@@ -8266,97 +8310,110 @@
             var fbCtx = mdFeedback.getContext('2d');
             fbCtx.clearRect(0, 0, cw, ch);
             fbCtx.drawImage(vizCanvas, 0, 0);
-            vizCtx.fillStyle = 'rgba(0,0,0,0.06)';
+            // Stronger fade so bursts flash and clear.
+            vizCtx.fillStyle = 'rgba(0,0,0,' + (0.09 + bass * 0.04) + ')';
             vizCtx.fillRect(0, 0, cw, ch);
+            // Aggressive outward zoom + rotation on bass/mid. Previous frame streaks outward.
             vizCtx.save();
             vizCtx.translate(cx, cy);
-            var zoom = 1.01 + bass * 0.03;
-            var rot = (mid - 0.3) * 0.015;
+            var zoom = 1.03 + bass * 0.11;
+            var rot = (mid - 0.3) * 0.05;
             vizCtx.rotate(rot);
             vizCtx.scale(zoom, zoom);
-            vizCtx.globalAlpha = 0.92;
+            vizCtx.globalAlpha = 0.88;
             vizCtx.drawImage(mdFeedback, -cx, -cy);
             vizCtx.globalAlpha = 1.0;
             vizCtx.restore();
-            // Draw waveform as warped shape
+            // Draw 3 nested reactive rings at 25%, 55%, 85% of min dim.
             var t = mdFrame * 0.02;
-            var segs = 64;
-            vizCtx.beginPath();
-            for (var i = 0; i <= segs; i++) {
-              var p = i / segs;
-              var angle = p * Math.PI * 2;
-              var wIdx = Math.floor(p * (waveData.length - 1));
-              var wv = (waveData[wIdx] / 128.0 - 1);
-              var fIdx = Math.floor(p * (freqData.length - 1));
-              var fv = freqData[fIdx] / 255;
-              var r = Math.min(cx, cy) * 0.3 * (1 + wv * 0.5 + fv * 0.3);
-              var x = cx + Math.cos(angle + t) * r;
-              var y = cy + Math.sin(angle + t) * r;
-              i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
-            }
-            vizCtx.closePath();
-            var hue = (120 + mdFrame * 0.4) % 360;
-            vizCtx.strokeStyle = 'hsla(' + hue + ',100%,60%,0.7)';
-            vizCtx.lineWidth = (1.5 + bass * 2) * dpr;
-            vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.5)';
-            vizCtx.shadowBlur = 8 + bass * 15;
-            vizCtx.stroke();
-            vizCtx.shadowBlur = 0;
-            // Inner particles
-            for (var i = 0; i < 12; i++) {
-              var angle = (i / 12) * Math.PI * 2 + t * 1.5;
-              var dist = 15 + high * 40;
+            var reachR = Math.min(cx, cy);
+            var ringRadii = [0.25, 0.55, 0.85];
+            for (var k = 0; k < ringRadii.length; k++) {
+              var baseR = reachR * ringRadii[k] * (1 + bass * 0.35);
+              var segs = 96;
               vizCtx.beginPath();
-              vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, (1 + mid * 3) * dpr, 0, 6.28);
-              vizCtx.fillStyle = 'hsla(' + ((hue + 60) % 360) + ',100%,70%,' + (0.3 + high * 0.7) + ')';
+              for (var i = 0; i <= segs; i++) {
+                var p = i / segs;
+                var angle = p * Math.PI * 2;
+                var wIdx = Math.floor(p * (waveData.length - 1));
+                var wv = (waveData[wIdx] / 128.0 - 1);
+                var fIdx = Math.floor(p * (freqData.length - 1));
+                var fv = freqData[fIdx] / 255;
+                // Wave deforms the ring radius; bigger deformation on bigger rings.
+                var r = baseR + wv * (25 + k * 20) + fv * (20 + k * 15);
+                var x = cx + Math.cos(angle + t * (1 + k * 0.3)) * r;
+                var y = cy + Math.sin(angle + t * (1 + k * 0.3)) * r;
+                i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
+              }
+              vizCtx.closePath();
+              var hue = (120 + mdFrame * 0.8 + k * 50) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + bass * 15) + '%,' + (0.45 + bass * 0.4) + ')';
+              vizCtx.lineWidth = (2 + bass * 4) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.7)';
+              vizCtx.shadowBlur = 8 + bass * 25;
+              vizCtx.stroke();
+            }
+            vizCtx.shadowBlur = 0;
+            // Outward particle streaks — count scales with high freq.
+            var particleCount = 32;
+            for (var i = 0; i < particleCount; i++) {
+              var angle = (i / particleCount) * Math.PI * 2 + t * (0.4 + high * 1.5);
+              var dist = 30 + high * 140 + ((mdFrame * 2 + i * 11) % 80);
+              var pr = (1.2 + mid * 4 + bass * 1.5) * dpr;
+              vizCtx.beginPath();
+              vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, pr, 0, 6.28);
+              vizCtx.fillStyle = 'hsla(' + ((mdFrame * 0.6 + i * 20) % 360) + ',100%,72%,' + (0.4 + high * 0.6) + ')';
               vizCtx.fill();
             }
 
           } else if (mode === 'NEBULA') {
-            // ─── Milkdrop: Nebula clouds with particle flow ───
+            // ─── Nebula clouds — brighter clouds that bloom on bass, dense particle flow ───
             analyser.getByteFrequencyData(freqData);
             mdFrame++;
             var t = mdFrame * 0.008;
             var cx = cw / 2, cy = ch / 2;
-            var bass = 0, avg = 0;
+            var bass = 0, mid = 0, avg = 0;
             for (var i = 0; i < 8; i++) bass += freqData[i];
             bass = bass / 8 / 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i];
+            mid = mid / 32 / 255;
             for (var i = 0; i < freqData.length; i++) avg += freqData[i];
             avg = avg / freqData.length / 255;
-            // Slow fade for trails
-            vizCtx.fillStyle = 'rgba(0,0,0,0.05)';
+            // Stronger fade so the bloom is punchier, not smeared indefinitely.
+            vizCtx.fillStyle = 'rgba(0,0,0,' + (0.08 + bass * 0.05) + ')';
             vizCtx.fillRect(0, 0, cw, ch);
-            // Nebula clouds — layered radial gradients
-            var clouds = 4;
+            // Nebula clouds — 7 layered gradients, much higher alpha, bass expands radius.
+            var clouds = 7;
+            var reach = Math.max(cw, ch);
             for (var c = 0; c < clouds; c++) {
               var seed = c * 73.37;
-              var ox = cx + Math.sin(t * 0.7 + seed) * cw * 0.2;
-              var oy = cy + Math.cos(t * 0.5 + seed * 1.3) * ch * 0.2;
+              var ox = cx + Math.sin(t * 0.7 + seed) * cw * 0.35;
+              var oy = cy + Math.cos(t * 0.5 + seed * 1.3) * ch * 0.35;
               var freqIdx = Math.floor((c / clouds) * freqData.length);
               var val = freqData[Math.min(freqIdx, freqData.length - 1)] / 255;
-              var radius = (30 + val * 60 + bass * 40) * dpr;
+              var radius = (reach * 0.12 + val * reach * 0.18 + bass * reach * 0.15);
               var grad = vizCtx.createRadialGradient(ox, oy, 0, ox, oy, radius);
-              var hue = (100 + c * 40 + mdFrame * 0.2) % 360;
-              grad.addColorStop(0, 'hsla(' + hue + ',80%,50%,' + (0.15 + val * 0.25) + ')');
-              grad.addColorStop(0.5, 'hsla(' + ((hue + 30) % 360) + ',70%,40%,' + (0.06 + val * 0.1) + ')');
-              grad.addColorStop(1, 'hsla(' + hue + ',60%,30%,0)');
+              var hue = (100 + c * 45 + mdFrame * 0.4) % 360;
+              grad.addColorStop(0, 'hsla(' + hue + ',90%,60%,' + (0.35 + val * 0.45 + bass * 0.15) + ')');
+              grad.addColorStop(0.4, 'hsla(' + ((hue + 35) % 360) + ',80%,50%,' + (0.18 + val * 0.2) + ')');
+              grad.addColorStop(1, 'hsla(' + hue + ',70%,40%,0)');
               vizCtx.fillStyle = grad;
               vizCtx.fillRect(ox - radius, oy - radius, radius * 2, radius * 2);
             }
-            // Flowing particles
-            var count = 40;
+            // Flowing particles — 2x more, brighter, speed tied to mid.
+            var count = 90;
             for (var i = 0; i < count; i++) {
               var seed = i * 127.1 + 311.7;
               var freqIdx = Math.floor((i / count) * freqData.length);
               var val = freqData[Math.min(freqIdx, freqData.length - 1)] / 255;
-              var angle = seed * 2.31 + t * (0.3 + val * 0.5);
-              var dist = ((seed * 0.47 + t * 0.2) % 1.0) * Math.max(cw, ch) * 0.5;
+              var angle = seed * 2.31 + t * (0.3 + val * 0.6 + mid * 0.8);
+              var dist = ((seed * 0.47 + t * (0.25 + mid * 0.5)) % 1.0) * reach * 0.55;
               var px = cx + Math.cos(angle) * dist;
               var py = cy + Math.sin(angle) * dist;
-              var pr = (0.5 + val * 2.5) * dpr;
-              var hue = (130 + i * 3 + mdFrame * 0.3) % 360;
+              var pr = (0.8 + val * 3.2 + bass * 1.2) * dpr;
+              var hue = (130 + i * 3 + mdFrame * 0.4) % 360;
               vizCtx.beginPath(); vizCtx.arc(px, py, pr, 0, 6.28);
-              vizCtx.fillStyle = 'hsla(' + hue + ',90%,65%,' + (0.2 + val * 0.6) + ')';
+              vizCtx.fillStyle = 'hsla(' + hue + ',95%,70%,' + (0.35 + val * 0.6) + ')';
               vizCtx.fill();
             }
 
