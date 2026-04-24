@@ -1,7 +1,7 @@
 {
   "name": "KD's Homebrew Digital Archive",
   "short_name": "KD Archive",
-  "description": "A home-grown mirror of the public internet. 12 TB of preserved knowledge — 36 offline wikis, 23,000+ vintage computing PDFs, and 500+ GB of OS images and chiptunes — served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) on ~30 W off-grid solar. A shelf in a house, not a rack in a data centre.",
+  "description": "A home-grown mirror of the public internet. 12 TB across 7 sub-archives — 36 offline wikis, 23,000+ vintage computing PDFs, OS images, vintage CD/DVDs, chiptunes, YouTube mirrors, and audiobooks — served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) on ~30 W off-grid solar. A shelf in a house, not a rack in a data centre.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

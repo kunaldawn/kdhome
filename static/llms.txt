@@ -17,7 +17,7 @@ This is where abandonware lives: retro code nobody ships any more, dead magazine
 journals, and manuals for chips that stopped being made decades ago. Useless to most. Gold
 to the few who go looking.
 
-The project spans three sub-archives totalling over 12 TB of curated content, served from
+The project spans seven sub-archives totalling over 12 TB of curated content, served from
 a home-grown homelab cluster drawing about 30 watts off-grid. No ads, no tracking, no
 telemetry, no SLA, no monetization, no users — free for all, free forever.
 
@@ -34,14 +34,7 @@ telemetry, no SLA, no monetization, no users — free for all, free forever.
 - Survival: WikiCiv, Food for Preppers, USDA Canning Guide
 - Reference: CIA World Factbook, Explain XKCD
 
-### Data Archive (archive.kunaldawn.com)
-500+ GB of curated digital artifacts:
-- Operating system images and ISOs (244 GB)
-- Vintage software CD/DVD archives (27.5 GB)
-- Chiptune music collections (22.4 GB)
-- Video archives (228 GB)
-
-### PDF Archive (pdfarchive.kunaldawn.com)
+### PDF Archive (pdf.kunaldawn.com)
 23,000+ curated PDFs totalling ~800 GB across 13 categories:
 - Computer Components: 7,200 vintage hardware manuals (Commodore, CDC, RCA, Amdahl, NCR)
 - Computer Magazines: 5,768 issues (Byte, Linux Voice, Datamation, MagPi, Retro Gamer)
@@ -50,6 +43,41 @@ telemetry, no SLA, no monetization, no users — free for all, free forever.
 - Electronics Magazines: 1,830 vintage and modern periodicals
 - Agriculture, Food, Drawing, Plants, MIT Press, Harvard Business Review
 - Retro Story Books: 2,129 vintage children's books
+
+### OS Archive (os.kunaldawn.com)
+~244 GB of operating system images and driver archives:
+- Bootable install media and ISOs across decades of computing
+- Legacy drivers for orphaned hardware (sound cards, NICs, printers, scanners)
+- BIOS updates and firmware for vintage machines
+- Utility and rescue distributions (DOS, mini-Linux, recovery tools)
+
+### CD/DVD Archive (iso.kunaldawn.com)
+~27 GB of vintage CD and DVD disc images:
+- Warez and abandonware — commercial releases that no longer ship anywhere
+- Magazine cover discs, demo compilations, shareware collections
+- Original install media for software lost to bit rot and dead publishers
+- Preserved before the polycarbonate degrades and the keys are forgotten
+
+### Chiptune Archive (chiptune.kunaldawn.com)
+~22 GB of chiptune and scene music:
+- Tracker modules — MOD, XM, S3M, IT, MPTM, STM, MED, MTM
+- Keygen and crack intro soundtracks from the cracking scene
+- Demo scene audio — party releases, compos, and long-running collectives
+- The signature sound of a computer showing off its soundchip
+
+### Tube Archive (tube.kunaldawn.com)
+~228 GB of curated YouTube content:
+- Channels preserved in full before takedowns, strikes, or silent deindexing
+- Playlists on technical, historical, and educational topics
+- Individual videos worth saving — talks, walkthroughs, primary-source footage
+- Offline-friendly copies so the knowledge outlives the platform
+
+### Audiobook Archive (audio.kunaldawn.com)
+An ongoing audiobook collection spanning:
+- Classic literature in the public domain (LibriVox and others)
+- Fiction and non-fiction, biographies, essays, and memoirs
+- Recorded lectures and long-form talks worth preserving
+- Knowledge and storytelling for the ears — long drives, longer nights
 
 ## Philosophy
 

@@ -180,10 +180,12 @@ def generate():
     archives = [
         ("\u25B8 wiki.kunaldawn.com",
          "36 offline ZIMs \u2014 Wikipedia, Stack Overflow, ArchWiki, iFixit"),
-        ("\u25B8 archive.kunaldawn.com",
-         "500+ GB \u2014 OS images, vintage CD/DVDs, chiptunes, video"),
-        ("\u25B8 pdfarchive.kunaldawn.com",
+        ("\u25B8 pdf.kunaldawn.com",
          "23K+ PDFs \u2014 Byte Magazine, 1960s hw manuals, 1890s journals"),
+        ("\u25B8 os.kunaldawn.com",
+         "Operating system images, drivers, bootable install media"),
+        ("\u25B8 iso . chiptune . tube . audio",
+         "CD/DVDs . tracker music . YouTube mirrors . audiobooks"),
     ]
     for url_text, desc in archives:
         draw.text((left_x, ty), url_text, fill=NEON, font=url_font)
@@ -195,7 +197,7 @@ def generate():
     stats = [
         ("36", "Offline Wikis"),
         ("23,000+", "Curated PDFs"),
-        ("500+ GB", "Data Archives"),
+        ("7", "Sub-Archives"),
         ("12 TB", "Total Preserved"),
     ]
     box_w = 260
