@@ -7899,8 +7899,11 @@
           var binStep = Math.max(1, Math.floor((freqData.length - 1) / NUM_BARS));
           for (var i = 0; i < NUM_BARS; i++) {
             var val = freqData[Math.min(1 + i * binStep, freqData.length - 1)] / 255;
+            var hue = 120 + (i / NUM_BARS) * 200; // green → cyan → blue → magenta across spectrum
             vizBars[i].style.height = (2 + val * (barMaxH - 2)) + 'px';
-            vizBars[i].style.opacity = (0.25 + val * 0.75).toString();
+            vizBars[i].style.opacity = (0.4 + val * 0.6).toString();
+            vizBars[i].style.background = 'linear-gradient(to top, hsl(' + hue + ',100%,' + (45 + val * 15) + '%), hsl(' + ((hue + 30) % 360) + ',100%,' + (65 + val * 15) + '%))';
+            vizBars[i].style.boxShadow = val > 0.25 ? '0 0 ' + (val * 12) + 'px hsla(' + hue + ',100%,65%,' + (val * 0.7) + ')' : 'none';
           }
         } else {
           var cw = vizCanvas.width, ch = vizCanvas.height;
@@ -7950,16 +7953,36 @@
             vizCtx.shadowBlur = 0;
 
           } else if (mode === 'MIRROR') {
-            // ─── Mirrored spectrum ───
+            // ─── Mirrored spectrum — rainbow gradient bars with bass-reactive center glow ───
             analyser.getByteFrequencyData(freqData);
-            var bars = 32, barW = cw / bars;
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            var bars = 48, barW = cw / bars;
             for (var i = 0; i < bars; i++) {
               var val = freqData[Math.floor((i / bars) * freqData.length)] / 255;
+              if (val < 0.02) continue;
               var h = val * ch * 0.48;
-              vizCtx.fillStyle = 'rgba(0,255,153,' + (0.3 + val * 0.7) + ')';
-              vizCtx.fillRect(i * barW, ch / 2 - h, barW - 1, h);
-              vizCtx.fillRect(i * barW, ch / 2, barW - 1, h);
+              var hue = (120 + (i / bars) * 200) % 360;
+              // Vertical gradient: bright at center, fades toward tips
+              var gradTop = vizCtx.createLinearGradient(0, ch / 2 - h, 0, ch / 2);
+              gradTop.addColorStop(0, 'hsla(' + hue + ',100%,55%,' + (0.2 + val * 0.4) + ')');
+              gradTop.addColorStop(1, 'hsla(' + hue + ',100%,70%,' + (0.6 + val * 0.4) + ')');
+              var gradBot = vizCtx.createLinearGradient(0, ch / 2, 0, ch / 2 + h);
+              gradBot.addColorStop(0, 'hsla(' + hue + ',100%,70%,' + (0.6 + val * 0.4) + ')');
+              gradBot.addColorStop(1, 'hsla(' + hue + ',100%,55%,' + (0.2 + val * 0.4) + ')');
+              vizCtx.fillStyle = gradTop;
+              vizCtx.fillRect(i * barW, ch / 2 - h, Math.max(1, barW - 1), h);
+              vizCtx.fillStyle = gradBot;
+              vizCtx.fillRect(i * barW, ch / 2, Math.max(1, barW - 1), h);
             }
+            // Pulsing center line
+            var glowA = 0.15 + bass * 0.5;
+            var glow = vizCtx.createLinearGradient(0, ch / 2 - 2, 0, ch / 2 + 2);
+            glow.addColorStop(0, 'rgba(255,255,255,0)');
+            glow.addColorStop(0.5, 'rgba(255,255,255,' + glowA + ')');
+            glow.addColorStop(1, 'rgba(255,255,255,0)');
+            vizCtx.fillStyle = glow;
+            vizCtx.fillRect(0, ch / 2 - 2, cw, 4);
 
           } else if (mode === 'DOTS') {
             // ─── Dot scatter — per-bin hue, bass-scaled dots, connection polyline + mirror ───
@@ -8065,36 +8088,57 @@
             vizCtx.fillRect(cx - coreR, cy - coreR, coreR * 2, coreR * 2);
 
           } else if (mode === 'FLAME') {
-            // ─── Flame / heat bars rising ───
+            // ─── Real fire — red → orange → yellow → white palette, flicker on bass ───
             analyser.getByteFrequencyData(freqData);
-            var bars = 24, barW = cw / bars;
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            var t = performance.now() / 220;
+            var bars = 36, barW = cw / bars;
+            vizCtx.globalCompositeOperation = 'lighter'; // flames add, don't mask
             for (var i = 0; i < bars; i++) {
               var val = freqData[Math.floor((i / bars) * freqData.length)] / 255;
               if (val < 0.03) continue;
-              var h = val * ch * 0.9;
+              // Flicker + bass boost: flame heights wobble
+              var flick = 0.85 + Math.sin(t * 3 + i * 0.7) * 0.15;
+              var h = val * ch * (0.75 + bass * 0.3) * flick;
               var grad = vizCtx.createLinearGradient(0, ch, 0, ch - Math.max(1, h));
-              grad.addColorStop(0, 'rgba(0,255,153,' + (0.6 + val * 0.4) + ')');
-              grad.addColorStop(0.4, 'rgba(0,200,100,' + (0.3 + val * 0.3) + ')');
-              grad.addColorStop(1, 'rgba(0,100,60,0)');
+              // bottom (hottest) → top (coolest smoke)
+              grad.addColorStop(0.0, 'rgba(255,240,210,' + (0.65 + val * 0.35) + ')');   // white-hot base
+              grad.addColorStop(0.25, 'rgba(255,200,60,' + (0.55 + val * 0.35) + ')');    // yellow
+              grad.addColorStop(0.55, 'rgba(255,100,30,' + (0.4 + val * 0.3) + ')');      // orange
+              grad.addColorStop(0.85, 'rgba(200,30,20,' + (0.2 + val * 0.2) + ')');       // red
+              grad.addColorStop(1.0, 'rgba(60,0,0,0)');                                   // dark smoke fade
               vizCtx.fillStyle = grad;
-              vizCtx.fillRect(i * barW + 1, ch - h, barW - 2, h);
+              vizCtx.fillRect(i * barW + 1, ch - h, Math.max(1, barW - 2), h);
             }
+            vizCtx.globalCompositeOperation = 'source-over';
 
           } else if (mode === 'GRID') {
-            // ─── Frequency grid / heatmap ───
+            // ─── Frequency heatmap — cell hue cycles across columns, loud cells glow ───
             analyser.getByteFrequencyData(freqData);
-            var cols = 16, rows = 4;
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            // More cells when canvas is bigger, so fullscreen fills in more detail.
+            var cols = Math.max(16, Math.floor(cw / 40));
+            var rows = Math.max(4, Math.floor(ch / 40));
             var cellW = cw / cols, cellH = ch / rows;
             for (var r = 0; r < rows; r++) {
               for (var c = 0; c < cols; c++) {
                 var idx = Math.floor(((r * cols + c) / (rows * cols)) * freqData.length);
                 var val = freqData[Math.min(idx, freqData.length - 1)] / 255;
                 if (val < 0.02) continue;
-                var bright = Math.floor(val * 255);
-                vizCtx.fillStyle = 'rgba(0,' + bright + ',' + Math.floor(bright * 0.6) + ',' + (0.15 + val * 0.6) + ')';
+                var hue = (120 + (c / cols) * 200 + r * 8) % 360;
+                vizCtx.fillStyle = 'hsla(' + hue + ',100%,' + (45 + val * 25) + '%,' + (0.25 + val * 0.7) + ')';
+                if (val > 0.4) {
+                  vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.7)';
+                  vizCtx.shadowBlur = (6 + val * 14) * dpr;
+                } else {
+                  vizCtx.shadowBlur = 0;
+                }
                 vizCtx.fillRect(c * cellW + 1, r * cellH + 1, cellW - 2, cellH - 2);
               }
             }
+            vizCtx.shadowBlur = 0;
 
           } else if (mode === 'HELIX') {
             // ─── DNA double helix — amplitude driven dominantly by the spectrum ───
@@ -8221,17 +8265,33 @@
             vizCtx.shadowBlur = 0;
 
           } else if (mode === 'PIXEL') {
-            // ─── Pixel art blocks ───
+            // ─── VU-meter pixel blocks — green→yellow→red toward the top + peak caps ───
             analyser.getByteFrequencyData(freqData);
-            var px = 6 * dpr, cols = Math.floor(cw / px), rows = Math.floor(ch / px);
+            var px = 6 * dpr;
+            var cols = Math.floor(cw / px), rows = Math.floor(ch / px);
+            if (!window.__pixelPeaks || window.__pixelPeaks.length !== cols) {
+              window.__pixelPeaks = new Float32Array(cols);
+            }
+            var peaks = window.__pixelPeaks;
             for (var c = 0; c < cols; c++) {
               var idx = Math.floor((c / cols) * freqData.length);
               var val = freqData[idx] / 255;
               var lit = Math.floor(val * rows);
               for (var r = 0; r < lit; r++) {
-                var bright = (r / rows);
-                vizCtx.fillStyle = 'rgba(0,' + Math.floor(180 + bright * 75) + ',' + Math.floor(100 + bright * 55) + ',' + (0.3 + val * 0.5) + ')';
+                var h = r / rows; // 0 bottom → 1 top
+                // Hue: green (120) → yellow (60) → red (0) climbing up
+                var hue = 120 * (1 - h);
+                vizCtx.fillStyle = 'hsla(' + hue + ',100%,' + (50 + h * 15) + '%,' + (0.45 + val * 0.5) + ')';
                 vizCtx.fillRect(c * px, ch - (r + 1) * px, px - 1 * dpr, px - 1 * dpr);
+              }
+              // Peak hold: slow decay
+              peaks[c] = Math.max(val, peaks[c] - 0.008);
+              var peakRow = Math.floor(peaks[c] * rows);
+              if (peakRow > 0 && peakRow <= rows) {
+                var ph = peaks[c];
+                var peakHue = 120 * (1 - ph);
+                vizCtx.fillStyle = 'hsla(' + peakHue + ',100%,75%,0.95)';
+                vizCtx.fillRect(c * px, ch - peakRow * px, px - 1 * dpr, px - 1 * dpr);
               }
             }
 
@@ -8266,9 +8326,12 @@
             vizCtx.shadowBlur = 0;
 
           } else if (mode === 'HEX') {
-            // ─── Hex grid pulsing ───
+            // ─── Filled colored hexagons — each cell's size + color tracks its freq bin ───
             analyser.getByteFrequencyData(freqData);
-            var hexR = 8 * dpr;
+            var bass = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            var t = performance.now() / 1000;
+            var hexR = (9 + bass * 6) * dpr;
             var hexW = hexR * 1.732, hexH = hexR * 2;
             var cols = Math.ceil(cw / hexW) + 1, rows = Math.ceil(ch / (hexH * 0.75)) + 1;
             for (var r = 0; r < rows; r++) {
@@ -8277,49 +8340,65 @@
                 var y = r * hexH * 0.75;
                 var fIdx = Math.floor(((r * cols + c) / (rows * cols)) * freqData.length);
                 var val = freqData[Math.min(fIdx, freqData.length - 1)] / 255;
-                if (val < 0.05) continue;
+                if (val < 0.04) continue;
+                var scale = 0.45 + val * 0.55;
+                var hue = (140 + (c / cols) * 180 + r * 12 + t * 30) % 360;
                 vizCtx.beginPath();
                 for (var s = 0; s < 6; s++) {
                   var a = Math.PI / 3 * s - Math.PI / 6;
-                  var hx = x + Math.cos(a) * hexR * (0.5 + val * 0.5);
-                  var hy = y + Math.sin(a) * hexR * (0.5 + val * 0.5);
+                  var hx = x + Math.cos(a) * hexR * scale;
+                  var hy = y + Math.sin(a) * hexR * scale;
                   s === 0 ? vizCtx.moveTo(hx, hy) : vizCtx.lineTo(hx, hy);
                 }
                 vizCtx.closePath();
-                vizCtx.strokeStyle = 'rgba(0,255,153,' + (0.1 + val * 0.5) + ')';
-                vizCtx.lineWidth = 1 * dpr; vizCtx.stroke();
+                vizCtx.fillStyle = 'hsla(' + hue + ',95%,' + (50 + val * 20) + '%,' + (0.25 + val * 0.55) + ')';
+                vizCtx.fill();
+                vizCtx.strokeStyle = 'hsla(' + hue + ',100%,70%,' + (0.35 + val * 0.5) + ')';
+                vizCtx.lineWidth = (0.8 + val * 1.2) * dpr;
+                vizCtx.stroke();
               }
             }
 
           } else if (mode === 'TUNNEL') {
-            // ─── Milkdrop: Tunnel zoom with reactive rings ───
+            // ─── Tunnel zoom — bass punches forward motion, mid wobbles the aim ───
             analyser.getByteFrequencyData(freqData);
             mdFrame++;
             var cx = cw / 2, cy = ch / 2;
-            var avg = 0, bass = 0;
-            for (var i = 0; i < freqData.length; i++) avg += freqData[i];
-            avg = avg / freqData.length / 255;
-            for (var i = 0; i < 8; i++) bass += freqData[i];
-            bass = bass / 8 / 255;
+            var bass = 0, mid = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
             var t = mdFrame * 0.02;
-            // Draw fading trail
-            vizCtx.fillStyle = 'rgba(0,0,0,0.12)';
+            vizCtx.fillStyle = 'rgba(0,0,0,' + (0.09 + bass * 0.04) + ')';
             vizCtx.fillRect(0, 0, cw, ch);
-            var rings = 20;
+            var rings = 28;
+            var reach = Math.max(cw, ch) * 0.95;
             for (var r = rings; r >= 1; r--) {
               var p = r / rings;
-              var depth = (p + t * (0.5 + bass)) % 1.0;
-              var radius = depth * Math.max(cw, ch) * 0.8;
+              var depth = (p + t * (0.6 + bass * 1.6)) % 1.0; // bass punches speed
+              var radius = depth * reach;
               var freqIdx = Math.floor(p * (freqData.length - 1));
               var val = freqData[freqIdx] / 255;
-              var wobble = Math.sin(t * 3 + r * 0.7) * val * 15;
+              var wobbleX = Math.sin(t * 3 + r * 0.7) * (val * 18 + mid * 25);
+              var wobbleY = Math.cos(t * 2 + r) * (val * 14 + mid * 20);
               vizCtx.beginPath();
-              vizCtx.arc(cx + wobble, cy + Math.cos(t * 2 + r) * val * 10, radius, 0, Math.PI * 2);
-              var hue = (120 + r * 8 + mdFrame * 0.5) % 360;
-              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (40 + val * 30) + '%,' + (0.15 + val * 0.4) * (1 - depth) + ')';
-              vizCtx.lineWidth = (1.5 + val * 3) * dpr;
+              vizCtx.arc(cx + wobbleX, cy + wobbleY, radius, 0, Math.PI * 2);
+              var hue = (120 + r * 14 + mdFrame * 0.9) % 360;
+              var lightness = 50 + val * 30 + bass * 15;
+              var alpha = (0.25 + val * 0.55 + bass * 0.2) * (1 - depth * 0.5);
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + lightness + '%,' + alpha + ')';
+              vizCtx.lineWidth = (1.5 + val * 4 + bass * 2.5) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.5)';
+              vizCtx.shadowBlur = 4 + bass * 18;
               vizCtx.stroke();
             }
+            vizCtx.shadowBlur = 0;
+            // Central vanishing-point spark
+            var sparkR = 3 + bass * 10;
+            var sg = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, sparkR * 4);
+            sg.addColorStop(0, 'rgba(255,255,255,' + (0.4 + bass * 0.5) + ')');
+            sg.addColorStop(1, 'rgba(255,255,255,0)');
+            vizCtx.fillStyle = sg;
+            vizCtx.fillRect(cx - sparkR * 4, cy - sparkR * 4, sparkR * 8, sparkR * 8);
 
           } else if (mode === 'PLASMA') {
             // ─── Reactive plasma field — full-spectrum HSV palette, strong audio coupling ───
@@ -8551,18 +8630,17 @@
             }
 
           } else if (mode === 'VORTEX') {
-            // ─── Milkdrop: Spiral vortex with feedback ───
+            // ─── Spiral vortex — 5 arms, harder feedback rotation, bass-punched core flash ───
             analyser.getByteFrequencyData(freqData);
             analyser.getByteTimeDomainData(waveData);
             mdFrame++;
             var cx = cw / 2, cy = ch / 2;
-            var bass = 0, avg = 0;
-            for (var i = 0; i < 8; i++) bass += freqData[i];
-            bass = bass / 8 / 255;
+            var bass = 0, mid = 0, avg = 0;
+            for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
+            for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
             for (var i = 0; i < freqData.length; i++) avg += freqData[i];
             avg = avg / freqData.length / 255;
             var t = mdFrame * 0.02;
-            // Feedback zoom+rotate
             if (!mdFeedback || mdFeedback.width !== cw || mdFeedback.height !== ch) {
               mdFeedback = document.createElement('canvas');
               mdFeedback.width = cw; mdFeedback.height = ch;
@@ -8570,49 +8648,52 @@
             var fbCtx = mdFeedback.getContext('2d');
             fbCtx.clearRect(0, 0, cw, ch);
             fbCtx.drawImage(vizCanvas, 0, 0);
-            vizCtx.fillStyle = 'rgba(0,0,0,0.07)';
+            vizCtx.fillStyle = 'rgba(0,0,0,' + (0.08 + bass * 0.04) + ')';
             vizCtx.fillRect(0, 0, cw, ch);
             vizCtx.save();
             vizCtx.translate(cx, cy);
-            vizCtx.rotate(0.02 + bass * 0.03);
-            vizCtx.scale(0.985, 0.985);
-            vizCtx.globalAlpha = 0.9;
+            // Bass accelerates the spin; mid drives inward zoom for a "pull" feel.
+            vizCtx.rotate(0.025 + bass * 0.08 + mid * 0.02);
+            vizCtx.scale(0.975 - bass * 0.015, 0.975 - bass * 0.015);
+            vizCtx.globalAlpha = 0.88;
             vizCtx.drawImage(mdFeedback, -cx, -cy);
             vizCtx.globalAlpha = 1.0;
             vizCtx.restore();
-            // Draw spiral arms
-            var arms = 3;
+            // 5 spiral arms (was 3), each in its own hue band
+            var arms = 5;
             for (var a = 0; a < arms; a++) {
               vizCtx.beginPath();
               var armOffset = (a / arms) * Math.PI * 2;
-              var pts = 60;
+              var pts = 80;
               for (var i = 0; i <= pts; i++) {
                 var p = i / pts;
                 var freqIdx = Math.floor(p * (freqData.length - 1));
                 var val = freqData[freqIdx] / 255;
                 var wIdx = Math.floor(p * (waveData.length - 1));
                 var wv = (waveData[wIdx] / 128.0 - 1);
-                var spiralAngle = armOffset + p * Math.PI * 4 + t;
-                var r = p * Math.min(cx, cy) * (0.7 + val * 0.4 + wv * 0.15);
+                var spiralAngle = armOffset + p * Math.PI * 5 + t;
+                var r = p * Math.min(cx, cy) * (0.75 + val * 0.5 + wv * 0.2 + bass * 0.15);
                 var x = cx + Math.cos(spiralAngle) * r;
                 var y = cy + Math.sin(spiralAngle) * r;
                 i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
               }
-              var hue = (120 + a * 40 + mdFrame * 0.5) % 360;
-              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (50 + avg * 20) + '%,' + (0.5 + bass * 0.4) + ')';
-              vizCtx.lineWidth = (1.5 + bass * 2.5) * dpr;
-              vizCtx.shadowColor = 'hsla(' + hue + ',100%,60%,0.4)';
-              vizCtx.shadowBlur = 6 + bass * 12;
+              var hue = (120 + a * 55 + mdFrame * 0.9) % 360;
+              vizCtx.strokeStyle = 'hsla(' + hue + ',100%,' + (55 + avg * 25) + '%,' + (0.6 + bass * 0.35) + ')';
+              vizCtx.lineWidth = (1.8 + bass * 4) * dpr;
+              vizCtx.shadowColor = 'hsla(' + hue + ',100%,65%,0.6)';
+              vizCtx.shadowBlur = 8 + bass * 22;
               vizCtx.stroke();
             }
             vizCtx.shadowBlur = 0;
-            // Center glow
-            var grad = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, 20 + bass * 25);
-            var hue2 = (160 + mdFrame * 0.6) % 360;
-            grad.addColorStop(0, 'hsla(' + hue2 + ',100%,70%,' + (0.3 + avg * 0.5) + ')');
+            // Bass-punched center flash (warm white)
+            var coreR = (20 + bass * 60 + mid * 20) * dpr;
+            var grad = vizCtx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+            var hue2 = (160 + mdFrame * 1.1) % 360;
+            grad.addColorStop(0, 'hsla(' + hue2 + ',100%,' + (80 + bass * 15) + '%,' + (0.4 + bass * 0.5) + ')');
+            grad.addColorStop(0.5, 'hsla(' + hue2 + ',100%,60%,' + (0.2 + bass * 0.3) + ')');
             grad.addColorStop(1, 'hsla(' + hue2 + ',100%,50%,0)');
             vizCtx.fillStyle = grad;
-            vizCtx.fillRect(cx - 50, cy - 50, 100, 100);
+            vizCtx.fillRect(cx - coreR, cy - coreR, coreR * 2, coreR * 2);
           }
         }
 
