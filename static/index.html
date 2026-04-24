@@ -462,11 +462,35 @@
       border-radius: 4px;
     }
 
+    /* 12-column grid with spans chosen per breakpoint so 7 cards always pack
+       into fully-filled rows (no orphan gap). Layouts by width:
+         ≥1100px → 4 cols (4 + 3, second row widened to fill)
+         ≥800px  → 3 cols (3 + 3 + 1, orphan full-width)
+         ≥500px  → 2 cols (2 + 2 + 2 + 1, orphan full-width)
+         <500px  → 1 col */
     .grid-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(12, 1fr);
       gap: 12px;
-      margin-top: 12px
+      margin-top: 12px;
+    }
+
+    .grid-cards > .card { grid-column: span 12; }
+
+    @media (min-width: 500px) {
+      .grid-cards > .card { grid-column: span 6; }
+      .grid-cards > .card:last-child { grid-column: span 12; }
+    }
+
+    @media (min-width: 800px) {
+      .grid-cards > .card { grid-column: span 4; }
+      .grid-cards > .card:last-child { grid-column: span 12; }
+    }
+
+    @media (min-width: 1100px) {
+      .grid-cards > .card { grid-column: span 3; }
+      .grid-cards > .card:last-child,
+      .grid-cards > .card:nth-last-child(-n+3) { grid-column: span 4; }
     }
 
     .card {
@@ -1232,7 +1256,6 @@
       }
 
       .grid-cards {
-        grid-template-columns: 1fr;
         gap: 10px;
       }
 
@@ -1409,10 +1432,6 @@
     @media (min-width:481px) and (max-width:1024px) {
       .vault {
         max-width: 90%;
-      }
-
-      .grid-cards {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       }
 
       .floating-icon {
