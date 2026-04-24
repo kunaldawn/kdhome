@@ -747,7 +747,8 @@
       display: flex;
       align-items: center;
       padding: 0 12px;
-      z-index: 1000;
+      /* Above any window, including one focused via bringToFront (z-index 1005). */
+      z-index: 5000;
       backdrop-filter: blur(16px) saturate(1.5);
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
     }
@@ -2126,7 +2127,8 @@
       width: auto;
       min-width: 60px;
       height: 50px;
-      z-index: 2;
+      /* Above all windows and the taskbar so the cat is never obscured. */
+      z-index: 5001;
       cursor: pointer;
       transition: all 0.3s ease;
       filter: drop-shadow(0 0 10px rgba(0, 255, 150, 0.6));
@@ -6596,6 +6598,20 @@
           const win = e.target.closest(WINDOW_SELECTOR);
           if (win) window.bringToFront(win);
         }, { capture: true, passive: true });
+
+        // Clicks inside the browser window's <iframe> don't bubble to the parent
+        // document, so the mousedown listener above misses them. When the iframe
+        // takes focus the main window blurs — catch that and bring the window
+        // that owns the focused iframe to the front.
+        window.addEventListener('blur', function() {
+          setTimeout(function() {
+            const ae = document.activeElement;
+            if (ae && ae.tagName === 'IFRAME') {
+              const win = ae.closest(WINDOW_SELECTOR);
+              if (win) window.bringToFront(win);
+            }
+          }, 0);
+        });
 
         window.makeDraggable = function makeDraggable(windowEl, handleEl) {
           let isDragging = false;
