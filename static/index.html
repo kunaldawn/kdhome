@@ -144,7 +144,7 @@
           "@type": "WebSite",
           "name": "Tube Archive",
           "url": "https://tube.kunaldawn.com/",
-          "description": "Curated YouTube content archive — channels, playlists, and videos worth preserving before takedowns or deindexing make them unreachable."
+          "description": "Curated YouTube mirrors of computer science, engineering, and scientific content — preserved before takedowns or deindexing make them unreachable."
         },
         {
           "@type": "WebSite",
@@ -3118,7 +3118,7 @@
       margin: 14px 0 18px;
       padding: 12px 14px 10px;
       font-family: 'Share Tech Mono', monospace;
-      font-size: 12.5px;
+      font-size: 14.5px;
       color: #b9e8d2;
       background: rgba(0, 255, 150, 0.03);
       border: 1px dashed rgba(0, 255, 150, 0.28);
@@ -3131,12 +3131,22 @@
       border-color: rgba(0, 255, 150, 0.45);
     }
     .entry-terms-head {
+      display: block;
+      margin: 0 auto 14px;
+      padding: 0;
       text-align: center;
+      /* Explicitly pick a font that carries the box-drawing glyphs used in the
+         "ANSI Shadow" art. Share Tech Mono does not, so characters would fall
+         back to the browser default and break the grid. */
+      font-family: ui-monospace, 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
       font-size: 11px;
-      letter-spacing: 4px;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: pre;
       color: #00ff99;
-      opacity: 0.75;
-      margin-bottom: 10px;
+      opacity: 0.95;
+      text-shadow: 0 0 10px rgba(0, 255, 150, 0.45);
+      overflow: visible;
     }
     .entry-check {
       position: relative;
@@ -3250,7 +3260,8 @@
       .entry-gate { padding: 16px; }
       .entry-gate-glass { padding: 20px 18px 14px; }
       .entry-gate-title { font-size: 16px; letter-spacing: 3px; }
-      .entry-terms { font-size: 12px; padding: 10px 12px; }
+      .entry-terms { font-size: 13.5px; padding: 10px 12px; }
+      .entry-terms-head { font-size: 7.5px; }
       .entry-rules { grid-template-columns: 1fr; gap: 2px; }
       .entry-gate-btn { padding: 11px 30px; font-size: 12px; letter-spacing: 3px; }
     }
@@ -3298,7 +3309,14 @@
       <h2 class="entry-gate-title" id="entry-gate-title">KD's Homebrew Digital Archive</h2>
 
       <div class="entry-terms" role="group" aria-label="Terms">
-        <div class="entry-terms-head"><span>── T E R M S ──</span></div>
+        <pre class="entry-terms-head" aria-label="Terms">
+████████╗███████╗██████╗ ███╗   ███╗███████╗
+╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝
+   ██║   █████╗  ██████╔╝██╔████╔██║███████╗
+   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║╚════██║
+   ██║   ███████╗██║  ██║██║ ╚═╝ ██║███████║
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
+</pre>
         <label class="entry-check">
           <input type="checkbox" id="entry-age-check">
           <span class="entry-check-box" aria-hidden="true"></span>
@@ -3307,10 +3325,8 @@
         <ul class="entry-rules">
           <li><span class="bul">&raquo;</span> no SLA</li>
           <li><span class="bul">&raquo;</span> no ads</li>
-          <li><span class="bul">&raquo;</span> no monetization</li>
-          <li><span class="bul">&raquo;</span> no telemetry</li>
-          <li><span class="bul">&raquo;</span> no users</li>
-          <li><span class="bul">&raquo;</span> free for all &amp; always</li>
+          <li><span class="bul">&raquo;</span> no users and data collection</li>
+          <li><span class="bul">&raquo;</span> no monetization &amp; donations</li>
         </ul>
       </div>
 
@@ -3467,7 +3483,7 @@
         add('tk-ok',  hr2());
         add('tk-ok',  rowC(''));
         add('tk-ok',  rowC('K D  ·  H O M E B R E W'));
-        add('tk-ok',  rowC('I N T E R N E T  ·  A R C H I V E'));
+        add('tk-ok',  rowC('D I G I T A L  ·  A R C H I V E'));
         add('tk-ok',  rowC(''));
         add('tk-dim', rowC('[ rel 0x01 · online · 2026 ]'));
         add('tk-ok',  hr2());
@@ -3500,12 +3516,9 @@
           // Desktop: cat left (col 0-13), rack right (col 14-55).
           const CAT_COL = 14;
           const CAT = [
-            '   /\\_/\\     ',
+            '   /\\_/\\    ',
             '  ( o.o )    ',
             '   > ^ <     ',
-            '    ~|~      ',
-            '  (  (  )    ',
-            '             ',
           ];
           const rackW = W - CAT_COL;
           const rackTB = '+' + R('=', rackW - 2) + '+';
@@ -3560,7 +3573,7 @@
         prose('tk-dim', 'tracker modules . mod/xm/s3m/it . keygen music . demo scene audio');
         blank();
         prose('',       'tube -- 228 GB');
-        prose('tk-dim', 'curated youtube mirrors . channels . playlists . videos saved from takedowns');
+        prose('tk-dim', 'computer science . hardware . engineering . math . physics . science deep-dives');
         blank();
         prose('',       'audio -- audiobook collection');
         prose('tk-dim', 'fiction . non-fiction . lectures . classic literature');
@@ -3572,12 +3585,9 @@
         section('E T H O S');
         add('tk-hot', center('no  ads'));
         add('tk-hot', center('no  tracking'));
-        add('tk-hot', center('no  telemetry'));
         add('tk-hot', center('no  SLA'));
-        add('tk-hot', center('no  monetization'));
-        add('tk-hot', center('no  users'));
-        blank();
-        add('tk-ok',  center('free for all  .  free forever'));
+        add('tk-hot', center('no  users  and  data  collection'));
+        add('tk-hot', center('no  monetization  &  donations'));
 
         // ─── GREETZ ─────────────────────────────────────
         section('G R E E T Z');
@@ -5050,7 +5060,7 @@
 
               <a class="card" href="https://tube.kunaldawn.com" rel="noopener" onclick="event.preventDefault(); openBrowserWindow('https://tube.kunaldawn.com', 'Tube Archive');">
                 <h4>Tube Archive</h4>
-                <div class="muted">Curated YouTube content archive — channels, playlists, and videos worth preserving before takedowns, strikes, or silent deindexing make them unreachable.</div>
+                <div class="muted">Curated YouTube mirrors of computer science, hardware teardowns, engineering, math, physics, and technology deep-dives — saved before takedowns or silent deindexing make them unreachable.</div>
               </a>
 
               <a class="card" href="https://audio.kunaldawn.com" rel="noopener" onclick="event.preventDefault(); openBrowserWindow('https://audio.kunaldawn.com', 'Audiobook Archive');">
@@ -7125,7 +7135,7 @@
             {u:'https://os.kunaldawn.com', l:'OS Archive', d:'Operating system images, drivers, bootable install media, BIOS updates.'},
             {u:'https://iso.kunaldawn.com', l:'CD/DVD Archive', d:'Vintage CD/DVD disc images — warez, abandonware, commercial releases time forgot.'},
             {u:'https://chiptune.kunaldawn.com', l:'Chiptune Archive', d:'Tracker modules, MOD/XM/S3M/IT, keygen music, demo scene audio.'},
-            {u:'https://tube.kunaldawn.com', l:'Tube Archive', d:'Curated YouTube mirrors — channels, playlists, videos saved from takedowns.'},
+            {u:'https://tube.kunaldawn.com', l:'Tube Archive', d:'Curated YouTube mirrors of computer science, engineering, and scientific content.'},
             {u:'https://audio.kunaldawn.com', l:'Audiobook Archive', d:'Audiobook collection — fiction, non-fiction, lectures, classic literature.'}
           ];
           var cards = sites.map(function(s) {
