@@ -1228,12 +1228,31 @@
         padding-bottom: 44px;
       }
 
+      /* Treat vault as a real maximised window on mobile: pin it to the
+         viewport with position:fixed so the titlebar stays put while the
+         content scrolls inside it (matches how other maximised windows
+         behave). */
       .vault {
-        border-radius: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 44px;
         max-width: 100%;
-        min-height: calc(100vh - 44px);
+        min-height: 0;
+        border-radius: 0;
         border-left: 0;
         border-right: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .vault-titlebar {
+        flex-shrink: 0;
+      }
+      .vault-content {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
       }
 
       .grid {
