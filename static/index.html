@@ -774,6 +774,7 @@
     }
 
     .start-button {
+      flex-shrink: 0;
       height: 34px;
       padding: 0 14px;
       background: linear-gradient(180deg, rgba(0, 255, 150, 0.12), rgba(0, 255, 150, 0.04));
@@ -798,13 +799,23 @@
 
     .taskbar-items {
       flex: 1;
+      /* Without min-width:0 a flex item won't shrink below its content's
+         natural width, so a long list of open windows pushes the clock /
+         system-tray off-screen. Letting this strip scroll horizontally
+         keeps the rest of the taskbar pinned. */
+      min-width: 0;
       display: flex;
       align-items: center;
       gap: 6px;
       margin-left: 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
     }
+    .taskbar-items::-webkit-scrollbar { display: none; }
 
     .taskbar-item {
+      flex-shrink: 0;
       height: 34px;
       padding: 0 14px;
       background: rgba(0, 255, 150, 0.04);
@@ -856,6 +867,7 @@
     }
 
     .system-tray {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       gap: 12px;
