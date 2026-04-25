@@ -1223,13 +1223,17 @@
     /* Mobile Responsive Styles */
     @media (max-width:800px) {
       body {
-        padding: 16px;
-        padding-bottom: 60px;
+        /* Vault opens maximised on mobile — full bleed to the taskbar (44px). */
+        padding: 0;
+        padding-bottom: 44px;
       }
 
       .vault {
-        border-radius: 8px;
+        border-radius: 0;
         max-width: 100%;
+        min-height: calc(100vh - 44px);
+        border-left: 0;
+        border-right: 0;
       }
 
       .grid {
@@ -1408,8 +1412,8 @@
 
     @media (max-width:480px) {
       body {
-        padding: 12px;
-        padding-bottom: 55px;
+        padding: 0;
+        padding-bottom: 44px;
       }
 
       .vault-content {
@@ -1469,8 +1473,8 @@
     /* Landscape mobile adjustments */
     @media (max-height:500px) and (orientation:landscape) {
       body {
-        padding: 8px;
-        padding-bottom: 50px;
+        padding: 0;
+        padding-bottom: 44px;
       }
 
       .vault-content {
@@ -1584,7 +1588,7 @@
 
     .music-viz-wrap {
       position: relative;
-      height: 32px;
+      height: 56px;
       margin-top: 6px;
       cursor: pointer;
     }
@@ -1604,7 +1608,7 @@
       display: flex;
       align-items: flex-end;
       gap: 1px;
-      height: 32px;
+      height: 56px;
     }
 
     .music-viz-bar {
@@ -1617,7 +1621,7 @@
 
     .music-viz-canvas {
       width: 100%;
-      height: 32px;
+      height: 56px;
       display: none;
     }
 
@@ -3289,10 +3293,178 @@
     }
 
     body.entry-gate-locked { overflow: hidden; }
+
+    /* ═══ Glass-off mode (simple transparency) ═══
+       Default on mobile. Kills backdrop-filter blur (the expensive part —
+       it forces the GPU to re-render the matrix/grid behind every frame)
+       and bumps each panel's alpha so the matrix bleed-through is just
+       a faint hint rather than a noisy overlay. Class is applied early
+       in <body> from localStorage. */
+    body.no-transparency .vault,
+    body.no-transparency .start-menu,
+    body.no-transparency .taskbar,
+    body.no-transparency .music-window,
+    body.no-transparency .browser-window,
+    body.no-transparency .demo-window,
+    body.no-transparency .lock-content,
+    body.no-transparency .entry-gate,
+    body.no-transparency .entry-gate-glass,
+    body.no-transparency .browser-content.loading {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    body.no-transparency .vault,
+    body.no-transparency .music-window,
+    body.no-transparency .browser-window,
+    body.no-transparency .demo-window {
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.92), rgba(3, 16, 24, 0.95) 140%) !important;
+    }
+    body.no-transparency .start-menu {
+      background: linear-gradient(180deg, rgba(0, 20, 15, 0.94), rgba(0, 0, 0, 0.96)) !important;
+    }
+    body.no-transparency .taskbar {
+      background: linear-gradient(180deg, rgba(0, 30, 20, 0.94), rgba(0, 5, 3, 0.96)) !important;
+    }
+    body.no-transparency .lock-content {
+      background: rgba(0, 5, 3, 0.94) !important;
+    }
+    body.no-transparency .entry-gate {
+      background: radial-gradient(circle at 50% 40%, rgba(0, 30, 22, 0.92), rgba(0, 0, 0, 0.97)) !important;
+    }
+    body.no-transparency .entry-gate-glass {
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.95), rgba(0, 30, 20, 0.97)) !important;
+    }
+    body.no-transparency .browser-content.loading {
+      filter: none !important;
+    }
+
+    /* ═══ Settings dialog ═══
+       Always solid — independent of the transparency toggle — so the dialog
+       you're using to flip the toggle never changes appearance under you. */
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      animation: fadeIn 0.18s ease;
+    }
+    .settings-overlay.show { display: flex; }
+    .settings-window {
+      width: 100%;
+      max-width: 420px;
+      background: #061620;
+      border: 1px solid rgba(0, 255, 150, 0.35);
+      border-radius: 10px;
+      box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.7),
+        0 0 60px rgba(0, 255, 150, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      font-family: 'Inter', sans-serif;
+    }
+    .settings-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, rgba(0, 255, 150, 0.1), rgba(0, 255, 150, 0.04));
+      border-bottom: 1px solid rgba(0, 255, 150, 0.2);
+    }
+    .settings-title {
+      flex: 1;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      color: var(--neon);
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(0, 255, 150, 0.4);
+    }
+    .settings-content {
+      padding: 18px 18px 20px;
+    }
+    .settings-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 4px;
+    }
+    .settings-row + .settings-row {
+      border-top: 1px solid rgba(0, 255, 150, 0.08);
+    }
+    .settings-row-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .settings-row-label {
+      color: var(--neon);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .settings-row-help {
+      color: #7fd1b3;
+      font-size: 12px;
+      line-height: 1.45;
+      opacity: 0.8;
+    }
+    .settings-switch {
+      position: relative;
+      flex: 0 0 auto;
+      width: 44px;
+      height: 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(0, 255, 150, 0.3);
+      background: rgba(0, 0, 0, 0.4);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      margin-top: 2px;
+    }
+    .settings-switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #7fd1b3;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .settings-switch.on {
+      background: rgba(0, 255, 150, 0.25);
+      border-color: var(--neon);
+      box-shadow: 0 0 10px rgba(0, 255, 150, 0.3);
+    }
+    .settings-switch.on::after {
+      transform: translateX(20px);
+      background: var(--neon);
+    }
   </style>
 </head>
 
 <body class="entry-gate-locked">
+  <script>
+    /* Apply glass-effect preference before any paint — saved by Settings.
+       Mobile (<=800px) defaults to OFF (panels stay translucent but the
+       backdrop-filter blur is killed for GPU/heat reasons). Desktop
+       defaults to ON. User pref always wins once set. The "no-transparency"
+       class name is historical — it now toggles glass blur, not the
+       translucency itself. */
+    (function () {
+      try {
+        var pref = localStorage.getItem('kd:prefs:transparency');
+        var off;
+        if (pref === 'off') off = true;
+        else if (pref === 'on') off = false;
+        else off = window.matchMedia('(max-width: 800px)').matches;
+        if (off) document.body.classList.add('no-transparency');
+      } catch (e) {}
+    })();
+  </script>
   <!-- Shared SVG filter: keys bright pixels (white + near-white) to
        transparent via alpha = clamp(2.2 - (R+G+B)), preserving RGB.
        White (1,1,1) → -0.8 → 0; (0.8,0.8,0.8) → -0.2 → 0; mid gray
@@ -4845,6 +5017,10 @@
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
             <span>Demo</span>
           </div>
+          <div class="menu-item" onclick="openSettings()">
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+            <span>Settings</span>
+          </div>
         </div>
         <div class="menu-column right">
           <div class="menu-section-title">Quick Access</div>
@@ -4890,6 +5066,27 @@
         <div class="menu-item power" onclick="lockScreen()">
           <span class="menu-icon"><svg width="14" height="14" viewBox="-1 0 26 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
           <span>Lock</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings dialog -->
+    <div class="settings-overlay" id="settings-overlay" onclick="if (event.target === this) closeSettings()">
+      <div class="settings-window" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-titlebar">
+          <div class="vault-titlebar-controls">
+            <div class="window-btn close" onclick="closeSettings()" title="Close"></div>
+          </div>
+          <span class="settings-title" id="settings-title">settings@kd:~/preferences</span>
+        </div>
+        <div class="settings-content">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">Glass effect</div>
+              <div class="settings-row-help">Adds frosted-glass blur behind panels. Off by default on phones — the blur is the expensive part and can heat the device. Panels stay translucent either way.</div>
+            </div>
+            <div class="settings-switch" id="settings-transparency-switch" role="switch" aria-checked="true" tabindex="0" onclick="toggleTransparencyPref()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTransparencyPref();}"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -6766,6 +6963,46 @@
           toggleStartMenu();
         };
 
+        // Settings dialog
+        function syncTransparencySwitch() {
+          var sw = document.getElementById('settings-transparency-switch');
+          if (!sw) return;
+          var on = !document.body.classList.contains('no-transparency');
+          sw.classList.toggle('on', on);
+          sw.setAttribute('aria-checked', on ? 'true' : 'false');
+        }
+
+        window.openSettings = function () {
+          var menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show')) toggleStartMenu();
+          var overlay = document.getElementById('settings-overlay');
+          if (!overlay) return;
+          syncTransparencySwitch();
+          overlay.classList.add('show');
+        };
+
+        window.closeSettings = function () {
+          var overlay = document.getElementById('settings-overlay');
+          if (overlay) overlay.classList.remove('show');
+        };
+
+        window.toggleTransparencyPref = function () {
+          var nowOff = !document.body.classList.contains('no-transparency');
+          document.body.classList.toggle('no-transparency', nowOff);
+          try {
+            localStorage.setItem('kd:prefs:transparency', nowOff ? 'off' : 'on');
+          } catch (e) {}
+          syncTransparencySwitch();
+        };
+
+        // Close settings on Escape
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            var overlay = document.getElementById('settings-overlay');
+            if (overlay && overlay.classList.contains('show')) closeSettings();
+          }
+        });
+
         window.lockScreen = function () {
           const lockScreen = document.createElement('div');
           lockScreen.className = 'lock-screen';
@@ -7213,8 +7450,8 @@
           currentUrl = url;
           currentLabel = label || '';
           var iframe = document.createElement('iframe');
-          iframe.setAttribute('sandbox', 'allow-scripts');
           if (url === 'about:home') {
+            iframe.setAttribute('sandbox', 'allow-scripts');
             addrEl.value = 'about:home';
             titleEl.textContent = 'browser@kd:~/home';
             taskbarLabel.textContent = 'Browser';
@@ -7225,7 +7462,7 @@
             addrEl.value = url;
             titleEl.textContent = 'browser@kd:~/' + (label || host);
             taskbarLabel.textContent = label || host;
-            iframe.srcdoc = cfErrorDoc(url, host);
+            iframe.src = url;
           }
           contentEl.innerHTML = '';
           contentEl.appendChild(iframe);
@@ -7316,6 +7553,9 @@
             taskbar.classList.add('active');
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
             if (window.bringToFront) window.bringToFront(win);
+            if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+              maximizeBrowserWindow();
+            }
           } else if (taskbar.classList.contains('active')) {
             if (window.__focusedWindow !== win) {
               window.bringToFront(win);
@@ -7466,6 +7706,9 @@
             taskbar.classList.add('active');
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
             if (window.bringToFront) window.bringToFront(win);
+            if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+              maximizeDemoWindow();
+            }
           } else if (taskbar.classList.contains('active')) {
             if (window.__focusedWindow !== win) {
               window.bringToFront(win);
@@ -7620,6 +7863,9 @@
         if (window.bringToFront) window.bringToFront(win);
         var menu = document.getElementById('startMenu');
         if (menu && menu.classList.contains('show')) toggleStartMenu();
+        if (window.matchMedia('(max-width: 800px)').matches && !chipMaximized) {
+          maximizeChiptunes();
+        }
       };
 
       var chipMaximized = false;
@@ -7661,6 +7907,9 @@
           chipTaskbar.classList.remove('minimized');
           chipTaskbar.classList.add('active');
           if (window.bringToFront) window.bringToFront(win);
+          if (window.matchMedia('(max-width: 800px)').matches && !chipMaximized) {
+            maximizeChiptunes();
+          }
         } else if (chipTaskbar.classList.contains('active')) {
           // If visible but not focused, just bring to front; if already focused, minimize
           if (window.__focusedWindow !== win) {
@@ -7911,42 +8160,64 @@
           vizCtx.clearRect(0, 0, cw, ch);
 
           if (mode === 'SCOPE') {
-            // ─── Oscilloscope — bass thickens the trace, mid shifts hue, glow fills below ───
+            // ─── Oscilloscope — auto-gain so peak reaches ~85% of half-height ───
             analyser.getByteTimeDomainData(waveData);
             analyser.getByteFrequencyData(freqData);
             var bass = 0, mid = 0, high = 0;
             for (var i = 0; i < 8; i++) bass += freqData[i]; bass /= 8 * 255;
             for (var i = 8; i < 40; i++) mid += freqData[i]; mid /= 32 * 255;
             for (var i = 40; i < freqData.length; i++) high += freqData[i]; high /= (freqData.length - 40) * 255;
+            // Compute raw peak deviation of the waveform from center (0..1).
             var peak = 0;
             for (var i = 0; i < waveData.length; i++) {
               var v = Math.abs(waveData[i] - 128) / 128;
               if (v > peak) peak = v;
             }
+            // Auto-gain with a moderate cap so noise isn't amplified wildly when silent.
+            var targetGain = peak > 0.04 ? Math.min(0.9 / peak, 6) : 6;
+            if (window.__scopeGain === undefined) window.__scopeGain = 1;
+            // Signal got louder → drop gain quickly so peaks don't clip.
+            // Signal got quieter → raise gain slowly so quiet passages don't pump.
+            if (targetGain < window.__scopeGain) {
+              window.__scopeGain = window.__scopeGain * 0.6 + targetGain * 0.4;
+            } else {
+              window.__scopeGain = window.__scopeGain * 0.96 + targetGain * 0.04;
+            }
+            var gain = window.__scopeGain;
+            // Smoothed displayed peak (after gain) for visual-coupling
+            var dispPeak = Math.min(1, peak * gain);
             var hue = (140 + mid * 140) % 360;
             var sliceW = cw / waveData.length;
-            // Filled envelope under the trace pulses with peak amplitude
-            var grad = vizCtx.createLinearGradient(0, ch * 0.25, 0, ch * 0.75);
+            var halfH = ch / 2;
+            // sampleY: positive audio amplitude goes UP (smaller y), with tanh soft-clip
+            // so loud peaks asymptote to the edges instead of snapping to them.
+            function sampleY(i) {
+              var centered = (waveData[i] - 128) / 128; // -1..1
+              var soft = Math.tanh(centered * gain);   // -1..1 (smooth saturation)
+              return halfH - soft * halfH * 0.92;      // flipped: +amp = up, -amp = down
+            }
+            // Filled envelope under the trace — alpha pulses with displayed peak
+            var grad = vizCtx.createLinearGradient(0, 0, 0, ch);
             grad.addColorStop(0, 'hsla(' + hue + ',100%,60%,0)');
-            grad.addColorStop(0.5, 'hsla(' + hue + ',100%,60%,' + (0.1 + peak * 0.35) + ')');
+            grad.addColorStop(0.5, 'hsla(' + hue + ',100%,60%,' + (0.1 + dispPeak * 0.35) + ')');
             grad.addColorStop(1, 'hsla(' + hue + ',100%,60%,0)');
             vizCtx.beginPath();
-            vizCtx.moveTo(0, ch / 2);
+            vizCtx.moveTo(0, halfH);
             for (var i = 0; i < waveData.length; i++) {
-              vizCtx.lineTo(i * sliceW, (waveData[i] / 128.0) * ch / 2);
+              vizCtx.lineTo(i * sliceW, sampleY(i));
             }
-            vizCtx.lineTo(cw, ch / 2);
+            vizCtx.lineTo(cw, halfH);
             vizCtx.closePath();
             vizCtx.fillStyle = grad;
             vizCtx.fill();
             // Main scope line
             vizCtx.beginPath();
             for (var i = 0; i < waveData.length; i++) {
-              var y = (waveData[i] / 128.0) * ch / 2;
+              var y = sampleY(i);
               i === 0 ? vizCtx.moveTo(0, y) : vizCtx.lineTo(i * sliceW, y);
             }
-            vizCtx.strokeStyle = 'hsl(' + hue + ',100%,' + (55 + peak * 20) + '%)';
-            vizCtx.lineWidth = (1.5 + bass * 4 + peak * 2) * dpr;
+            vizCtx.strokeStyle = 'hsl(' + hue + ',100%,' + (55 + dispPeak * 20) + '%)';
+            vizCtx.lineWidth = (1.5 + bass * 4 + dispPeak * 2) * dpr;
             vizCtx.shadowColor = 'hsl(' + hue + ',100%,60%)';
             vizCtx.shadowBlur = 6 + bass * 20 + high * 8;
             vizCtx.stroke();
@@ -8049,7 +8320,7 @@
                 var val = freqData[Math.min(i * step, freqData.length - 1)] / 255;
                 var wv = waveData[Math.floor(p * (waveData.length - 1))] / 128.0 - 1;
                 var angle = p * Math.PI * 2 - Math.PI / 2 + nowT * (k % 2 === 0 ? 0.4 : -0.5);
-                var r = baseR + val * minR * 0.35 + wv * (8 + k * 6);
+                var r = baseR + val * minR * 0.35 + wv * minR * (0.04 + k * 0.025);
                 var x = cx + Math.cos(angle) * r;
                 var y = cy + Math.sin(angle) * r;
                 i === 0 ? vizCtx.moveTo(x, y) : vizCtx.lineTo(x, y);
@@ -8378,8 +8649,10 @@
               var radius = depth * reach;
               var freqIdx = Math.floor(p * (freqData.length - 1));
               var val = freqData[freqIdx] / 255;
-              var wobbleX = Math.sin(t * 3 + r * 0.7) * (val * 18 + mid * 25);
-              var wobbleY = Math.cos(t * 2 + r) * (val * 14 + mid * 20);
+              // Wobble scales with canvas — 2-3% of min dim per freq unit.
+              var wobbleScale = Math.min(cx, cy);
+              var wobbleX = Math.sin(t * 3 + r * 0.7) * wobbleScale * (val * 0.035 + mid * 0.05);
+              var wobbleY = Math.cos(t * 2 + r) * wobbleScale * (val * 0.03 + mid * 0.04);
               vizCtx.beginPath();
               vizCtx.arc(cx + wobbleX, cy + wobbleY, radius, 0, Math.PI * 2);
               var hue = (120 + r * 14 + mdFrame * 0.9) % 360;
@@ -8566,15 +8839,25 @@
               vizCtx.stroke();
             }
             vizCtx.shadowBlur = 0;
-            // Outward particle streaks — count scales with high freq.
-            var particleCount = 32;
+            // Outward particle streaks — distances scale with canvas; each particle
+            // gets its own persistent "orbit" (via seed hash) so they visibly disperse
+            // across the whole reach rather than clustering into a ring.
+            var particleCount = 48;
+            var rInner = reachR * 0.05;
+            var rOuter = reachR * 0.95;
             for (var i = 0; i < particleCount; i++) {
-              var angle = (i / particleCount) * Math.PI * 2 + t * (0.4 + high * 1.5);
-              var dist = 30 + high * 140 + ((mdFrame * 2 + i * 11) % 80);
-              var pr = (1.2 + mid * 4 + bass * 1.5) * dpr;
+              var seed = i * 127.1;
+              // Stable per-particle base radius in [0, 1].
+              var base = ((Math.sin(seed) * 43758.5453) % 1 + 1) % 1;
+              var cycle = ((mdFrame * (0.006 + high * 0.02) + base) % 1);
+              var dist = rInner + cycle * (rOuter - rInner) + high * reachR * 0.08;
+              var angle = base * Math.PI * 2 + t * (0.4 + high * 1.5) + cycle * 0.6;
+              var pr = (1 + mid * 4 + bass * 2 + cycle * 1.2) * dpr;
               vizCtx.beginPath();
               vizCtx.arc(cx + Math.cos(angle) * dist, cy + Math.sin(angle) * dist, pr, 0, 6.28);
-              vizCtx.fillStyle = 'hsla(' + ((mdFrame * 0.6 + i * 20) % 360) + ',100%,72%,' + (0.4 + high * 0.6) + ')';
+              // Fade out as particles approach the edge — streak effect.
+              var alpha = Math.max(0, (1 - cycle) * 0.85 + 0.15) * (0.45 + high * 0.55);
+              vizCtx.fillStyle = 'hsla(' + ((mdFrame * 0.6 + i * 20) % 360) + ',100%,72%,' + alpha + ')';
               vizCtx.fill();
             }
 
