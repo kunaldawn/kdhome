@@ -7454,6 +7454,11 @@
 '<title>Start Page</title>' +
 '<style>' +
 'html,body{margin:0;padding:0;background:#0a1518;color:#cfeee0;font-family:"Share Tech Mono",ui-monospace,monospace;min-height:100%}' +
+'html{scrollbar-width:thin;scrollbar-color:rgba(0,255,150,0.3) rgba(0,0,0,0.2)}' +
+'::-webkit-scrollbar{width:8px;height:8px}' +
+'::-webkit-scrollbar-track{background:rgba(0,0,0,0.2)}' +
+'::-webkit-scrollbar-thumb{background:rgba(0,255,150,0.25);border-radius:4px}' +
+'::-webkit-scrollbar-thumb:hover{background:rgba(0,255,150,0.45)}' +
 'body{background:radial-gradient(ellipse at center,#0d1f22 0%,#050b0c 70%);padding:40px 24px}' +
 '.hdr{text-align:center;margin-bottom:36px}' +
 '.hdr h1{color:#00ff99;font-size:22px;letter-spacing:2px;margin:0 0 6px;text-shadow:0 0 12px rgba(0,255,150,0.45)}' +
@@ -7622,11 +7627,40 @@
           }
         };
 
-        // Receive nav requests from the about:home iframe
+        // Receive nav requests from the about:home iframe + URL updates
+        // from any iframed archive page (cross-origin iframes can't be
+        // inspected directly, so each archive opts into broadcasting its
+        // own location via postMessage on every page load).
         window.addEventListener('message', function(e) {
-          if (!e.data || e.data.type !== 'browser-nav') return;
-          render(e.data.url, e.data.label);
+          if (!e.data) return;
+          if (e.data.type === 'browser-nav') {
+            render(e.data.url, e.data.label);
+            return;
+          }
+          if (e.data.type === 'kd-iframe-loc' && typeof e.data.url === 'string') {
+            // Only trust the message if it came from the iframe we're hosting.
+            var iframe = contentEl.querySelector('iframe');
+            if (!iframe || e.source !== iframe.contentWindow) return;
+            currentUrl = e.data.url;
+            addrEl.value = e.data.url;
+            try {
+              var host = new URL(e.data.url).host;
+              titleEl.textContent = 'browser@kd:~/' + (currentLabel || host);
+            } catch (err) {}
+          }
         });
+        // Same-origin fallback: for srcdoc (about:home) we can read
+        // location directly when the iframe loads.
+        contentEl.addEventListener('load', function(e) {
+          if (e.target.tagName !== 'IFRAME') return;
+          try {
+            var loc = e.target.contentWindow.location.href;
+            if (loc && loc !== 'about:blank' && loc !== 'about:srcdoc') {
+              currentUrl = loc;
+              addrEl.value = loc;
+            }
+          } catch (err) { /* cross-origin — ignore, postMessage covers it */ }
+        }, true);
 
         // Double-click titlebar toggles maximize (feels like a real window)
         titlebar.addEventListener('dblclick', function(e) {
