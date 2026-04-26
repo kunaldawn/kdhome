@@ -1948,6 +1948,26 @@
       transform: translateY(1px);
     }
 
+    .browser-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      background: rgba(0, 0, 0, 0.2);
+      border-color: rgba(0, 255, 150, 0.08);
+      box-shadow: none;
+      color: var(--neon);
+    }
+
+    .browser-btn:disabled:hover {
+      background: rgba(0, 0, 0, 0.2);
+      border-color: rgba(0, 255, 150, 0.08);
+      box-shadow: none;
+      color: var(--neon);
+    }
+
+    .browser-btn:disabled:active {
+      transform: none;
+    }
+
     .browser-btn svg { display: block; }
 
     .browser-address {
@@ -5177,6 +5197,9 @@
         <span class="vault-titlebar-title" id="browser-title">browser@kd:~</span>
       </div>
       <div class="browser-toolbar">
+        <button class="browser-btn" id="browser-back" onclick="browserGoBack()" title="Back" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
         <button class="browser-btn" id="browser-home" onclick="browserGoHome()" title="Home">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-5h-2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/></svg>
         </button>
@@ -7334,11 +7357,30 @@
         var contentEl = document.getElementById('browser-content');
         var taskbar = document.getElementById('browser-taskbar');
         var taskbarLabel = document.getElementById('browser-taskbar-label');
+        var backBtn = document.getElementById('browser-back');
 
         var currentUrl = '';
         var currentLabel = '';
         var isMax = false;
         var prevStyles = {};
+        var historyStack = [];
+        var historyIndex = -1;
+
+        function updateBackBtn() {
+          if (!backBtn) return;
+          if (historyIndex > 0) backBtn.removeAttribute('disabled');
+          else backBtn.setAttribute('disabled', 'disabled');
+        }
+
+        function pushHistory(url, label) {
+          if (!url) return;
+          var top = historyStack[historyIndex];
+          if (top && top.url === url) return;
+          historyStack = historyStack.slice(0, historyIndex + 1);
+          historyStack.push({ url: url, label: label || '' });
+          historyIndex = historyStack.length - 1;
+          updateBackBtn();
+        }
 
         if (window.makeDraggable) window.makeDraggable(win, titlebar);
 
@@ -7482,7 +7524,8 @@
 '</body></html>';
         }
 
-        function render(url, label) {
+        function render(url, label, options) {
+          options = options || {};
           currentUrl = url;
           currentLabel = label || '';
           var iframe = document.createElement('iframe');
@@ -7502,6 +7545,10 @@
           }
           contentEl.innerHTML = '';
           contentEl.appendChild(iframe);
+          if (!options.fromHistory) {
+            pushHistory(url, label);
+          }
+          updateBackBtn();
         }
 
         function recenter() {
@@ -7554,6 +7601,13 @@
           render('about:home', '');
         };
 
+        window.browserGoBack = function() {
+          if (historyIndex <= 0) return;
+          historyIndex--;
+          var prev = historyStack[historyIndex];
+          render(prev.url, prev.label, { fromHistory: true });
+        };
+
         window.browserOpenExternal = function() {
           if (currentUrl && currentUrl !== 'about:home') {
             window.open(currentUrl, '_blank', 'noopener');
@@ -7575,6 +7629,9 @@
             if (isMax) { win.classList.remove('maximized'); isMax = false; }
             contentEl.innerHTML = '';
             currentUrl = '';
+            historyStack = [];
+            historyIndex = -1;
+            updateBackBtn();
           }, 300);
         };
 
@@ -7655,6 +7712,7 @@
               var host = new URL(e.data.url).host;
               titleEl.textContent = 'browser@kd:~/' + (currentLabel || host);
             } catch (err) {}
+            pushHistory(e.data.url, currentLabel);
           }
         });
         // Same-origin fallback: for srcdoc (about:home) we can read
@@ -7666,6 +7724,7 @@
             if (loc && loc !== 'about:blank' && loc !== 'about:srcdoc') {
               currentUrl = loc;
               addrEl.value = loc;
+              pushHistory(loc, currentLabel);
             }
           } catch (err) { /* cross-origin — ignore, postMessage covers it */ }
         }, true);
