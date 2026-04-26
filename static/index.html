@@ -3344,6 +3344,7 @@
     }
 
     body.entry-gate-locked { overflow: hidden; }
+    body.entry-gate-accepted .entry-gate { display: none !important; }
 
     /* ═══ Glass-off mode (simple transparency) ═══
        Default on mobile. Kills backdrop-filter blur (the expensive part —
@@ -3500,19 +3501,28 @@
 <body class="entry-gate-locked">
   <script>
     /* Apply glass-effect preference before any paint — saved by Settings.
-       Mobile (<=800px) defaults to OFF (panels stay translucent but the
-       backdrop-filter blur is killed for GPU/heat reasons). Desktop
-       defaults to ON. User pref always wins once set. The "no-transparency"
-       class name is historical — it now toggles glass blur, not the
-       translucency itself. */
+       Defaults to OFF on both mobile and desktop (panels stay translucent
+       but the backdrop-filter blur is killed for GPU/heat reasons). User
+       pref always wins once set. The "no-transparency" class name is
+       historical — it now toggles glass blur, not the translucency itself. */
     (function () {
       try {
         var pref = localStorage.getItem('kd:prefs:transparency');
         var off;
-        if (pref === 'off') off = true;
-        else if (pref === 'on') off = false;
-        else off = window.matchMedia('(max-width: 800px)').matches;
+        if (pref === 'on') off = false;
+        else off = true;
         if (off) document.body.classList.add('no-transparency');
+      } catch (e) {}
+    })();
+    /* If the user already accepted the entry-gate terms in a previous
+       visit, hide the gate before first paint and unlock the body. The
+       gate element is later removed from the DOM by its own IIFE. */
+    (function () {
+      try {
+        if (localStorage.getItem('kd:prefs:agreed-18plus') === 'yes') {
+          document.body.classList.remove('entry-gate-locked');
+          document.body.classList.add('entry-gate-accepted');
+        }
       } catch (e) {}
     })();
   </script>
@@ -3585,6 +3595,14 @@
       var ageCheck = document.getElementById('entry-age-check');
       var termsBox = document.querySelector('.entry-terms');
       if (!gate || !btn) return;
+      // Already accepted in a prior visit — drop the gate from the DOM.
+      var alreadyAgreed = false;
+      try { alreadyAgreed = localStorage.getItem('kd:prefs:agreed-18plus') === 'yes'; } catch(e) {}
+      if (alreadyAgreed) {
+        document.body.classList.remove('entry-gate-locked');
+        if (gate.parentNode) gate.parentNode.removeChild(gate);
+        return;
+      }
       function syncBtn() { btn.disabled = !(ageCheck && ageCheck.checked); }
       if (ageCheck) ageCheck.addEventListener('change', syncBtn);
       syncBtn();
@@ -3600,9 +3618,9 @@
       function enter() {
         if (btn.disabled) return;
         btn.removeEventListener('click', enter);
+        try { localStorage.setItem('kd:prefs:agreed-18plus', 'yes'); } catch(e) {}
         gate.classList.add('dismissing');
         document.body.classList.remove('entry-gate-locked');
-        try { if (typeof window.startMusicPlayback === 'function') window.startMusicPlayback(); } catch(e) {}
         setTimeout(function() {
           if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
         }, 1600);
@@ -5075,31 +5093,31 @@
         </div>
         <div class="menu-column right">
           <div class="menu-section-title">Quick Access</div>
-          <div class="menu-item" onclick="openBrowserWindow('https://wiki.kunaldawn.com', 'Wiki Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://wiki.kunaldawn.com', 'Wiki Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></span>
             <span>Wiki Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://pdf.kunaldawn.com', 'PDF Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://pdf.kunaldawn.com', 'PDF Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8M8 11h5" stroke="rgba(0,0,0,0.3)" stroke-width="1.5" fill="none"/></svg></span>
             <span>PDF Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://os.kunaldawn.com', 'OS Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://os.kunaldawn.com', 'OS Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7 9l2 2-2 2"/><line x1="11" y1="13" x2="15" y2="13"/></svg></span>
             <span>OS Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://iso.kunaldawn.com', 'CD/DVD Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://iso.kunaldawn.com', 'CD/DVD Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></span>
             <span>CD/DVD Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://chiptune.kunaldawn.com', 'Chiptune Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://chiptune.kunaldawn.com', 'Chiptune Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
             <span>Chiptune Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://tube.kunaldawn.com', 'Tube Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://tube.kunaldawn.com', 'Tube Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><polygon points="10 9 16 12 10 15" fill="currentColor" stroke="none"/></svg></span>
             <span>Tube Archive</span>
           </div>
-          <div class="menu-item" onclick="openBrowserWindow('https://audio.kunaldawn.com', 'Audiobook Archive')">
+          <div class="menu-item" onclick="openFeaturedArchive('https://audio.kunaldawn.com', 'Audiobook Archive')">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg></span>
             <span>Audiobook Archive</span>
           </div>
@@ -5134,9 +5152,16 @@
           <div class="settings-row">
             <div class="settings-row-text">
               <div class="settings-row-label">Glass effect</div>
-              <div class="settings-row-help">Adds frosted-glass blur behind panels. Off by default on phones — the blur is the expensive part and can heat the device. Panels stay translucent either way.</div>
+              <div class="settings-row-help">Adds frosted-glass blur behind panels. Off by default — the blur is the expensive part and can heat the device. Panels stay translucent either way.</div>
             </div>
             <div class="settings-switch" id="settings-transparency-switch" role="switch" aria-checked="true" tabindex="0" onclick="toggleTransparencyPref()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTransparencyPref();}"></div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <div class="settings-row-label">Open in internal browser</div>
+              <div class="settings-row-help">When on, the start-menu archive links and the featured archive cards open inside the inbuilt browser window instead of a new browser tab. Off by default — archives open in a new tab.</div>
+            </div>
+            <div class="settings-switch" id="settings-internal-browser-switch" role="switch" aria-checked="false" tabindex="0" onclick="toggleInternalBrowserPref()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleInternalBrowserPref();}"></div>
           </div>
         </div>
       </div>
@@ -7026,12 +7051,26 @@
           sw.setAttribute('aria-checked', on ? 'true' : 'false');
         }
 
+        function getInternalBrowserPref() {
+          try { return localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; }
+          catch (e) { return false; }
+        }
+
+        function syncInternalBrowserSwitch() {
+          var sw = document.getElementById('settings-internal-browser-switch');
+          if (!sw) return;
+          var on = getInternalBrowserPref();
+          sw.classList.toggle('on', on);
+          sw.setAttribute('aria-checked', on ? 'true' : 'false');
+        }
+
         window.openSettings = function () {
           var menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) toggleStartMenu();
           var overlay = document.getElementById('settings-overlay');
           if (!overlay) return;
           syncTransparencySwitch();
+          syncInternalBrowserSwitch();
           overlay.classList.add('show');
         };
 
@@ -7047,6 +7086,14 @@
             localStorage.setItem('kd:prefs:transparency', nowOff ? 'off' : 'on');
           } catch (e) {}
           syncTransparencySwitch();
+        };
+
+        window.toggleInternalBrowserPref = function () {
+          var nowOn = !getInternalBrowserPref();
+          try {
+            localStorage.setItem('kd:prefs:archives-internal-browser', nowOn ? 'on' : 'off');
+          } catch (e) {}
+          syncInternalBrowserSwitch();
         };
 
         // Close settings on Escape
@@ -7590,10 +7637,12 @@
         };
 
         window.openFeaturedArchive = function(url, label) {
-          if (window.matchMedia('(max-width: 800px)').matches) {
-            window.open(url, '_blank', 'noopener');
-          } else {
+          var useInternal = false;
+          try { useInternal = localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; } catch(e) {}
+          if (useInternal) {
             window.openBrowserWindow(url, label);
+          } else {
+            window.open(url, '_blank', 'noopener');
           }
         };
 
