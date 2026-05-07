@@ -7146,21 +7146,33 @@
             if (this.clickTimer) clearTimeout(this.clickTimer);
             this.clickTimer = setTimeout(() => { this.clickCount = 0; }, 800);
             if (this.streakTimer) clearTimeout(this.streakTimer);
-            this.streakTimer = setTimeout(() => { this.streakCount = 0; }, 1500);
-
-            // Streak unlocks (highest first; reset streak on trigger)
-            if (this.streakCount === 20) {
+            // Reset both the running counter and the tier marker after the
+            // streak goes idle so the next session can re-arm boop/annoyed/dance.
+            this.streakTimer = setTimeout(() => {
               this.streakCount = 0;
+              this._streakTierFired = 0;
+            }, 1500);
+
+            // Streak unlocks. We can't reset streakCount on each trigger
+            // (the original plan did that, but it traps the user at the boop
+            // tier — clicks 6–10 just count back up to 5 and re-fire boop
+            // forever). Instead, we keep streakCount monotonically increasing
+            // for this streak and use a separate `_streakTierFired` integer to
+            // remember the highest tier that's already happened, so each tier
+            // fires exactly once per streak.
+            const tierFired = this._streakTierFired || 0;
+            if (this.streakCount >= 20 && tierFired < 20) {
+              this._streakTierFired = 20;
               this.triggerStreak('dancing', 'OK fine, dance party.', 5000);
               return;
             }
-            if (this.streakCount === 10) {
-              this.streakCount = 0;
+            if (this.streakCount >= 10 && tierFired < 10) {
+              this._streakTierFired = 10;
               this.triggerStreak('annoyed', 'Hey, leash up.', 2500);
               return;
             }
-            if (this.streakCount === 5) {
-              this.streakCount = 0;
+            if (this.streakCount >= 5 && tierFired < 5) {
+              this._streakTierFired = 5;
               this.triggerStreak('surprised', 'B O O P', 1500);
               return;
             }
