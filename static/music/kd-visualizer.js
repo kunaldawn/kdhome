@@ -312,8 +312,59 @@
         bindBtn('mvm-prev', prev);
         bindBtn('mvm-next', next);
         bindBtn('mvm-rand', random);
-        bindBtn('mvm-auto', function () { setAutoCycle(!autoCycle); });
-        // mvm-fs wired in Task 12; long-press / interval popover in Task 11
+        // mvm-fs wired in Task 12
+
+        var autoBtn = document.getElementById('mvm-auto');
+        var ivPop = document.getElementById('mvm-iv-pop');
+        if (autoBtn && ivPop) {
+            var pressTimer = null;
+            var longPress = false;
+
+            function openIvPop() {
+                ivPop.hidden = false;
+                var opts = ivPop.querySelectorAll('.mvm-iv-opt');
+                for (var i = 0; i < opts.length; i++) {
+                    var s = parseInt(opts[i].getAttribute('data-s'), 10);
+                    if (s === AUTO_INTERVAL_OPTIONS_S[autoIntervalIdx]) opts[i].classList.add('on');
+                    else opts[i].classList.remove('on');
+                }
+                resetMenuHideTimer();
+            }
+
+            autoBtn.addEventListener('mousedown', function () {
+                longPress = false;
+                pressTimer = setTimeout(function () { longPress = true; openIvPop(); }, 400);
+            });
+            autoBtn.addEventListener('mouseup', function () {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+            });
+            autoBtn.addEventListener('mouseleave', function () {
+                if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
+            });
+            autoBtn.addEventListener('contextmenu', function (e) {
+                e.preventDefault();
+                openIvPop();
+            });
+            autoBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (longPress) { longPress = false; return; }
+                setAutoCycle(!autoCycle);
+                resetMenuHideTimer();
+            });
+
+            var opts = ivPop.querySelectorAll('.mvm-iv-opt');
+            for (var i = 0; i < opts.length; i++) {
+                opts[i].addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var s = parseInt(this.getAttribute('data-s'), 10);
+                    if (!isNaN(s)) setIntervalSec(s);
+                    ivPop.hidden = true;
+                    resetMenuHideTimer();
+                });
+            }
+        }
     }
 
     // ---- public API ----
