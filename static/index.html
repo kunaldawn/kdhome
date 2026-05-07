@@ -7139,8 +7139,28 @@
             this.mood.curiosity = Math.min(100, this.mood.curiosity + 10);
             this.lastUserActivity = Date.now();
             this.clickCount++;
+            this.streakCount = (this.streakCount || 0) + 1;
             if (this.clickTimer) clearTimeout(this.clickTimer);
             this.clickTimer = setTimeout(() => { this.clickCount = 0; }, 800);
+            if (this.streakTimer) clearTimeout(this.streakTimer);
+            this.streakTimer = setTimeout(() => { this.streakCount = 0; }, 1500);
+
+            // Streak unlocks (highest first; reset streak on trigger)
+            if (this.streakCount === 20) {
+              this.streakCount = 0;
+              this.triggerStreak('dancing', 'OK fine, dance party.', 5000);
+              return;
+            }
+            if (this.streakCount === 10) {
+              this.streakCount = 0;
+              this.triggerStreak('annoyed', 'Hey, leash up.', 2500);
+              return;
+            }
+            if (this.streakCount === 5) {
+              this.streakCount = 0;
+              this.triggerStreak('surprised', 'B O O P', 1500);
+              return;
+            }
 
             if (this.clickCount >= 3) {
               this.pet();
@@ -7190,6 +7210,21 @@
               this.setState('idle');
               this.restartBehaviorLoop(1500);
             }, 1500);
+          }
+
+          triggerStreak(state, msg, dur) {
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState(state);
+            this.showMessage(msg);
+            this.animateFrames(state === 'dancing' ? 300 : 400, dur);
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+              this.restartBehaviorLoop(1200);
+            }, dur);
           }
 
           // ─── Surprises ───
