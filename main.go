@@ -1,7 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -10,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -38,18 +43,42 @@ func initVisitDB(dataDir string) {
 	visitDB.SetMaxOpenConns(1) // SQLite is single-writer
 	visitDB.SetMaxIdleConns(1)
 
-	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS visits (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		ts DATETIME DEFAULT CURRENT_TIMESTAMP
+	// Single-row aggregate table. Replaces the old per-visit row append,
+	// which grew without bound and made startup `SELECT COUNT(*)` linear.
+	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS visit_count (
+		id INTEGER PRIMARY KEY CHECK (id = 1),
+		n  INTEGER NOT NULL DEFAULT 0
 	)`)
 	if err != nil {
-		log.Printf("[VISITS] failed to create table: %v", err)
+		log.Printf("[VISITS] failed to create visit_count: %v", err)
+		return
+	}
+	if _, err = visitDB.Exec(`INSERT OR IGNORE INTO visit_count (id, n) VALUES (1, 0)`); err != nil {
+		log.Printf("[VISITS] failed to seed visit_count: %v", err)
 		return
 	}
 
-	// Load current count into memory
+	// One-shot migration: if the legacy per-row `visits` table exists and the
+	// aggregate is still 0, copy the count over so we don't reset to zero on
+	// upgrade. Leaves the old table in place for archival; nothing else
+	// references it.
+	var legacy int
+	visitDB.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='visits'`).Scan(&legacy)
+	if legacy > 0 {
+		var aggregate, legacyCount int64
+		visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&aggregate)
+		visitDB.QueryRow(`SELECT COUNT(*) FROM visits`).Scan(&legacyCount)
+		if aggregate == 0 && legacyCount > 0 {
+			if _, err := visitDB.Exec(`UPDATE visit_count SET n = ? WHERE id = 1`, legacyCount); err != nil {
+				log.Printf("[VISITS] migration update failed: %v", err)
+			} else {
+				log.Printf("[VISITS] migrated %d rows from legacy table to aggregate", legacyCount)
+			}
+		}
+	}
+
 	var count int64
-	visitDB.QueryRow("SELECT COUNT(*) FROM visits").Scan(&count)
+	visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&count)
 	atomic.StoreInt64(&visitCount, count)
 	log.Printf("[VISITS] initialized — total: %d", count)
 }
@@ -59,9 +88,9 @@ func recordVisit() {
 		return
 	}
 	go func() {
-		_, err := visitDB.Exec("INSERT INTO visits (ts) VALUES (CURRENT_TIMESTAMP)")
+		_, err := visitDB.Exec(`UPDATE visit_count SET n = n + 1 WHERE id = 1`)
 		if err != nil {
-			log.Printf("[VISITS] insert error: %v", err)
+			log.Printf("[VISITS] update error: %v", err)
 			return
 		}
 		atomic.AddInt64(&visitCount, 1)
@@ -96,8 +125,8 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; "+
-				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "+
-				"font-src 'self' https://fonts.gstatic.com; "+
+				"style-src 'self' 'unsafe-inline'; "+
+				"font-src 'self'; "+
 				"img-src 'self' data:; "+
 				"media-src 'self' blob:; "+
 				"worker-src 'self' blob:; "+
@@ -184,6 +213,201 @@ func (n noDirFS) Open(name string) (http.File, error) {
 	return f, nil
 }
 
+// ─── Static cache: in-memory + pre-gzipped + ETag + Cache-Control ───
+
+// Extensions whose payloads compress well. Skipped for already-compressed
+// formats (webp, png, mp3, woff2, tracker modules, etc).
+var compressibleExt = map[string]bool{
+	".html":        true,
+	".js":          true,
+	".css":         true,
+	".json":        true,
+	".svg":         true,
+	".webmanifest": true,
+	".txt":         true,
+	".xml":         true,
+	".wasm":        true,
+	".mem":         true,
+	".map":         true,
+}
+
+// Tracker modules are streamed straight from disk by FileServer rather than
+// being held in the in-memory cache — they're binary and add up to multiple MB.
+var trackerExt = map[string]bool{
+	".mod": true, ".xm": true, ".s3m": true, ".it": true,
+	".mptm": true, ".stm": true, ".med": true, ".mtm": true,
+}
+
+type cachedFile struct {
+	contentType  string
+	raw          []byte
+	gz           []byte // nil if not worth gzipping
+	etag         string
+	modTime      time.Time
+	cacheControl string
+}
+
+var staticCache map[string]*cachedFile
+
+// cacheControlFor returns a Cache-Control value based on the URL path. Assets
+// whose contents change only via a deploy get long max-age + immutable; the
+// HTML shell and crawler-facing files get a short max-age so updates aren't
+// stuck behind stale browser caches.
+func cacheControlFor(urlPath string) string {
+	switch {
+	case urlPath == "/" || urlPath == "/index.html",
+		urlPath == "/site.webmanifest",
+		urlPath == "/sitemap.xml",
+		urlPath == "/robots.txt",
+		urlPath == "/llms.txt":
+		return "public, max-age=300, must-revalidate"
+	case strings.HasPrefix(urlPath, "/music/"),
+		strings.HasPrefix(urlPath, "/fonts/"),
+		strings.HasPrefix(urlPath, "/infra"),
+		urlPath == "/og-image.png",
+		strings.HasPrefix(urlPath, "/favicon"),
+		urlPath == "/apple-touch-icon.png",
+		strings.HasPrefix(urlPath, "/android-chrome-"):
+		return "public, max-age=31536000, immutable"
+	default:
+		return "public, max-age=3600"
+	}
+}
+
+// buildStaticCache walks staticDir, loads every non-tracker file under 8 MiB
+// into memory, computes a content-hash ETag, and pre-gzips compressible types
+// at gzip.BestCompression.
+func buildStaticCache(staticDir string) (map[string]*cachedFile, error) {
+	cache := map[string]*cachedFile{}
+	err := filepath.Walk(staticDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		if trackerExt[ext] {
+			return nil
+		}
+		if info.Size() > 8*1024*1024 {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(staticDir, path)
+		urlPath := "/" + filepath.ToSlash(rel)
+
+		ct := mime.TypeByExtension(ext)
+		if ct == "" {
+			ct = http.DetectContentType(data)
+		}
+
+		sum := sha256.Sum256(data)
+		etag := `"` + hex.EncodeToString(sum[:8]) + `"`
+
+		var gz []byte
+		if compressibleExt[ext] {
+			var buf bytes.Buffer
+			zw, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+			zw.Write(data)
+			zw.Close()
+			if buf.Len() < len(data) {
+				gz = buf.Bytes()
+			}
+		}
+
+		cache[urlPath] = &cachedFile{
+			contentType:  ct,
+			raw:          data,
+			gz:           gz,
+			etag:         etag,
+			modTime:      info.ModTime().UTC(),
+			cacheControl: cacheControlFor(urlPath),
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if idx, ok := cache["/index.html"]; ok {
+		cache["/"] = idx
+	}
+	return cache, nil
+}
+
+func acceptsGzip(r *http.Request) bool {
+	for _, part := range strings.Split(r.Header.Get("Accept-Encoding"), ",") {
+		name := strings.TrimSpace(part)
+		if i := strings.IndexByte(name, ';'); i >= 0 {
+			name = strings.TrimSpace(name[:i])
+		}
+		if name == "gzip" {
+			return true
+		}
+	}
+	return false
+}
+
+// staticHandler serves cached files with negotiated gzip + ETag-based
+// conditional GET. Anything not in the cache (e.g. tracker modules dropped
+// into static/music/ after startup) falls through to the disk-backed
+// FileServer.
+func staticHandler(fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
+			fallback.ServeHTTP(w, r)
+			return
+		}
+		cf, ok := staticCache[r.URL.Path]
+		if !ok {
+			// Disk fallback gets the same Cache-Control treatment, but
+			// nothing else — it's the slow path for unfingerprinted files.
+			w.Header().Set("Cache-Control", cacheControlFor(r.URL.Path))
+			w.Header().Add("Vary", "Accept-Encoding")
+			fallback.ServeHTTP(w, r)
+			return
+		}
+
+		h := w.Header()
+		h.Set("ETag", cf.etag)
+		h.Set("Cache-Control", cf.cacheControl)
+		h.Add("Vary", "Accept-Encoding")
+
+		// Conditional GET. ETag wins over If-Modified-Since per RFC 7232.
+		if inm := r.Header.Get("If-None-Match"); inm != "" {
+			if inm == cf.etag || inm == "*" {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		} else if ims := r.Header.Get("If-Modified-Since"); ims != "" {
+			if t, err := http.ParseTime(ims); err == nil &&
+				!cf.modTime.Truncate(time.Second).After(t) {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+		}
+
+		h.Set("Content-Type", cf.contentType)
+		h.Set("Last-Modified", cf.modTime.Format(http.TimeFormat))
+
+		body := cf.raw
+		if cf.gz != nil && acceptsGzip(r) {
+			h.Set("Content-Encoding", "gzip")
+			body = cf.gz
+		}
+		h.Set("Content-Length", strconv.Itoa(len(body)))
+
+		if r.Method == http.MethodHead {
+			return
+		}
+		w.Write(body)
+	}
+}
+
 // ─── Main ───
 
 func main() {
@@ -207,10 +431,19 @@ func main() {
 	// Initialize systems
 	initVisitDB(dataDir)
 
+	// Pre-load and pre-gzip static assets so we serve compressed bytes
+	// without paying CPU per request on the Pi.
+	cache, err := buildStaticCache(staticDir)
+	if err != nil {
+		log.Fatalf("[STATIC] cache build failed: %v", err)
+	}
+	staticCache = cache
+	log.Printf("[STATIC] cached %d files", len(cache))
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/visit", visitHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
-	mux.Handle("/", http.FileServer(noDirFS{http.Dir(staticDir)}))
+	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
 	srv := &http.Server{
 		Addr:              ":" + port,

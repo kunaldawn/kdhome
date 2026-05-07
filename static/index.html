@@ -25,14 +25,38 @@
 <html lang="en" xml:lang="en">
 
 <head>
-  <!-- Google tag (gtag.js) -->
+  <!-- Google tag (gtag.js). The library is async (non-blocking), and the
+       `config` call — which kicks the /g/collect page_view request — is
+       deferred to requestIdleCallback or the first user interaction so it
+       never competes with First Contentful Paint. -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HZTB29002E"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag() { dataLayer.push(arguments); }
     gtag('js', new Date());
-
-    gtag('config', 'G-HZTB29002E');
+    (function () {
+      var fired = false;
+      function fire() {
+        if (fired) return;
+        fired = true;
+        gtag('config', 'G-HZTB29002E');
+      }
+      // Idle whenever the browser has spare time; capped at 4s so analytics
+      // still arrives reliably on tabs the user opens and immediately
+      // backgrounds. Falls back to the first interaction on browsers without
+      // requestIdleCallback (Safari < 17, etc).
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(fire, { timeout: 4000 });
+      } else {
+        setTimeout(fire, 2000);
+      }
+      // Also fire on the first user interaction — covers the case where the
+      // user is fast and clicks/scrolls before idle.
+      var opts = { once: true, passive: true };
+      ['pointerdown', 'keydown', 'scroll', 'visibilitychange'].forEach(function (ev) {
+        window.addEventListener(ev, fire, opts);
+      });
+    })();
   </script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
@@ -157,10 +181,29 @@
   </script>
 
   <title>KD's Homebrew Digital Archive — 12 TB Preserved on a Home-grown Homelab</title>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap"
-    rel="stylesheet">
+  <!-- Self-hosted fonts. Inter is a variable font (covers 300/400/600 in
+       one file). Both files are latin subset only; the page never serves
+       cyrillic/greek/vietnamese, so the extra Google subsets just
+       wasted RTTs. font-display: swap keeps text visible while loading. -->
+  <link rel="preload" href="/fonts/Inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ShareTechMono-latin.woff2" as="font" type="font/woff2" crossorigin>
   <style>
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 300 600;
+      font-display: swap;
+      src: url('/fonts/Inter-latin-var.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: 'Share Tech Mono';
+      font-style: normal;
+      font-weight: 400;
+      font-display: swap;
+      src: url('/fonts/ShareTechMono-latin.woff2') format('woff2');
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
     * {
       box-sizing: border-box;
     }
@@ -996,14 +1039,25 @@
       line-height: 1.3;
       color: var(--neon);
       animation: matrix-fall linear infinite;
-      text-shadow:
-        0 0 10px rgba(0, 255, 150, 0.8),
-        0 0 20px rgba(0, 255, 150, 0.6),
-        0 0 30px rgba(0, 255, 150, 0.4),
-        0 0 40px rgba(0, 255, 150, 0.2);
-      filter: contrast(1.5) brightness(1.2);
+      /* Single-stop shadow + no contrast/brightness filter. The previous
+         four-stop shadow at 40 px blur plus a per-column filter pass made
+         every animated frame re-rasterise ~3,000 separately blurred glyphs;
+         this collapse keeps the look while moving paint to ~free-territory
+         on the GPU. */
+      text-shadow: 0 0 12px rgba(0, 255, 150, 0.55);
       opacity: 0;
       transform: translateY(-100%);
+    }
+    /* Two style variants for the brighter/medium glyphs. Replaces the inline
+       <span style="..."> writes that the JS used to do per character — saves
+       ~150 KB of generated HTML and lets the engine cache hashed style
+       lookups. */
+    .matrix-column .glyph-bright {
+      color: #fff;
+      text-shadow: 0 0 14px #00ff99, 0 0 22px rgba(0, 255, 150, 0.6);
+    }
+    .matrix-column .glyph-medium {
+      text-shadow: 0 0 12px rgba(0, 255, 150, 0.75);
     }
 
     @keyframes matrix-fall {
@@ -2217,6 +2271,11 @@
       background: rgba(0, 0, 0, 0.25);
       border: 1px solid rgba(0, 255, 150, 0.06);
       border-bottom: none;
+      /* Skip layout/paint for sections scrolled out of view; the browser
+         renders only what's near the viewport. ~700 px is a safe upper
+         bound on the longest expanded body. */
+      content-visibility: auto;
+      contain-intrinsic-size: auto 120px;
     }
 
     .info-section:first-child {
@@ -5521,7 +5580,14 @@
                   doesn't require a data centre — just determination, a shelf, and enough panels to cover
                   the draw.
                 </small>
-                <img class="infra-media" src="/infra.webp" alt="Homelab hardware stack" loading="lazy" decoding="async" width="480" height="270">
+                <!--
+                  Animated WebP (1.47 MB, 318 frames) re-encoded to H.264 mp4
+                  (492 KB) for inter-frame compression. Poster is a 3.7 KB
+                  still WebP of the first frame for instant paint.
+                -->
+                <video class="infra-media" src="/infra.mp4" poster="/infra-poster.webp"
+                  width="480" height="270" autoplay loop muted playsinline preload="none"
+                  aria-label="Homelab hardware stack"></video>
               </div>
             </div>
 
@@ -5664,22 +5730,26 @@
           return '> Statistics retrieved from /proc/archive/stats';
         };
 
-        // Matrix rain effect
+        // Matrix rain effect.
+        //
+        // Glyph styles (.glyph-bright / .glyph-medium / unstyled) live in CSS;
+        // the JS just builds DOM. Avoiding inline-style spans cuts ~150 KB of
+        // generated HTML and lets the engine cache the style hash.
         function createMatrixRain() {
-          // Create matrix rain for all devices but optimize for mobile
           const isMobile = window.innerWidth < 768;
 
           const matrixBg = document.createElement('div');
           matrixBg.className = 'matrix-bg';
-          document.body.appendChild(matrixBg);
 
-          // Using only ASCII characters to prevent language detection issues
+          // ASCII only — avoids Chrome auto-translate kicking in on the page.
           const chars = '01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()_+-=[]{}|;:<>?,./';
           const columnWidth = isMobile ? 25 : 35;
           const columns = Math.floor(window.innerWidth / columnWidth);
-          const maxColumns = isMobile ? 15 : columns; // Limit columns on mobile for performance
+          const maxColumns = isMobile ? 15 : columns;
           const actualColumns = Math.min(columns, maxColumns);
+          const charCount = isMobile ? 30 : 60;
 
+          const frag = document.createDocumentFragment();
           for (let i = 0; i < actualColumns; i++) {
             const column = document.createElement('div');
             column.className = 'matrix-column';
@@ -5688,46 +5758,43 @@
             column.style.animationDelay = `${Math.random() * 8}s`;
             column.style.opacity = `${Math.random() * 0.5 + 0.5}`;
 
-            let text = '';
-            const charCount = isMobile ? 30 : 60; // Fewer characters on mobile
             for (let j = 0; j < charCount; j++) {
               const char = chars[Math.floor(Math.random() * chars.length)];
               const brightness = Math.random();
               if (brightness > 0.95) {
-                // Bright white trailing character
-                text += `<span style="color:#ffffff;filter:brightness(2);text-shadow:0 0 25px #00ff99, 0 0 35px #00ff99">${char}</span><br>`;
+                const span = document.createElement('span');
+                span.className = 'glyph-bright';
+                span.textContent = char;
+                column.appendChild(span);
               } else if (brightness > 0.8) {
-                // Medium bright character
-                text += `<span style="filter:brightness(1.5);text-shadow:0 0 15px rgba(0,255,150,0.8)">${char}</span><br>`;
+                const span = document.createElement('span');
+                span.className = 'glyph-medium';
+                span.textContent = char;
+                column.appendChild(span);
               } else {
-                // Normal character
-                text += char + '<br>';
+                column.appendChild(document.createTextNode(char));
               }
+              column.appendChild(document.createElement('br'));
             }
-            column.innerHTML = text;
-            matrixBg.appendChild(column);
+            frag.appendChild(column);
           }
+          matrixBg.appendChild(frag);
+          document.body.appendChild(matrixBg);
         }
 
         // Initialize matrix rain
         createMatrixRain();
 
-        // Handle tab visibility change - fix matrix animation lag
+        // Pause animations when the tab is hidden — far cheaper than the old
+        // remove()+recreate cycle, and avoids the GC churn that produced.
         document.addEventListener('visibilitychange', () => {
           const matrixBg = document.querySelector('.matrix-bg');
           if (!matrixBg) return;
-
-          if (document.hidden) {
-            // Pause all matrix animations when tab is hidden
-            matrixBg.style.animationPlayState = 'paused';
-            matrixBg.querySelectorAll('.matrix-column').forEach(col => {
-              col.style.animationPlayState = 'paused';
-            });
-          } else {
-            // Recreate matrix rain on tab return to avoid desynced animations
-            matrixBg.remove();
-            createMatrixRain();
-          }
+          const state = document.hidden ? 'paused' : 'running';
+          matrixBg.style.animationPlayState = state;
+          matrixBg.querySelectorAll('.matrix-column').forEach(col => {
+            col.style.animationPlayState = state;
+          });
         });
 
         // Random glitch effect
@@ -5764,8 +5831,12 @@
           observer.observe(card);
         });
 
-        // Terminal typing effect
+        // Terminal typing effect. Reserves the final layout height before
+        // clearing so progressive `textContent +=` doesn't push later content
+        // around (Cumulative Layout Shift fix).
         function typeWriter(element, text, speed = 50) {
+          const finalHeight = element.getBoundingClientRect().height;
+          if (finalHeight > 0) element.style.minHeight = finalHeight + 'px';
           let i = 0;
           element.textContent = '';
           function type() {
@@ -5829,22 +5900,20 @@
           });
         };
 
-        // Visit counter
+        // Visit counter. POST records the visit and returns the new count;
+        // we don't bother with a GET-only fallback because both endpoints
+        // share the same in-memory atomic and a transient POST failure
+        // just means "skip the counter for this visit".
         (function () {
           const el = document.getElementById('visit-count');
-          // Record visit and get count
           fetch('/api/visit', { method: 'POST' })
-            .then(r => r.json())
+            .then(r => r.ok ? r.json() : null)
             .then(data => {
-              if (el && data.count != null) el.textContent = data.count.toLocaleString() + ' visits';
+              if (el && data && data.count != null) {
+                el.textContent = data.count.toLocaleString() + ' visits';
+              }
             })
-            .catch(() => {
-              // Fallback: just get count
-              fetch('/api/visit')
-                .then(r => r.json())
-                .then(data => { if (el && data.count != null) el.textContent = data.count.toLocaleString() + ' visits'; })
-                .catch(() => { if (el) el.textContent = ''; });
-            });
+            .catch(() => { /* silent: no counter is fine */ });
         })();
 
         // ═══════════════════════════════════════════════════════════
@@ -6532,18 +6601,36 @@
             return true;
           }
 
-          // Poll for overlap with the music window (the user can drag it anywhere);
-          // if the cat winds up under it, drop everything and escape to the freest side.
+          // The music window can move (drag), maximize, or hide. Instead of
+          // polling every 350 ms (which forced two getBoundingClientRect()
+          // reads/sec even at idle), watch the window for style/class
+          // mutations and recheck only when something actually changed.
+          // A debounce coalesces the burst of style writes from a drag into
+          // a single overlap check at rest.
           startMusicAvoidWatcher() {
             if (this._musicWatcher) return;
-            this._musicWatcher = setInterval(() => {
+            const win = document.getElementById('music-window');
+            if (!win) return;
+            const recheck = () => {
               if (document.hidden) return;
               if (this.isMoving) return;
               if (!this.isOnMusicWindow()) return;
               this.cancelBehaviorLoop();
               if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
               this.escapeMusicWindow();
-            }, 350);
+            };
+            let pending = null;
+            const schedule = () => {
+              if (pending) return;
+              pending = setTimeout(() => { pending = null; recheck(); }, 120);
+            };
+            this._musicWatcher = new MutationObserver(schedule);
+            this._musicWatcher.observe(win, { attributes: true, attributeFilter: ['style', 'class'] });
+            // Also recheck after the cat itself stops moving — it might have
+            // landed on top of the window.
+            this.cat.addEventListener('transitionend', schedule);
+            // And on viewport resize (window may now overlap differently).
+            window.addEventListener('resize', schedule, { passive: true });
           }
 
           // Vertical range for free-roam. On narrow viewports the music
@@ -8027,13 +8114,13 @@
       })();
     </script>
 
-    <!-- Tracker music player (libopenmpt + chiptune2.js) -->
+    <!-- Tracker music player (libopenmpt + chiptune2.js) — loaded on first
+         Play click. The libopenmpt asm.js bundle is ~2.3 MB; deferring it
+         until the user actually wants music keeps it off the critical path. -->
     <script>
       window['libopenmpt'] = {};
       libopenmpt.locateFile = function(filename) { return '/music/' + filename; };
     </script>
-    <script src="/music/libopenmpt.js"></script>
-    <script src="/music/chiptune2.js"></script>
     <script defer src="/music/kd-visualizer.js"></script>
     <script>
     (function() {
@@ -8066,6 +8153,70 @@
       var isStopped = false; // true after explicit stop, prevents onEnded auto-advance
       var songLoopEnabled = false; // controls module internal looping (repeat patterns in MOD/XM/IT)
       var chipTaskbar = document.getElementById('chiptunes-taskbar');
+
+      // ─── Lazy loader for libopenmpt + chiptune2 ───
+      // The asm.js libopenmpt bundle is ~2.3 MB. We keep it off the critical
+      // path and pull it in only after the user signals intent to play.
+      //
+      // The script's onload fires when the JS body has parsed, but the
+      // Emscripten runtime only becomes usable after libopenmpt fetches its
+      // heap-init .mem file (asynchronous) and finishes initRuntime. We poll
+      // for heap readiness rather than relying on Module.onRuntimeInitialized,
+      // which fires inconsistently when set after the script tag has already
+      // started fetching.
+      var libsPromise = null;
+      function loadTrackerLibs() {
+        if (libsPromise) return libsPromise;
+        libsPromise = new Promise(function (resolveAll, rejectAll) {
+          function waitForRuntime() {
+            return new Promise(function (resolve) {
+              (function poll() {
+                var m = window.libopenmpt;
+                if (m && m.calledRun && typeof m._malloc === 'function' && m.HEAPU8) {
+                  try {
+                    var p = m._malloc(1);
+                    m._free(p);
+                    resolve();
+                    return;
+                  } catch (e) { /* heap not yet wired; keep polling */ }
+                }
+                setTimeout(poll, 25);
+              })();
+            });
+          }
+          var scripts = ['/music/libopenmpt.js', '/music/chiptune2.js'];
+          var loaded = 0;
+          scripts.forEach(function (src) {
+            var s = document.createElement('script');
+            s.src = src;
+            // async=false preserves order: chiptune2 references libopenmpt at parse time.
+            s.async = false;
+            s.onload = function () {
+              if (++loaded === scripts.length) waitForRuntime().then(resolveAll);
+            };
+            s.onerror = function () {
+              libsPromise = null;
+              rejectAll(new Error('failed to load ' + src));
+            };
+            document.head.appendChild(s);
+          });
+        });
+        return libsPromise;
+      }
+      // ensurePlayer: idempotent; lazy-loads libs on first call, then creates the player.
+      async function ensurePlayer() {
+        if (player) return;
+        var prevInfo = info ? info.textContent : '';
+        if (info) info.textContent = 'Loading...';
+        try {
+          await loadTrackerLibs();
+        } catch (e) {
+          if (info) info.textContent = 'Load error';
+          throw e;
+        }
+        initPlayer();
+        if (info && info.textContent === 'Loading...') info.textContent = prevInfo;
+      }
 
       // ─── Player → visualizer hand-off (consumed by kd-visualizer.js) ───
       window.kdMusic = {
@@ -8257,10 +8408,10 @@
 
       // ─── Auto-start hook (triggered from entry gate user gesture) ───
       var pendingAutoStart = false;
-      window.startMusicPlayback = function() {
+      window.startMusicPlayback = async function() {
         if (!playlist.length) { pendingAutoStart = true; return; }
         if (isPlaying) return;
-        if (!player) initPlayer();
+        try { await ensurePlayer(); } catch (e) { return; }
         if (player) {
           try { if (player.context && player.context.state === 'suspended') player.context.resume(); } catch(e) {}
           loadAndPlay();
@@ -8357,9 +8508,9 @@
         });
       }
 
-      function playTrack(idx) {
+      async function playTrack(idx) {
         currentTrack = idx;
-        if (!player) initPlayer();
+        try { await ensurePlayer(); } catch (e) { return; }
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       }
 
@@ -8378,9 +8529,13 @@
 
 
       // ─── Controls ───
-      btn.addEventListener('click', function() {
+      btn.addEventListener('click', async function() {
         if (!playlist.length) return;
-        if (!player) { initPlayer(); if (player) loadAndPlay(); return; }
+        if (!player) {
+          try { await ensurePlayer(); } catch (e) { return; }
+          if (player) loadAndPlay();
+          return;
+        }
 
         if (isPlaying) {
           // Pause
@@ -8396,17 +8551,17 @@
         }
       });
 
-      btnPrev.addEventListener('click', function() {
+      btnPrev.addEventListener('click', async function() {
         if (!playlist.length) return;
         currentTrack = (currentTrack - 1 + playlist.length) % playlist.length;
-        if (!player) initPlayer();
+        try { await ensurePlayer(); } catch (e) { return; }
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       });
 
-      btnNext.addEventListener('click', function() {
+      btnNext.addEventListener('click', async function() {
         if (!playlist.length) return;
         currentTrack = (currentTrack + 1) % playlist.length;
-        if (!player) initPlayer();
+        try { await ensurePlayer(); } catch (e) { return; }
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       });
       // ─── Minimize on mobile by default ───
