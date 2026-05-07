@@ -6199,6 +6199,15 @@
             if (this.behaviorTimer) { clearTimeout(this.behaviorTimer); this.behaviorTimer = null; }
           }
 
+          // Invalidates any in-flight followPoint chain. Bumping the token
+          // tells the queued inner setTimeouts to bail when they wake up —
+          // they'd otherwise overwrite state that's been set by an
+          // interrupting action (pet, spook, escape).
+          cancelFollow() {
+            this._followToken = (this._followToken || 0) + 1;
+            if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+          }
+
           restartBehaviorLoop(delay) {
             this.cancelBehaviorLoop();
             this.behaviorTimer = setTimeout(() => this.scheduleNext(), delay || 2000);
@@ -6684,7 +6693,7 @@
                 const curB = parseInt(this.cat.style.bottom) || 50;
                 if (curB > 80) {
                   this.cancelBehaviorLoop();
-                  if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+                  this.cancelFollow();
                   this.cat.style.transition = 'bottom 0.3s ease-out';
                   this.cat.style.bottom = '50px';
                   setTimeout(() => { this.cat.style.transition = ''; this.restartBehaviorLoop(800); }, 320);
@@ -6694,7 +6703,7 @@
               // 2. Music-window-specific escape (legacy behavior preserved).
               if (!this.isOnMusicWindow()) return;
               this.cancelBehaviorLoop();
-              if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+              this.cancelFollow();
               this.escapeMusicWindow();
             };
             let pending = null;
@@ -6833,10 +6842,16 @@
           followPoint(x, y) {
             if (this.isMoving) return;
             this.isMoving = true;
+            // Token guards both inner setTimeouts: if cancelFollow runs (or
+            // followPoint is restarted), bumping the token makes any pending
+            // inner timeout return without overwriting state.
+            this._followToken = (this._followToken || 0) + 1;
+            const myToken = this._followToken;
             this.setState('alert');
             this.animateFrames(500, 500);
             if (this.followTimeout) clearTimeout(this.followTimeout);
             this.followTimeout = setTimeout(() => {
+              if (myToken !== this._followToken) return; // cancelled
               if (!this.isMoving) return; // interrupted
               this.setState('walking');
               const catRect = this.cat.getBoundingClientRect();
@@ -6853,6 +6868,7 @@
               this.cat.style.bottom = safe.bottom + 'px';
               this.animateFrames(200, dur);
               setTimeout(() => {
+                if (myToken !== this._followToken) return; // cancelled
                 this.isMoving = false;
                 this.cat.style.transition = '';
                 this.setState('sitting');
@@ -6897,7 +6913,7 @@
           pet() {
             this.cancelBehaviorLoop();
             this.isMoving = false;
-            if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+            this.cancelFollow();
             this.setState('love');
             this.showMessage('Purrrrrr <3');
             for (let i = 0; i < 6; i++) setTimeout(() => this.spawnEmote('♥', '#ff6b6b', 1000), i * 150);
@@ -6914,7 +6930,7 @@
           interact() {
             this.cancelBehaviorLoop();
             this.isMoving = false;
-            if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+            this.cancelFollow();
             this.setState('happy');
             const pool = Math.random() < 0.3 ? 'tips' : 'idle';
             const msgs = pool === 'tips' ? this.msgPools.tips : [
@@ -6954,7 +6970,7 @@
           spook(runDir) {
             if (this.isMoving) return;
             this.cancelBehaviorLoop();
-            if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+            this.cancelFollow();
             this.spawnEmote('!', '#ffbd2e', 500);
             this.setState('surprised');
             this.isMoving = true;
