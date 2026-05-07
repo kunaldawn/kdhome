@@ -6370,7 +6370,7 @@
             const now = new Date();
             const h = now.getHours();
             const day = now.getDay();
-            const browserVisible = this.windowVisible('browser-window');
+            const browserVisible = this.windowVisible('.browser-window');
             const demoVisible = this.windowVisible('demo-window');
             const musicVisible = this.windowVisible('music-window');
             const lunchHour = h >= 12 && h < 13;
@@ -6785,12 +6785,23 @@
           // Cheap visibility check — true if the element is in the DOM and
           // not currently hidden / minimized. Used by the themed weight
           // biases in getNextState; getBoundingClientRect would be overkill.
-          windowVisible(id) {
-            const el = document.getElementById(id);
-            if (!el) return false;
-            if (el.classList.contains('hidden')) return false;
-            if (el.style.display === 'none') return false;
-            return true;
+          windowVisible(idOrSelector) {
+            // Accepts an element id (e.g., 'music-window') or any selector.
+            // For selectors, returns true if any matching element is visible
+            // (not .hidden and not display:none).
+            var els;
+            if (idOrSelector.indexOf('.') === 0 || idOrSelector.indexOf('[') === 0) {
+              els = document.querySelectorAll(idOrSelector);
+            } else {
+              const el = document.getElementById(idOrSelector);
+              els = el ? [el] : [];
+            }
+            for (const el of els) {
+              if (el.classList.contains('hidden')) continue;
+              if (el.style.display === 'none') continue;
+              return true;
+            }
+            return false;
           }
 
           // All visible windows the cat should avoid: music + browser + demo.
@@ -6799,11 +6810,16 @@
           // taskbar strip when an archive is open.
           getAllAvoidRects() {
             const rects = [];
-            const ids = ['music-window', 'browser-window', 'demo-window'];
-            for (const id of ids) {
+            const fixed = ['music-window', 'demo-window'];
+            for (const id of fixed) {
               const r = this.rectFor(document.getElementById(id), 12);
               if (r) rects.push(r);
             }
+            // Browser windows are dynamic — enumerate all currently open instances.
+            document.querySelectorAll('.browser-window').forEach((el) => {
+              const r = this.rectFor(el, 12);
+              if (r) rects.push(r);
+            });
             return rects;
           }
 
@@ -6812,10 +6828,16 @@
           // strip just above the taskbar — anywhere else would obstruct
           // whatever the user is reading in the maximized window.
           hasMaximizedWindow() {
-            const ids = ['browser-window', 'demo-window', 'music-window'];
-            for (const id of ids) {
+            const fixed = ['demo-window', 'music-window'];
+            for (const id of fixed) {
               const w = document.getElementById(id);
               if (!w) continue;
+              if (w.classList.contains('hidden')) continue;
+              if (w.style.display === 'none') continue;
+              if (w.classList.contains('maximized')) return true;
+            }
+            const browsers = document.querySelectorAll('.browser-window');
+            for (const w of browsers) {
               if (w.classList.contains('hidden')) continue;
               if (w.style.display === 'none') continue;
               if (w.classList.contains('maximized')) return true;
@@ -6951,15 +6973,12 @@
           // into one check at rest. Polling-free; no per-frame reads.
           startMusicAvoidWatcher() {
             if (this._winWatcher) return;
-            const ids = ['music-window', 'browser-window', 'demo-window'];
-            const targets = ids.map(id => document.getElementById(id)).filter(Boolean);
-            if (!targets.length) return;
+            const fixed = ['music-window', 'demo-window'];
+            const fixedTargets = fixed.map(id => document.getElementById(id)).filter(Boolean);
+
             const recheck = () => {
               if (document.hidden) return;
               if (this.isMoving) return;
-              // 1. If a window is maximized and the cat has drifted above the
-              //    bottom strip, snap it down. No transition fanfare — this
-              //    runs on window open / maximize and should feel instant.
               if (this.hasMaximizedWindow()) {
                 const curB = parseInt(this.cat.style.bottom) || 50;
                 if (curB > 80) {
@@ -6971,7 +6990,6 @@
                   return;
                 }
               }
-              // 2. Music-window-specific escape (legacy behavior preserved).
               if (!this.isOnMusicWindow()) return;
               this.cancelBehaviorLoop();
               this.cancelFollow();
@@ -6982,10 +7000,40 @@
               if (pending) return;
               pending = setTimeout(() => { pending = null; recheck(); }, 120);
             };
+
+            // Per-element observer for fixed windows + currently-open browser
+            // windows. New browser windows added later get their own observer
+            // attached by the body-level observer below.
             this._winWatcher = new MutationObserver(schedule);
-            for (const t of targets) {
-              this._winWatcher.observe(t, { attributes: true, attributeFilter: ['style', 'class'] });
-            }
+            const observe = (el) => {
+              this._winWatcher.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+            };
+            fixedTargets.forEach(observe);
+            document.querySelectorAll('.browser-window').forEach(observe);
+
+            // Body-level observer: catches new browser windows being added
+            // (and removed) over time, attaching the per-element observer to
+            // each new node so we react when it's dragged or maximized.
+            this._bodyWatcher = new MutationObserver((muts) => {
+              for (const m of muts) {
+                m.addedNodes.forEach((n) => {
+                  if (n.nodeType === 1 && n.classList && n.classList.contains('browser-window')) {
+                    observe(n);
+                    schedule();
+                  }
+                });
+                if (m.removedNodes.length) schedule();
+              }
+            });
+            this._bodyWatcher.observe(document.body, { childList: true });
+
+            // Reconciliation: defends against any missed mutation by re-running
+            // the avoidance check every 5 s while any browser window is open.
+            // Cheap (one query + a few rect reads) and bounded.
+            this._reconcileTimer = setInterval(() => {
+              if (document.querySelector('.browser-window:not(.hidden)')) schedule();
+            }, 5000);
+
             // Also recheck after the cat itself stops moving — it might have
             // landed on top of a window.
             this.cat.addEventListener('transitionend', schedule);
@@ -8326,7 +8374,6 @@
           }
           var step = (cascadeIndex - 0) % 5; // 1..4 then 0
           var offset = step * 30;
-          var rect = inst.el.getBoundingClientRect();
           // CSS default centers the window via translateX(-50%); we switch to
           // explicit fixed positioning so cascade math is unambiguous.
           var wantedWidth = Math.min(1100, window.innerWidth * 0.92);
@@ -8440,6 +8487,7 @@
             try { inst.el.remove(); } catch (e) {}
             try { inst.taskbarEl.remove(); } catch (e) {}
             instances.delete(inst.id);
+            if (window.__focusedWindow === inst.el) window.__focusedWindow = null;
             if (instances.size === 0) cascadeIndex = 0;
           }, 300);
         }
