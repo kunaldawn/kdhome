@@ -2044,6 +2044,25 @@
       animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
+    /* Close animation: opacity + scale, decoupled from transform so it
+       composes correctly whether the window is centered, dragged, or
+       maximized. Uses opacity on the parent and scale on the child via
+       a CSS variable to avoid stomping on translate-based positioning. */
+    @keyframes windowFadeClose {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+    .browser-window.closing,
+    .demo-window.closing {
+      animation: windowFadeClose 0.3s ease-out forwards;
+      pointer-events: none;
+    }
+    .browser-window.closing > *,
+    .demo-window.closing > * {
+      transition: transform 0.3s ease-out;
+      transform: scale(0.96);
+    }
+
     .browser-toolbar {
       display: flex;
       align-items: center;
@@ -8454,15 +8473,11 @@
         };
 
         window.closeBrowserWindow = function() {
-          win.style.transition = 'opacity 0.3s, transform 0.3s';
-          win.style.opacity = '0';
-          win.style.transform = (win.style.transform || 'translateX(-50%)') + ' scale(0.95)';
+          win.classList.add('closing');
           setTimeout(function() {
+            win.classList.remove('closing');
             win.classList.add('hidden');
             win.style.display = 'none';
-            win.style.opacity = '';
-            win.style.transform = '';
-            win.style.transition = '';
             taskbar.style.display = 'none';
             taskbar.classList.remove('active', 'minimized');
             if (isMax) { win.classList.remove('maximized'); isMax = false; }
@@ -8642,15 +8657,11 @@
         };
 
         window.closeDemoWindow = function() {
-          win.style.transition = 'opacity 0.3s, transform 0.3s';
-          win.style.opacity = '0';
-          win.style.transform = (win.style.transform || 'translateX(-50%)') + ' scale(0.95)';
+          win.classList.add('closing');
           setTimeout(function() {
+            win.classList.remove('closing');
             win.classList.add('hidden');
             win.style.display = 'none';
-            win.style.opacity = '';
-            win.style.transform = '';
-            win.style.transition = '';
             taskbar.style.display = 'none';
             taskbar.classList.remove('active', 'minimized');
             if (isMax) { win.classList.remove('maximized'); isMax = false; }
