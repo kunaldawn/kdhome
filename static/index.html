@@ -6200,10 +6200,15 @@
           }
 
           pickWeighted(options) {
+            // r is initially in [0, total). After subtracting each weight,
+            // we pick the first bucket where r became negative — using `< 0`
+            // (not `<= 0`) keeps the boundary case in the right bucket. The
+            // fallback returns the LAST option, not the first, in case
+            // floating-point noise leaves r exactly 0 after the final subtract.
             const total = options.reduce((a, o) => a + o.w, 0);
             let r = Math.random() * total;
-            for (const o of options) { r -= o.w; if (r <= 0) return o.s; }
-            return options[0].s;
+            for (const o of options) { r -= o.w; if (r < 0) return o.s; }
+            return options[options.length - 1].s;
           }
 
           getNextState() {
