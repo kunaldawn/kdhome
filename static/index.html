@@ -6511,6 +6511,113 @@
                 this.mood.energy = Math.min(100, this.mood.energy + 10);
                 break;
 
+              case 'reading':
+                this.setState('reading');
+                this.showMessage(this.pickMsg('reading'));
+                this.animateFrames(900, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.curiosity += 5;
+                break;
+
+              case 'researching':
+                this.setState('researching');
+                this.showMessage(this.pickMsg('researching'));
+                this.animateFrames(700, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.curiosity += 8;
+                break;
+
+              case 'listening':
+                this.setState('listening');
+                this.showMessage(this.pickMsg('listening'));
+                this.animateFrames(1200, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                break;
+
+              case 'vibing':
+                this.setState('vibing');
+                this.showMessage(this.pickMsg('vibing'));
+                this.animateFrames(300, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.boredom = Math.max(0, this.mood.boredom - 8);
+                break;
+
+              case 'watching':
+                this.setState('watching');
+                this.showMessage(this.pickMsg('watching'));
+                this.animateFrames(800, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.boredom = Math.max(0, this.mood.boredom - 5);
+                break;
+
+              case 'soldering':
+                this.setState('soldering');
+                this.showMessage(this.pickMsg('soldering'));
+                this.animateFrames(400, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                break;
+
+              case 'disc-spin':
+                this.setState('disc-spin');
+                this.showMessage(this.pickMsg('disc-spin'));
+                this.animateFrames(150, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                break;
+
+              case 'low-power':
+                this.setState('low-power');
+                this.showMessage(this.pickMsg('low-power'));
+                this.animateFrames(2500, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.energy = Math.min(100, this.mood.energy + 5);
+                break;
+
+              case 'demoscene':
+                this.setState('demoscene');
+                this.showMessage(this.pickMsg('demoscene'));
+                this.animateFrames(200, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.curiosity += 5;
+                break;
+
+              case 'stargaze':
+                this.setState('stargaze');
+                this.showMessage(this.pickMsg('stargaze'));
+                this.animateFrames(2000, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                break;
+
+              case 'lunch':
+                this.setState('lunch');
+                this.showMessage(this.pickMsg('lunch'));
+                this.animateFrames(400, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                this.mood.energy = Math.min(100, this.mood.energy + 10);
+                break;
+
+              case 'celebrate':
+                this.setState('celebrate');
+                this.showMessage(this.pickMsg('celebrate'));
+                this.animateFrames(300, dur);
+                this.clearStateTimer();
+                this.stateTimer = setTimeout(() => this.hideMessage(), dur - 500);
+                for (let i = 0; i < 8; i++) {
+                  setTimeout(() => this.spawnEmote(['★','✨','♦','♥'][Math.floor(Math.random()*4)], '#ffd166', 1200), i * 100);
+                }
+                this.mood.boredom = 0;
+                break;
+
               default:
                 this.setState('idle');
                 this.animateFrames(2000, dur);
