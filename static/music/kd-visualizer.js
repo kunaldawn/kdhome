@@ -312,7 +312,9 @@
         bindBtn('mvm-prev', prev);
         bindBtn('mvm-next', next);
         bindBtn('mvm-rand', random);
-        // mvm-fs wired in Task 12
+        bindBtn('mvm-fs', toggleFullscreen);
+        document.addEventListener('fullscreenchange', onFsChange);
+        document.addEventListener('webkitfullscreenchange', onFsChange);
 
         var autoBtn = document.getElementById('mvm-auto');
         var ivPop = document.getElementById('mvm-iv-pop');
@@ -418,7 +420,29 @@
             scheduleAutoCycle();
         }
     }
-    function toggleFullscreen() { /* Task 12 */ }
+    function toggleFullscreen() {
+        var wrap = document.getElementById('music-viz-wrap');
+        if (!wrap) return;
+        var fs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fs) {
+            try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) {}
+        } else {
+            var req = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+            if (!req) return;
+            req.call(wrap).then(function () {
+                setTimeout(resizeCanvas, 200);
+            }).catch(function (e) { console.warn('fullscreen denied:', e); });
+        }
+    }
+
+    function onFsChange() {
+        var wrap = document.getElementById('music-viz-wrap');
+        if (!wrap) return;
+        var fs = document.fullscreenElement || document.webkitFullscreenElement;
+        if (fs === wrap) wrap.classList.add('fullscreen');
+        else wrap.classList.remove('fullscreen');
+        setTimeout(resizeCanvas, 60);
+    }
     function onResize() { /* Task 13 */ }
 
     window.kdVisualizer = {
