@@ -6113,7 +6113,11 @@
               { name: 'tuxedo',    weight:  5, color: '#e8eef0',   glow: '0 0 10px rgba(180, 200, 220, 0.6)' },
               { name: 'pink',      weight:  4, color: '#ff66cc',   glow: '0 0 10px rgba(255, 102, 204, 0.7)' },
               { name: 'solar',     weight:  2, color: '#f4d35e',   glow: '0 0 10px rgba(244, 211, 94, 0.7)' },
-              { name: 'darkgreen', weight:  2, color: '#33ff77',   glow: '0 0 8px rgba(51, 255, 119, 0.6), 0 0 16px rgba(0, 80, 0, 0.5)' },
+              // darkgreen layers two halos. drop-shadow() does NOT accept comma-
+              // separated multi-shadow syntax (unlike text-shadow), so the two
+              // shadows must come through as separate filter functions; we use
+              // an array here and applyPalette joins with `drop-shadow(...)` per entry.
+              { name: 'darkgreen', weight:  2, color: '#33ff77',   glow: ['0 0 8px rgba(51, 255, 119, 0.6)', '0 0 16px rgba(0, 80, 0, 0.5)'] },
             ];
             this.palette = this.pickPalette();
 
@@ -6121,8 +6125,8 @@
             // 15% of the time, animate() picks from this pool instead of the
             // base frame. Pure cosmetic; doesn't affect transitions or moods.
             this.frameVariants = {
-              idle:    [' _,/\\_/\\,_\n( o.o ) \n > ^ <  '],
-              sitting: [' /\\_/\\  \n>>=^.^=<<\n(> ^ <)  '],
+              idle:    ['_,_/\\_/\\\n( o.o ) \n > ^ <  '],
+              sitting: [' /\\_/\\  \n>=^.^=<<\n(> ^ <) '],
               coding:  [' /\\_/\\  \n( =.= )_\n > ^ <[]'],
               hacking: [' /\\_/\\  \n( =.= ) \n > ^ <  '],
               reading: [' /\\_/\\  \n( o.o )▤\n > ^ <  '],
@@ -6300,10 +6304,14 @@
           }
 
           pickPalette() {
+            // Same boundary semantics as pickWeighted: `< 0` after subtracting,
+            // and the FP fallback returns the last bucket (not the first) so a
+            // pathological random landing exactly on the total can't bias the
+            // distribution toward the head of the list.
             const total = this.palettes.reduce((a, p) => a + p.weight, 0);
             let r = Math.random() * total;
             for (const p of this.palettes) { r -= p.weight; if (r < 0) return p; }
-            return this.palettes[0];
+            return this.palettes[this.palettes.length - 1];
           }
 
           applyPalette() {
@@ -6314,7 +6322,11 @@
               this.cat.style.filter = '';
               return;
             }
-            this.cat.style.filter = 'drop-shadow(' + this.palette.glow + ')';
+            // glow may be a single shadow string or an array of them. CSS
+            // drop-shadow() doesn't accept comma-separated multi-shadow syntax,
+            // so layered halos have to come through as multiple filter functions.
+            const shadows = Array.isArray(this.palette.glow) ? this.palette.glow : [this.palette.glow];
+            this.cat.style.filter = shadows.map(s => 'drop-shadow(' + s + ')').join(' ');
           }
 
           getNextState() {
