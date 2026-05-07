@@ -7247,8 +7247,16 @@
             let crossed = 0;
             for (const t of tiers) if (count >= t) crossed = t;
             if (!crossed) return;
-            let prev = 0;
-            try { prev = parseInt(localStorage.getItem('kd:cat:last-visit-tier') || '0', 10) || 0; } catch (e) {}
+            let stored = null;
+            try { stored = localStorage.getItem('kd:cat:last-visit-tier'); } catch (e) {}
+            // First-visit suppression: a brand-new browser shouldn't see the
+            // cat celebrate "1k visits!" — they crossed nothing, the site did.
+            // Seed the tier so future actual crossings can fire, and bail.
+            if (stored === null) {
+              try { localStorage.setItem('kd:cat:last-visit-tier', String(crossed)); } catch (e) {}
+              return;
+            }
+            const prev = parseInt(stored, 10) || 0;
             if (crossed <= prev) return;
             try { localStorage.setItem('kd:cat:last-visit-tier', String(crossed)); } catch (e) {}
             this.cancelBehaviorLoop();
@@ -7278,6 +7286,15 @@
 
           // ─── Surprises ───
 
+          // Konami / Ctrl+Shift+M / typed-word triggers chain setTimeouts to
+          // sequence states (e.g. matrix → hacking → idle). Unlike
+          // followPoint, they don't carry a cancel-token: an interrupting
+          // pet/spook/click between the outer and inner timeouts can clobber
+          // the chain's later state transitions. Acceptable for an easter-egg
+          // surface — the worst case is the user briefly sees the wrong
+          // state before the next behavior tick recovers. clearStateTimer()
+          // does cancel the currently-tracked timeout, so the typical flow
+          // (interrupt → cancelBehaviorLoop → setState) clears cleanly.
           triggerKonami() {
             this.cancelBehaviorLoop();
             this.cancelFollow();
