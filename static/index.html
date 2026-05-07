@@ -6103,6 +6103,20 @@
               annoyed:  { color: '#ff6b6b', shadow: '0 0 4px #ff6b6b' },
             };
 
+            // ─── Color palettes (variant) ───
+            // Picked once per page load. Default neon (empty color string) is
+            // the most common; the others are little surprises that show up
+            // for the rest of a session. Per-state stateStyles still override.
+            this.palettes = [
+              { name: 'neon',      weight: 80, color: '',          glow: '0 0 10px rgba(0, 255, 150, 0.6)' },
+              { name: 'orange',    weight:  7, color: '#ffaa44',   glow: '0 0 10px rgba(255, 170, 68, 0.7)' },
+              { name: 'tuxedo',    weight:  5, color: '#e8eef0',   glow: '0 0 10px rgba(180, 200, 220, 0.6)' },
+              { name: 'pink',      weight:  4, color: '#ff66cc',   glow: '0 0 10px rgba(255, 102, 204, 0.7)' },
+              { name: 'solar',     weight:  2, color: '#f4d35e',   glow: '0 0 10px rgba(244, 211, 94, 0.7)' },
+              { name: 'darkgreen', weight:  2, color: '#33ff77',   glow: '0 0 8px rgba(51, 255, 119, 0.6), 0 0 16px rgba(0, 80, 0, 0.5)' },
+            ];
+            this.palette = this.pickPalette();
+
             // ─── State Durations ───
             this.stateDurations = {
               idle: 4000, sitting: 5000, thinking: 4000, coding: 6000,
@@ -6168,6 +6182,7 @@
             }, 6000);
 
             this.cat.addEventListener('transitionstart', () => this.leavePawPrints());
+            this.applyPalette();
           }
 
           // ─── Mood Helpers ───
@@ -6194,8 +6209,10 @@
             this.body.className = `cat-body ${cssClass}`;
 
             const style = this.stateStyles[state];
-            this.body.style.color = style ? style.color : '';
-            this.body.style.textShadow = style ? style.shadow : '';
+            const paletteColor = (this.palette && this.palette.color) || '';
+            const paletteShadow = paletteColor ? '0 0 10px ' + paletteColor : '';
+            this.body.style.color = style ? style.color : paletteColor;
+            this.body.style.textShadow = style ? style.shadow : paletteShadow;
 
             this.updateDirection();
             this.animate();
@@ -6263,6 +6280,24 @@
             let r = Math.random() * total;
             for (const o of options) { r -= o.w; if (r < 0) return o.s; }
             return options[options.length - 1].s;
+          }
+
+          pickPalette() {
+            const total = this.palettes.reduce((a, p) => a + p.weight, 0);
+            let r = Math.random() * total;
+            for (const p of this.palettes) { r -= p.weight; if (r < 0) return p; }
+            return this.palettes[0];
+          }
+
+          applyPalette() {
+            // Default 'neon' palette has color === '' which means "use whatever
+            // CSS specified". Non-default palettes set color/textShadow on the
+            // body and tweak the drop-shadow filter on the wrapper.
+            if (!this.palette || !this.palette.color) {
+              this.cat.style.filter = '';
+              return;
+            }
+            this.cat.style.filter = 'drop-shadow(' + this.palette.glow + ')';
           }
 
           getNextState() {
