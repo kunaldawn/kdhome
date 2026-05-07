@@ -443,7 +443,16 @@
         else wrap.classList.remove('fullscreen');
         setTimeout(resizeCanvas, 60);
     }
-    function onResize() { /* Task 13 */ }
+    function onResize() {
+        resizeCanvas();
+    }
+
+    var resizeT = 0;
+    window.addEventListener('resize', function () {
+        if (!viz) return;
+        clearTimeout(resizeT);
+        resizeT = setTimeout(resizeCanvas, 120);
+    });
 
     window.kdVisualizer = {
         onAudioChanged: onAudioChanged,
