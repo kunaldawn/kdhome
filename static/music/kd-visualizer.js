@@ -173,6 +173,100 @@
         try { viz.render(); } catch (e) {}
     }
 
+    // ---- preset stepping ----
+    function prev() {
+        if (!presetKeys || !presetKeys.length) return;
+        presetIdx = (presetIdx - 1 + presetKeys.length) % presetKeys.length;
+        applyPreset();
+        scheduleAutoCycle();
+    }
+    function next() {
+        if (!presetKeys || !presetKeys.length) return;
+        presetIdx = (presetIdx + 1) % presetKeys.length;
+        applyPreset();
+        scheduleAutoCycle();
+    }
+    function random() {
+        if (!presetKeys || presetKeys.length < 2) {
+            if (presetKeys && presetKeys.length === 1) applyPreset();
+            return;
+        }
+        var prevIdx = presetIdx;
+        do {
+            presetIdx = Math.floor(Math.random() * presetKeys.length);
+        } while (presetIdx === prevIdx);
+        applyPreset();
+        scheduleAutoCycle();
+    }
+
+    // scheduleAutoCycle is implemented in Task 10; provide a no-op stub
+    // for now so prev/next/random work without auto-cycle.
+    var scheduleAutoCycle = function () {};
+
+    // ---- preset menu ----
+    function openMenu() {
+        if (!menuEl) return;
+        menuEl.hidden = false;
+        resetMenuHideTimer();
+    }
+    function closeMenu() {
+        if (!menuEl) return;
+        menuEl.hidden = true;
+        if (menuHideTimer) { clearTimeout(menuHideTimer); menuHideTimer = null; }
+        var pop = document.getElementById('mvm-iv-pop');
+        if (pop) pop.hidden = true;
+    }
+    function toggleMenu() {
+        if (!menuEl) return;
+        if (menuEl.hidden) openMenu(); else closeMenu();
+    }
+    function resetMenuHideTimer() {
+        if (menuHideTimer) clearTimeout(menuHideTimer);
+        menuHideTimer = setTimeout(function () {
+            if (menuEl && !menuEl.hidden) closeMenu();
+        }, 4000);
+    }
+    function isMenuOpen() {
+        return !!(menuEl && !menuEl.hidden);
+    }
+
+    function bindMenuEvents() {
+        if (!canvas || !menuEl) return;
+
+        // click on canvas → toggle menu
+        canvas.addEventListener('click', function (e) {
+            if (!viz) return; // viz not initialized — ignore
+            e.stopPropagation();
+            toggleMenu();
+        });
+
+        // click anywhere outside the menu (and not on the canvas which already toggled) → close
+        document.addEventListener('click', function (e) {
+            if (!isMenuOpen()) return;
+            if (menuEl.contains(e.target)) return;
+            if (e.target === canvas) return;
+            closeMenu();
+        }, true);
+
+        // hover/click inside menu refreshes the auto-hide timer
+        menuEl.addEventListener('mousemove', resetMenuHideTimer);
+        menuEl.addEventListener('click', resetMenuHideTimer);
+
+        var bindBtn = function (id, fn) {
+            var el = document.getElementById(id);
+            if (el) el.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                fn();
+                resetMenuHideTimer();
+            });
+        };
+        bindBtn('mvm-prev', prev);
+        bindBtn('mvm-next', next);
+        bindBtn('mvm-rand', random);
+        // mvm-auto / mvm-fs wired in Task 10/12
+    }
+
     // ---- public API ----
     function onAudioChanged() {
         // Called from index.html on track-load and on stop.
@@ -198,12 +292,6 @@
             setStatus('viz unavailable');
         });
     }
-    function openMenu() { /* Task 8 */ }
-    function closeMenu() { /* Task 8 */ }
-    function toggleMenu() { /* Task 8 */ }
-    function prev() { /* Task 8 */ }
-    function next() { /* Task 8 */ }
-    function random() { /* Task 8 */ }
     function setAutoCycle(on) { /* Task 10 */ }
     function setIntervalSec(s) { /* Task 10 */ }
     function toggleFullscreen() { /* Task 12 */ }
@@ -223,9 +311,14 @@
         onResize: onResize,
     };
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', findEls);
-    } else {
+    function init() {
         findEls();
+        bindMenuEvents();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
     }
 })();
