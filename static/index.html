@@ -7975,6 +7975,16 @@
       var songLoopEnabled = false; // controls module internal looping (repeat patterns in MOD/XM/IT)
       var chipTaskbar = document.getElementById('chiptunes-taskbar');
 
+      // ─── Player → visualizer hand-off (consumed by kd-visualizer.js) ───
+      window.kdMusic = {
+        getContext: function () { return player ? player.context : null; },
+        getSourceNode: function () { return player ? player.currentPlayingNode : null; },
+        isPlaying: function () { return isPlaying; },
+        isWindowVisible: function () {
+          return !win.classList.contains('hidden') && win.style.display !== 'none';
+        },
+      };
+
       var vizWrap = document.getElementById('music-viz-wrap');
       var vizCanvas = document.getElementById('music-viz-canvas');
       var vizCtx = vizCanvas.getContext('2d');
