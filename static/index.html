@@ -6271,15 +6271,32 @@
             const trans = this.transitions[this.currentState];
             if (!trans) return 'idle';
 
+            const now = new Date();
+            const h = now.getHours();
+            const day = now.getDay();
+            const browserVisible = this.windowVisible('browser-window');
+            const demoVisible = this.windowVisible('demo-window');
+            const musicVisible = this.windowVisible('music-window');
+            const lunchHour = h >= 12 && h < 13;
+            const fridayEvening = day === 5 && h >= 17;
+
             const modified = trans.map(t => {
               let w = t.w;
               if (t.s === 'sleeping' || t.s === 'coffee') w += this.mood.energy < 25 ? 30 : 0;
               if (t.s === 'coding' || t.s === 'archiving' || t.s === 'hacking') w += this.mood.curiosity > 40 ? 10 : 0;
               if (t.s === 'walking' || t.s === 'playing' || t.s === 'dancing') w += this.mood.boredom > 40 ? 15 : 0;
-              const h = new Date().getHours();
               if (h >= 22 || h < 6) { if (t.s === 'sleeping') w += 25; }
               if (h >= 6 && h < 10) { if (t.s === 'coffee') w += 15; }
               if (this.mood.energy < 20 && ['dancing','playing','gamer','running'].includes(t.s)) w = Math.max(1, w - 15);
+
+              // ─── Themed biases (homepage context) ───
+              if (musicVisible && t.s === 'vibing') w += 15;
+              if (browserVisible && (t.s === 'reading' || t.s === 'watching' || t.s === 'researching' || t.s === 'listening')) w += 8;
+              if (demoVisible && t.s === 'demoscene') w += 15;
+              if (lunchHour && t.s === 'lunch') w += 40;
+              if (fridayEvening && (t.s === 'vibing' || t.s === 'dancing')) w += 12;
+              if (this.mood.energy < 30 && t.s === 'low-power') w += 20;
+
               return { s: t.s, w: Math.max(1, w) };
             });
 
@@ -6667,6 +6684,17 @@
           // music window specifically).
           getAvoidRect() {
             return this.rectFor(document.getElementById('music-window'), 18);
+          }
+
+          // Cheap visibility check — true if the element is in the DOM and
+          // not currently hidden / minimized. Used by the themed weight
+          // biases in getNextState; getBoundingClientRect would be overkill.
+          windowVisible(id) {
+            const el = document.getElementById(id);
+            if (!el) return false;
+            if (el.classList.contains('hidden')) return false;
+            if (el.style.display === 'none') return false;
+            return true;
           }
 
           // All visible windows the cat should avoid: music + browser + demo.
