@@ -7001,6 +7001,11 @@
           }
 
           leavePawPrints() {
+            // transitionstart fires on every style mutation, including the
+            // empty-transform cleanup in setState. Only emit while the cat
+            // is actually moving so prints aren't sprayed at every state flip.
+            const moving = this.currentState === 'walking' || this.currentState === 'running';
+            if (!moving) return;
             if (Math.random() > 0.3) return;
             const catRect = this.cat.getBoundingClientRect();
             const paw = document.createElement('div');
