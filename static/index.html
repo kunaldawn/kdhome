@@ -7664,15 +7664,15 @@
           }
         }
 
-        // Shared focus / z-stack helper — brings a window above all others.
+        // Shared focus / z-stack helper. Uses a monotonically-increasing
+        // counter so each focus puts the window strictly above the previous
+        // top, giving real stacking history instead of a binary front/default.
         const WINDOW_SELECTOR = '.vault, .music-window, .browser-window, .demo-window';
         window.__focusedWindow = null;
+        let __nextWindowZ = 1005;
         window.bringToFront = function(el) {
           if (!el) return;
-          document.querySelectorAll(WINDOW_SELECTOR).forEach(function(w) {
-            if (w !== el) w.style.zIndex = '';
-          });
-          el.style.zIndex = '1005';
+          el.style.zIndex = String(++__nextWindowZ);
           window.__focusedWindow = el;
         };
 
