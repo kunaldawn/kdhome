@@ -6099,7 +6099,12 @@
 
             document.addEventListener('scroll', () => { this.lastUserActivity = Date.now(); });
             document.addEventListener('click', () => {
-              this.lastUserActivity = Date.now();
+              const now = Date.now();
+              this.lastUserActivity = now;
+              // Rate-limit so scroll-bar drags / synthetic taps / bubbling
+              // multi-clicks can't ramp curiosity faster than once per 250 ms.
+              if (now - (this._lastCuriosityBump || 0) < 250) return;
+              this._lastCuriosityBump = now;
               this.mood.curiosity = Math.min(100, this.mood.curiosity + 3);
             });
 
