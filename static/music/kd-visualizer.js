@@ -84,6 +84,95 @@
         }
     }
 
+    function resizeCanvas() {
+        if (!canvas) return;
+        var r = canvas.getBoundingClientRect();
+        var dpr = window.devicePixelRatio || 1;
+        var w = Math.max(64, Math.floor(r.width));
+        var h = Math.max(64, Math.floor(r.height));
+        var W = Math.floor(w * dpr);
+        var H = Math.floor(h * dpr);
+        if (canvas.width !== W || canvas.height !== H) {
+            canvas.width = W;
+            canvas.height = H;
+            if (viz && typeof viz.setRendererSize === 'function') {
+                try { viz.setRendererSize(W, H); } catch (e) {}
+            }
+        }
+    }
+
+    function ensureViz() {
+        if (viz) return true;
+        if (!window.kdMusic) return false;
+        var ctx = window.kdMusic.getContext();
+        if (!ctx) return false;
+        if (!window.butterchurn || !window.butterchurnPresets) return false;
+        if (!canvas) return false;
+
+        resizeCanvas();
+
+        try {
+            var bc = window.butterchurn.default || window.butterchurn;
+            viz = bc.createVisualizer(ctx, canvas, {
+                width: canvas.width,
+                height: canvas.height,
+                pixelRatio: window.devicePixelRatio || 1,
+                textureRatio: 1
+            });
+        } catch (e) {
+            console.warn('kdVisualizer createVisualizer failed:', e);
+            setStatus('webgl unavailable');
+            return false;
+        }
+
+        // Merge the two bundled packs into a single dict.
+        var packs = [window.butterchurnPresets, window.butterchurnPresetsExtra];
+        presets = {};
+        for (var i = 0; i < packs.length; i++) {
+            var pack = packs[i];
+            if (!pack) continue;
+            var p = pack.default || pack;
+            var dict = (typeof p.getPresets === 'function') ? p.getPresets() : p;
+            if (dict && typeof dict === 'object') {
+                for (var k in dict) {
+                    if (Object.prototype.hasOwnProperty.call(dict, k))
+                        presets[k] = dict[k];
+                }
+            }
+        }
+        presetKeys = Object.keys(presets).sort();
+        if (!presetKeys.length) {
+            setStatus('no presets');
+            return false;
+        }
+        presetIdx = Math.floor(Math.random() * presetKeys.length);
+        applyPreset(0);
+        setStatus('');
+        return true;
+    }
+
+    function applyPreset(blendSec) {
+        if (!viz || !presetKeys || !presetKeys.length) return;
+        var key = presetKeys[presetIdx];
+        var blend = typeof blendSec === 'number' ? blendSec : 1.5;
+        try { viz.loadPreset(presets[key], blend); }
+        catch (e) { console.warn('kdVisualizer applyPreset failed:', e); }
+        if (nameEl) {
+            var pretty = key.replace(/^[^-]+ - /, '');
+            nameEl.textContent = pretty.length > 70 ? pretty.slice(0, 67) + '…' : pretty;
+        }
+    }
+
+    function renderLoop() {
+        rafId = requestAnimationFrame(renderLoop);
+        if (!viz) return;
+        if (!window.kdMusic) return;
+        if (!window.kdMusic.isWindowVisible()) return;
+        if (!window.kdMusic.isPlaying()) return;
+        if (document.visibilityState !== 'visible') return;
+        try { viz.render(); } catch (e) {}
+    }
+
     // ---- public API ----
     function onAudioChanged() {
         // Called from index.html on track-load and on stop.
@@ -101,8 +190,9 @@
         }
         setStatus('loading viz…');
         loadDeps().then(function () {
-            // ensureViz / connectAudio land in Task 7
-            setStatus('viz not yet impl');
+            if (!ensureViz()) return; // setStatus already called by ensureViz on failure
+            connectAudioSource(src);
+            if (rafId === null) renderLoop();
         }).catch(function (e) {
             console.warn('kdVisualizer load failed:', e && e.message || e);
             setStatus('viz unavailable');
