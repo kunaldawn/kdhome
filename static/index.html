@@ -8218,6 +8218,7 @@
         var currentUrl = '';
         var currentLabel = '';
         var isMax = false;
+        var userUnmaxed = false; // set when user explicitly un-maximizes; suppresses mobile auto-max on next restore
         var prevStyles = {};
         var historyStack = [];
         var historyIndex = -1;
@@ -8481,6 +8482,7 @@
             taskbar.style.display = 'none';
             taskbar.classList.remove('active', 'minimized');
             if (isMax) { win.classList.remove('maximized'); isMax = false; }
+            userUnmaxed = false;
             contentEl.innerHTML = '';
             currentUrl = '';
             historyStack = [];
@@ -8508,7 +8510,10 @@
             taskbar.classList.add('active');
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
             if (window.bringToFront) window.bringToFront(win);
-            if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+            // userUnmaxed is set the first time the user manually un-maximizes;
+            // once set, restore-from-min must not re-apply mobile auto-max,
+            // since that would override their explicit choice every cycle.
+            if (window.matchMedia('(max-width: 800px)').matches && !isMax && !userUnmaxed) {
               maximizeBrowserWindow();
             }
           } else if (taskbar.classList.contains('active')) {
@@ -8543,6 +8548,7 @@
             win.style.margin = prevStyles.margin || '';
             win.style.transform = prevStyles.transform || '';
             isMax = false;
+            userUnmaxed = true;
           }
         };
 
