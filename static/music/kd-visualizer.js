@@ -311,9 +311,47 @@
         onResize: onResize,
     };
 
+    function bindKeyboard() {
+        document.addEventListener('keydown', function (e) {
+            // Only when the music window is the focused window. The
+            // existing window manager in index.html sets
+            // window.__focusedWindow on click/focus.
+            var win = document.getElementById('music-window');
+            if (!win) return;
+            if (window.__focusedWindow !== win) return;
+            // Ignore typing in inputs.
+            if (e.target && /^(input|textarea|select)$/i.test(e.target.tagName)) return;
+            if (!viz) return;
+
+            if (e.key === 'Escape') {
+                if (document.fullscreenElement) {
+                    try { document.exitFullscreen(); } catch (_) {}
+                } else if (isMenuOpen()) {
+                    closeMenu();
+                } else {
+                    return; // don't preventDefault if we did nothing
+                }
+            } else if (e.key === 'ArrowLeft') {
+                prev();
+            } else if (e.key === 'ArrowRight') {
+                next();
+            } else if (e.key === 'r' || e.key === 'R') {
+                random();
+            } else if (e.key === 'a' || e.key === 'A') {
+                setAutoCycle(!autoCycle);
+            } else if (e.key === 'f' || e.key === 'F') {
+                toggleFullscreen();
+            } else {
+                return;
+            }
+            e.preventDefault();
+        });
+    }
+
     function init() {
         findEls();
         bindMenuEvents();
+        bindKeyboard();
     }
 
     if (document.readyState === 'loading') {
