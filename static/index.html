@@ -2154,6 +2154,22 @@
       background: #f2f3f5;
     }
 
+    /* Multi-archive taskbar items: clamp width on desktop, drop label on mobile */
+    .taskbar-item.archive-window {
+      max-width: 130px;
+      overflow: hidden;
+    }
+    .taskbar-item.archive-window .taskbar-item-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 90px;
+      display: inline-block;
+    }
+    @media (max-width: 600px) {
+      .taskbar-item.archive-window .taskbar-item-label { display: none; }
+      .taskbar-item.archive-window { max-width: 36px; }
+    }
 
     /* ═══ Demoscene window ═══ */
     .demo-window {
@@ -5393,27 +5409,30 @@
       </div>
     </div>
 
-    <!-- Archive browser window -->
-    <div class="browser-window hidden" id="browser-window">
-      <div class="vault-titlebar" id="browser-titlebar">
-        <div class="vault-titlebar-controls">
-          <div class="window-btn close" onclick="closeBrowserWindow()" title="Close"></div>
-          <div class="window-btn minimize" onclick="minimizeBrowserWindow()" title="Minimize"></div>
-          <div class="window-btn maximize" onclick="maximizeBrowserWindow()" title="Maximize"></div>
+    <!-- Archive browser window template — cloned per archive by BrowserWindowManager -->
+    <template id="browser-window-template">
+      <div class="browser-window hidden">
+        <div class="vault-titlebar">
+          <div class="vault-titlebar-controls">
+            <div class="window-btn close" data-action="close" title="Close"></div>
+            <div class="window-btn minimize" data-action="minimize" title="Minimize"></div>
+            <div class="window-btn maximize" data-action="maximize" title="Maximize"></div>
+          </div>
+          <span class="vault-titlebar-title">browser@kd:~</span>
         </div>
-        <span class="vault-titlebar-title" id="browser-title">browser@kd:~</span>
+        <div class="browser-toolbar">
+          <button class="browser-btn browser-reload" data-action="reload" title="Reload">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+          <span class="browser-title-strip" aria-live="polite"></span>
+          <button class="browser-btn browser-external" data-action="external" title="Open in new tab">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          </button>
+        </div>
+        <div class="browser-content"></div>
       </div>
-      <div class="browser-toolbar">
-        <button class="browser-btn" id="browser-reload" onclick="browserReload()" title="Reload">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        </button>
-        <span class="browser-title-strip" id="browser-title-strip" aria-live="polite"></span>
-        <button class="browser-btn" id="browser-external" onclick="browserOpenExternal()" title="Open in new tab">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-        </button>
-      </div>
-      <div class="browser-content" id="browser-content"></div>
-    </div>
+    </template>
+    <div id="browser-window-host"></div>
 
     <!-- Demoscene window -->
     <div class="demo-window hidden" id="demo-window">
@@ -5460,10 +5479,7 @@
           <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
           <span>Chiptunes</span>
         </div>
-        <div class="taskbar-item" id="browser-taskbar" onclick="toggleBrowserWindow()" style="display:none">
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
-          <span id="browser-taskbar-label">Browser</span>
-        </div>
+        <div id="browser-taskbar-host" style="display:contents"></div>
         <div class="taskbar-item" id="demo-taskbar" onclick="toggleDemoWindow()" style="display:none">
           <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
           <span>Demo</span>
@@ -8199,9 +8215,7 @@
     <!-- Archive browser window -->
     <script>
       (function() {
-        // Single source of truth for the seven featured archives. Both the
-        // start-menu items and the homepage cards dispatch through
-        // openFeaturedArchive(id) and read url/label/hostname from here.
+        // ─── Archive registry ───
         var ARCHIVES = [
           { id: 'wiki',     url: 'https://wiki.kunaldawn.com',     label: 'Wiki Archive' },
           { id: 'pdf',      url: 'https://pdf.kunaldawn.com',      label: 'PDF Archive' },
@@ -8217,202 +8231,286 @@
         });
         window.__archives = REGISTRY;
 
-        var win = document.getElementById('browser-window');
-        var titlebar = document.getElementById('browser-titlebar');
-        var titleEl = document.getElementById('browser-title');
-        var titleStripEl = document.getElementById('browser-title-strip');
-        var contentEl = document.getElementById('browser-content');
-        var taskbar = document.getElementById('browser-taskbar');
-        var taskbarLabel = document.getElementById('browser-taskbar-label');
-        var reloadBtn = document.getElementById('browser-reload');
+        // ─── Manager state ───
+        var instances = new Map();           // id -> WindowInstance
+        var cascadeIndex = 0;                // resets when instances.size === 0
+        var template = document.getElementById('browser-window-template');
+        var taskbarHost = document.getElementById('browser-taskbar-host');
 
-        var currentUrl = '';
-        var currentLabel = '';
-        var currentHost = '';
-        var isMax = false;
-        var userUnmaxed = false; // set when user explicitly un-maximizes; suppresses mobile auto-max on next restore
-        var prevStyles = {};
-
-        if (window.makeDraggable) window.makeDraggable(win, titlebar);
-
-        function rayId() {
-          var chars = '0123456789abcdef';
-          var out = '';
-          for (var i = 0; i < 16; i++) out += chars[Math.floor(Math.random() * chars.length)];
-          return out + '-SJC';
+        function archiveIcon() {
+          // Re-used SVG for all archive taskbar items. Visually unifies them
+          // since per-archive icons would be lost at small sizes.
+          return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
         }
 
-        function nowUtc() {
-          return new Date().toUTCString();
+        function escapeHtml(s) {
+          return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        function visitorIp() {
-          // Not actually detectable; show an obfuscated placeholder like real CF does.
-          var parts = [];
-          for (var i = 0; i < 4; i++) parts.push(Math.floor(Math.random() * 255) + 1);
-          return parts.join('.');
+        // ─── WindowInstance constructor ───
+        function makeInstance(id) {
+          var entry = REGISTRY[id];
+          if (!entry) return null;
+
+          var frag = template.content.cloneNode(true);
+          var el = frag.querySelector('.browser-window');
+          el.dataset.archiveId = id;
+          el.classList.add('hidden');
+          var titlebar = el.querySelector('.vault-titlebar');
+          var titleEl = titlebar.querySelector('.vault-titlebar-title');
+          var titleStripEl = el.querySelector('.browser-title-strip');
+          var contentEl = el.querySelector('.browser-content');
+          var reloadBtn = el.querySelector('.browser-reload');
+
+          titleEl.textContent = 'browser@kd:~/' + entry.label;
+          titleStripEl.textContent = entry.label + ' — ' + entry.hostname;
+
+          var taskbarEl = document.createElement('div');
+          taskbarEl.className = 'taskbar-item archive-window';
+          taskbarEl.dataset.archiveId = id;
+          taskbarEl.title = entry.label;
+          taskbarEl.setAttribute('aria-label', entry.label);
+          taskbarEl.innerHTML = '<span>' + archiveIcon() + '</span><span class="taskbar-item-label">' + escapeHtml(entry.label) + '</span>';
+
+          var inst = {
+            id: id,
+            entry: entry,
+            el: el,
+            titlebar: titlebar,
+            titleEl: titleEl,
+            titleStripEl: titleStripEl,
+            contentEl: contentEl,
+            reloadBtn: reloadBtn,
+            taskbarEl: taskbarEl,
+            iframe: null,
+            isMax: false,
+            isMin: false,
+            userUnmaxed: false,
+            prevStyles: {}
+          };
+
+          // Wire titlebar buttons
+          titlebar.querySelector('[data-action="close"]').addEventListener('click', function() { closeInstance(inst); });
+          titlebar.querySelector('[data-action="minimize"]').addEventListener('click', function() { minimizeInstance(inst); });
+          titlebar.querySelector('[data-action="maximize"]').addEventListener('click', function() { toggleMaxInstance(inst); });
+          titlebar.addEventListener('dblclick', function(e) {
+            if (e.target.closest('.window-btn')) return;
+            toggleMaxInstance(inst);
+          });
+
+          // Wire toolbar buttons
+          el.querySelector('[data-action="reload"]').addEventListener('click', function() { reloadInstance(inst); });
+          el.querySelector('[data-action="external"]').addEventListener('click', function() {
+            window.open(inst.entry.url, '_blank', 'noopener');
+          });
+
+          // Wire taskbar item
+          taskbarEl.addEventListener('click', function() { toggleInstanceFromTaskbar(inst); });
+
+          // Mount
+          document.body.appendChild(el);
+          taskbarHost.appendChild(taskbarEl);
+
+          // Drag
+          if (window.makeDraggable) window.makeDraggable(el, titlebar);
+
+          return inst;
         }
 
+        function placeNewWindow(inst) {
+          // Cascade: first window centered (default CSS); each subsequent
+          // window steps 30px down/right, wrapping after 5 to stay on screen.
+          if (cascadeIndex === 0) {
+            cascadeIndex = 1;
+            return;
+          }
+          var step = (cascadeIndex - 0) % 5; // 1..4 then 0
+          var offset = step * 30;
+          var rect = inst.el.getBoundingClientRect();
+          // CSS default centers the window via translateX(-50%); we switch to
+          // explicit fixed positioning so cascade math is unambiguous.
+          var wantedWidth = Math.min(1100, window.innerWidth * 0.92);
+          var baseLeft = (window.innerWidth - wantedWidth) / 2;
+          var baseTop = 40;
+          inst.el.style.position = 'fixed';
+          inst.el.style.left = (baseLeft + offset) + 'px';
+          inst.el.style.top = (baseTop + offset) + 'px';
+          inst.el.style.right = '';
+          inst.el.style.bottom = '';
+          inst.el.style.transform = 'none';
+          inst.el.style.margin = '0';
+          inst.el.classList.add('dragged');
+          cascadeIndex++;
+        }
 
-        function render(url, label) {
-          currentUrl = url;
-          currentLabel = label || '';
-          try { currentHost = new URL(url).host; } catch (e) { currentHost = url; }
+        function showInstance(inst) {
+          inst.el.classList.remove('hidden');
+          inst.el.style.display = '';
+          inst.el.classList.add('restoring');
+          inst.taskbarEl.classList.remove('minimized');
+          inst.taskbarEl.classList.add('active');
+          setTimeout(function() { inst.el.classList.remove('restoring'); }, 500);
+          if (window.bringToFront) window.bringToFront(inst.el);
+          inst.isMin = false;
+        }
+
+        function loadIframe(inst) {
           var iframe = document.createElement('iframe');
-          iframe.src = url;
-          titleEl.textContent = 'browser@kd:~/' + (label || currentHost);
-          taskbarLabel.textContent = label || currentHost;
-          titleStripEl.textContent = (label ? label + ' — ' : '') + currentHost;
-          contentEl.innerHTML = '';
-          contentEl.appendChild(iframe);
+          iframe.src = inst.entry.url;
+          inst.contentEl.classList.add('loading');
+          var done = function() {
+            inst.contentEl.classList.remove('loading');
+            iframe.removeEventListener('load', done);
+          };
+          iframe.addEventListener('load', done);
+          setTimeout(done, 10000);
+          inst.contentEl.innerHTML = '';
+          inst.contentEl.appendChild(iframe);
+          inst.iframe = iframe;
         }
 
-        function showWindow() {
-          if (isMax) { win.classList.remove('maximized'); isMax = false; }
-          win.classList.remove('hidden');
-          win.style.display = '';
-          win.classList.add('restoring');
-          taskbar.style.display = '';
-          taskbar.classList.remove('minimized');
-          taskbar.classList.add('active');
-          setTimeout(function() { win.classList.remove('restoring'); }, 500);
-          if (window.bringToFront) window.bringToFront(win);
-          var menu = document.getElementById('startMenu');
-          if (menu && menu.classList.contains('show')) toggleStartMenu();
-          // Auto-maximize on mobile / narrow viewports
-          if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
-            maximizeBrowserWindow();
+        function maybeMobileMaximize(inst) {
+          if (inst.userUnmaxed) return;
+          if (window.matchMedia('(max-width: 800px)').matches && !inst.isMax) {
+            applyMax(inst);
           }
         }
 
-        window.openBrowserWindow = function(url, label) {
-          if (!url) return; // about:home is gone — every open requires an entry URL
-          render(url, label);
-          showWindow();
-        };
+        function applyMax(inst) {
+          inst.prevStyles = {
+            left: inst.el.style.left, top: inst.el.style.top,
+            right: inst.el.style.right, bottom: inst.el.style.bottom,
+            width: inst.el.style.width, height: inst.el.style.height,
+            position: inst.el.style.position,
+            margin: inst.el.style.margin, transform: inst.el.style.transform
+          };
+          inst.el.classList.add('maximized');
+          inst.isMax = true;
+        }
 
+        function unapplyMax(inst) {
+          inst.el.classList.remove('maximized');
+          var p = inst.prevStyles;
+          inst.el.style.left = p.left || '';
+          inst.el.style.top = p.top || '';
+          inst.el.style.right = p.right || '';
+          inst.el.style.bottom = p.bottom || '';
+          inst.el.style.width = p.width || '';
+          inst.el.style.height = p.height || '';
+          inst.el.style.position = p.position || '';
+          inst.el.style.margin = p.margin || '';
+          inst.el.style.transform = p.transform || '';
+          inst.isMax = false;
+          inst.userUnmaxed = true;
+        }
+
+        function toggleMaxInstance(inst) {
+          if (!inst.isMax) applyMax(inst); else unapplyMax(inst);
+        }
+
+        function minimizeInstance(inst) {
+          inst.el.classList.add('minimizing');
+          inst.taskbarEl.classList.add('minimized');
+          inst.taskbarEl.classList.remove('active');
+          inst.isMin = true;
+          setTimeout(function() {
+            inst.el.style.display = 'none';
+            inst.el.classList.remove('minimizing');
+          }, 500);
+        }
+
+        function reloadInstance(inst) {
+          if (!inst.iframe) return;
+          inst.reloadBtn.classList.add('loading');
+          inst.contentEl.classList.add('loading');
+          var sep = inst.entry.url.indexOf('?') === -1 ? '?' : '&';
+          var done = function() {
+            inst.reloadBtn.classList.remove('loading');
+            inst.contentEl.classList.remove('loading');
+            inst.iframe.removeEventListener('load', done);
+          };
+          inst.iframe.addEventListener('load', done);
+          setTimeout(done, 10000);
+          inst.iframe.src = inst.entry.url + sep + '_kd_reload=' + Date.now();
+        }
+
+        function closeInstance(inst) {
+          inst.el.classList.add('closing');
+          setTimeout(function() {
+            try { inst.el.remove(); } catch (e) {}
+            try { inst.taskbarEl.remove(); } catch (e) {}
+            instances.delete(inst.id);
+            if (instances.size === 0) cascadeIndex = 0;
+          }, 300);
+        }
+
+        function toggleInstanceFromTaskbar(inst) {
+          if (inst.isMin || inst.el.style.display === 'none') {
+            inst.el.style.display = '';
+            inst.el.classList.add('restoring');
+            inst.taskbarEl.classList.remove('minimized');
+            inst.taskbarEl.classList.add('active');
+            setTimeout(function() { inst.el.classList.remove('restoring'); }, 500);
+            if (window.bringToFront) window.bringToFront(inst.el);
+            inst.isMin = false;
+            // userUnmaxed suppresses re-applying mobile auto-max on restore.
+            if (!inst.userUnmaxed && window.matchMedia('(max-width: 800px)').matches && !inst.isMax) {
+              applyMax(inst);
+            }
+            return;
+          }
+          if (window.__focusedWindow !== inst.el) {
+            window.bringToFront(inst.el);
+            return;
+          }
+          minimizeInstance(inst);
+        }
+
+        // ─── Public API ───
         window.openFeaturedArchive = function(id) {
           var entry = REGISTRY[id];
           if (!entry) return;
           var useInternal = false;
           try { useInternal = localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; } catch(e) {}
-          if (useInternal) {
-            window.openBrowserWindow(entry.url, entry.label);
-          } else {
+          if (!useInternal) {
             window.open(entry.url, '_blank', 'noopener');
+            return;
           }
-        };
-
-        window.browserReload = function() {
-          if (!currentUrl) return;
-          var iframe = contentEl.querySelector('iframe');
-          if (!iframe) return;
-          if (reloadBtn) reloadBtn.classList.add('loading');
-          // Cache-buster forces a fresh fetch even when upstream serves
-          // strong Cache-Control. Stripped on next render so each archive
-          // window only carries the marker between explicit reloads.
-          var sep = currentUrl.indexOf('?') === -1 ? '?' : '&';
-          iframe.src = currentUrl + sep + '_kd_reload=' + Date.now();
-          var done = function() {
-            if (reloadBtn) reloadBtn.classList.remove('loading');
-            iframe.removeEventListener('load', done);
-          };
-          iframe.addEventListener('load', done);
-          // Safety: clear the spinner after 10s even if load never fires
-          // (e.g., archive offline behind cloudflared).
-          setTimeout(done, 10000);
-        };
-
-        window.browserOpenExternal = function() {
-          if (currentUrl) {
-            window.open(currentUrl, '_blank', 'noopener');
-          }
-        };
-
-        window.closeBrowserWindow = function() {
-          win.classList.add('closing');
-          setTimeout(function() {
-            win.classList.remove('closing');
-            win.classList.add('hidden');
-            win.style.display = 'none';
-            taskbar.style.display = 'none';
-            taskbar.classList.remove('active', 'minimized');
-            if (isMax) { win.classList.remove('maximized'); isMax = false; }
-            userUnmaxed = false;
-            prevStyles = {};
-            contentEl.innerHTML = '';
-            currentUrl = '';
-            currentLabel = '';
-            currentHost = '';
-          }, 300);
-        };
-
-        window.minimizeBrowserWindow = function() {
-          win.classList.add('minimizing');
-          taskbar.classList.add('minimized');
-          taskbar.classList.remove('active');
-          setTimeout(function() {
-            win.style.display = 'none';
-            win.classList.remove('minimizing');
-          }, 500);
-        };
-
-        window.toggleBrowserWindow = function() {
-          if (win.classList.contains('hidden')) return;
-          if (win.style.display === 'none' || taskbar.classList.contains('minimized')) {
-            win.style.display = '';
-            win.classList.add('restoring');
-            taskbar.classList.remove('minimized');
-            taskbar.classList.add('active');
-            setTimeout(function() { win.classList.remove('restoring'); }, 500);
-            if (window.bringToFront) window.bringToFront(win);
-            // userUnmaxed is set the first time the user manually un-maximizes;
-            // once set, restore-from-min must not re-apply mobile auto-max,
-            // since that would override their explicit choice every cycle.
-            if (window.matchMedia('(max-width: 800px)').matches && !isMax && !userUnmaxed) {
-              maximizeBrowserWindow();
-            }
-          } else if (taskbar.classList.contains('active')) {
-            if (window.__focusedWindow !== win) {
-              window.bringToFront(win);
+          var existing = instances.get(id);
+          if (existing) {
+            // Restore if minimized; bring to front either way.
+            if (existing.isMin || existing.el.style.display === 'none') {
+              toggleInstanceFromTaskbar(existing);
             } else {
-              minimizeBrowserWindow();
+              window.bringToFront(existing.el);
             }
+            var menu = document.getElementById('startMenu');
+            if (menu && menu.classList.contains('show')) toggleStartMenu();
+            return;
           }
+          var inst = makeInstance(id);
+          if (!inst) return;
+          instances.set(id, inst);
+          placeNewWindow(inst);
+          showInstance(inst);
+          loadIframe(inst);
+          maybeMobileMaximize(inst);
+          var menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show')) toggleStartMenu();
         };
 
-        window.maximizeBrowserWindow = function() {
-          if (!isMax) {
-            prevStyles = {
-              left: win.style.left, top: win.style.top,
-              right: win.style.right, bottom: win.style.bottom,
-              width: win.style.width, height: win.style.height,
-              position: win.style.position,
-              margin: win.style.margin, transform: win.style.transform
-            };
-            win.classList.add('maximized');
-            isMax = true;
-          } else {
-            win.classList.remove('maximized');
-            win.style.left = prevStyles.left || '';
-            win.style.top = prevStyles.top || '';
-            win.style.right = prevStyles.right || '';
-            win.style.bottom = prevStyles.bottom || '';
-            win.style.width = prevStyles.width || '';
-            win.style.height = prevStyles.height || '';
-            win.style.position = prevStyles.position || '';
-            win.style.margin = prevStyles.margin || '';
-            win.style.transform = prevStyles.transform || '';
-            isMax = false;
-            userUnmaxed = true;
-          }
+        // Legacy entry point — used by any caller still passing (url, label).
+        // Resolves the id from the registry by URL.
+        window.openBrowserWindow = function(url, label) {
+          if (!url) return;
+          var match = ARCHIVES.find(function(a) { return a.url === url; });
+          if (match) { window.openFeaturedArchive(match.id); return; }
+          // Unknown URL: open externally to avoid trusting an arbitrary string.
+          window.open(url, '_blank', 'noopener');
         };
 
-        // Double-click titlebar toggles maximize (feels like a real window)
-        titlebar.addEventListener('dblclick', function(e) {
-          if (e.target.closest('.window-btn')) return;
-          maximizeBrowserWindow();
-        });
+        // Expose the instance map for cat-avoidance and debugging.
+        window.__browserInstances = instances;
       })();
     </script>
 
