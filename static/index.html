@@ -5462,7 +5462,6 @@
         <div class="browser-content"></div>
       </div>
     </template>
-    <div id="browser-window-host"></div>
 
     <!-- Demoscene window -->
     <div class="demo-window hidden" id="demo-window">
@@ -8438,9 +8437,10 @@
           var done = function() {
             inst.contentEl.classList.remove('loading');
             iframe.removeEventListener('load', done);
+            if (inst._loadTimer) { clearTimeout(inst._loadTimer); inst._loadTimer = null; }
           };
           iframe.addEventListener('load', done);
-          setTimeout(done, 10000);
+          inst._loadTimer = setTimeout(done, 10000);
           inst.contentEl.innerHTML = '';
           inst.contentEl.appendChild(iframe);
           inst.iframe = iframe;
@@ -8498,20 +8498,25 @@
 
         function reloadInstance(inst) {
           if (!inst.iframe) return;
+          if (inst.reloadBtn.disabled) return; // already loading
           inst.reloadBtn.classList.add('loading');
+          inst.reloadBtn.disabled = true;
           inst.contentEl.classList.add('loading');
           var sep = inst.entry.url.indexOf('?') === -1 ? '?' : '&';
           var done = function() {
             inst.reloadBtn.classList.remove('loading');
+            inst.reloadBtn.disabled = false;
             inst.contentEl.classList.remove('loading');
             inst.iframe.removeEventListener('load', done);
+            if (inst._loadTimer) { clearTimeout(inst._loadTimer); inst._loadTimer = null; }
           };
           inst.iframe.addEventListener('load', done);
-          setTimeout(done, 10000);
+          inst._loadTimer = setTimeout(done, 10000);
           inst.iframe.src = inst.entry.url + sep + '_kd_reload=' + Date.now();
         }
 
         function closeInstance(inst) {
+          if (inst._loadTimer) { clearTimeout(inst._loadTimer); inst._loadTimer = null; }
           inst.el.classList.add('closing');
           setTimeout(function() {
             try { inst.el.remove(); } catch (e) {}
