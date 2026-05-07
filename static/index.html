@@ -1390,12 +1390,13 @@
          rule appears *later* in source order, so !important is required on
          width/height to override it. Do NOT use !important on bottom/right:
          the state-machine JS sets those via inline style to animate the cat
-         around, and !important would pin it in the corner. */
+         around, and !important would pin it in the corner. z-index is
+         intentionally NOT overridden here — cat must stay above all windows
+         (z-index 5001) so it's visible over the auto-maximized browser. */
       .desktop-cat {
         width: 40px !important;
         min-width: 0 !important;
         height: 35px !important;
-        z-index: 2;
       }
 
       .cat-body {
@@ -2342,6 +2343,15 @@
       cursor: pointer;
       transition: all 0.3s ease;
       filter: drop-shadow(0 0 10px rgba(0, 255, 150, 0.6));
+      /* Pet, not a paragraph: never hand a tap a text-selection caret or the
+         iOS callout menu, and kill the grey tap-highlight box on Android. */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     .cat-sprite {
@@ -5183,15 +5193,17 @@
   </script>
 
   <!-- Advanced Desktop Cat -->
+  <!-- Initial textContent matches frames.idle[0] verbatim so the first paint
+       (before DesktopCat.init runs) renders correctly aligned ASCII art under
+       white-space:pre, instead of the indented HTML source. -->
   <div class="desktop-cat" id="desktop-cat">
     <div class="cat-sprite">
       <div class="cat-bubble" id="cat-bubble"></div>
-      <div class="cat-body" id="cat-body">
-        /\_/\
-        ( o.o )
-        > ^ < </div>
-      </div>
+      <div class="cat-body" id="cat-body"> /\_/\
+( o.o )
+ > ^ <  </div>
     </div>
+  </div>
 
     <!-- Floating retro icons -->
     <div class="floating-icon" style="top: 10%; left: 5%;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h12l4 4v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><rect x="6" y="2" width="10" height="7" rx="1"/><rect x="6" y="14" width="12" height="6" rx="1"/><line x1="10" y1="17" x2="14" y2="17"/></svg></div>
@@ -6472,16 +6484,53 @@
             });
           }
 
-          // Return the visible music-window rect (with padding) the cat should avoid, or null.
-          getAvoidRect() {
-            const w = document.getElementById('music-window');
-            if (!w) return null;
-            if (w.classList.contains('hidden')) return null;
-            if (w.style.display === 'none') return null; // minimized
-            const r = w.getBoundingClientRect();
+          // Return rect (with padding) for an element if it's visible and the
+          // cat should avoid it. Hidden / minimized windows return null so the
+          // cat ignores them. Pad keeps a small comfort margin around the box.
+          rectFor(el, pad) {
+            if (!el) return null;
+            if (el.classList.contains('hidden')) return null;
+            if (el.style.display === 'none') return null; // minimized
+            const r = el.getBoundingClientRect();
             if (!r.width || !r.height) return null;
-            const pad = 18;
             return { left: r.left - pad, right: r.right + pad, top: r.top - pad, bottom: r.bottom + pad };
+          }
+
+          // Music window — kept as a dedicated getter for callers that only
+          // care about it (the legacy escape/avoid pathways still target the
+          // music window specifically).
+          getAvoidRect() {
+            return this.rectFor(document.getElementById('music-window'), 18);
+          }
+
+          // All visible windows the cat should avoid: music + browser + demo.
+          // The browser/demo windows auto-maximize on mobile and span the
+          // entire content area, so this is what makes the cat stay in the
+          // taskbar strip when an archive is open.
+          getAllAvoidRects() {
+            const rects = [];
+            const ids = ['music-window', 'browser-window', 'demo-window'];
+            for (const id of ids) {
+              const r = this.rectFor(document.getElementById(id), 12);
+              if (r) rects.push(r);
+            }
+            return rects;
+          }
+
+          // True if any major window is currently maximized (covers most of
+          // the viewport). When this is true the cat collapses into a thin
+          // strip just above the taskbar — anywhere else would obstruct
+          // whatever the user is reading in the maximized window.
+          hasMaximizedWindow() {
+            const ids = ['browser-window', 'demo-window', 'music-window'];
+            for (const id of ids) {
+              const w = document.getElementById(id);
+              if (!w) continue;
+              if (w.classList.contains('hidden')) continue;
+              if (w.style.display === 'none') continue;
+              if (w.classList.contains('maximized')) return true;
+            }
+            return false;
           }
 
           // Compute pixels of free space on each side of the music window.
@@ -6601,19 +6650,38 @@
             return true;
           }
 
-          // The music window can move (drag), maximize, or hide. Instead of
-          // polling every 350 ms (which forced two getBoundingClientRect()
-          // reads/sec even at idle), watch the window for style/class
-          // mutations and recheck only when something actually changed.
-          // A debounce coalesces the burst of style writes from a drag into
-          // a single overlap check at rest.
+          // Watch every major window (music, browser, demo) for style/class
+          // mutations and react when something actually changes:
+          //  - music window dragged onto the cat → escape to free space
+          //  - browser/demo window opens or maximizes → snap cat down to the
+          //    taskbar strip so it doesn't obstruct content (same intent as
+          //    the music-window escape but expressed positionally, since a
+          //    maximized window leaves no horizontal "free side" to dart to)
+          // A debounce coalesces a burst of style writes (drag, transition)
+          // into one check at rest. Polling-free; no per-frame reads.
           startMusicAvoidWatcher() {
-            if (this._musicWatcher) return;
-            const win = document.getElementById('music-window');
-            if (!win) return;
+            if (this._winWatcher) return;
+            const ids = ['music-window', 'browser-window', 'demo-window'];
+            const targets = ids.map(id => document.getElementById(id)).filter(Boolean);
+            if (!targets.length) return;
             const recheck = () => {
               if (document.hidden) return;
               if (this.isMoving) return;
+              // 1. If a window is maximized and the cat has drifted above the
+              //    bottom strip, snap it down. No transition fanfare — this
+              //    runs on window open / maximize and should feel instant.
+              if (this.hasMaximizedWindow()) {
+                const curB = parseInt(this.cat.style.bottom) || 50;
+                if (curB > 80) {
+                  this.cancelBehaviorLoop();
+                  if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
+                  this.cat.style.transition = 'bottom 0.3s ease-out';
+                  this.cat.style.bottom = '50px';
+                  setTimeout(() => { this.cat.style.transition = ''; this.restartBehaviorLoop(800); }, 320);
+                  return;
+                }
+              }
+              // 2. Music-window-specific escape (legacy behavior preserved).
               if (!this.isOnMusicWindow()) return;
               this.cancelBehaviorLoop();
               if (this.followTimeout) { clearTimeout(this.followTimeout); this.followTimeout = null; }
@@ -6624,31 +6692,78 @@
               if (pending) return;
               pending = setTimeout(() => { pending = null; recheck(); }, 120);
             };
-            this._musicWatcher = new MutationObserver(schedule);
-            this._musicWatcher.observe(win, { attributes: true, attributeFilter: ['style', 'class'] });
+            this._winWatcher = new MutationObserver(schedule);
+            for (const t of targets) {
+              this._winWatcher.observe(t, { attributes: true, attributeFilter: ['style', 'class'] });
+            }
             // Also recheck after the cat itself stops moving — it might have
-            // landed on top of the window.
+            // landed on top of a window.
             this.cat.addEventListener('transitionend', schedule);
-            // And on viewport resize (window may now overlap differently).
-            window.addEventListener('resize', schedule, { passive: true });
+            // And on viewport resize (windows may now overlap differently,
+            // and the cat itself may now be off-viewport).
+            window.addEventListener('resize', () => {
+              this.clampToViewport();
+              schedule();
+            }, { passive: true });
           }
 
-          // Vertical range for free-roam. On narrow viewports the music
-          // window spans almost the full width, so we start the range just
-          // above it — otherwise ~half of random Y targets would land in
-          // the music-overlap zone and get rerouted back to a single spot.
-          wanderYRange() {
-            const isMobile = window.innerWidth <= 520;
-            if (!isMobile) return { min: 50, span: 150 };
-            const avoid = this.getAvoidRect();
-            const catH = (this.cat.getBoundingClientRect().height || 35);
-            if (avoid) {
-              const aboveMusic = window.innerHeight - avoid.top + 12;
-              const topRoom = window.innerHeight - 120 - aboveMusic;
-              if (topRoom > 40) return { min: aboveMusic, span: topRoom };
+          // Keep the cat inside the viewport after a resize / orientation
+          // change. Without this, a phone rotated from landscape→portrait can
+          // leave the cat parked at right=900 (off-screen).
+          clampToViewport() {
+            const rect = this.cat.getBoundingClientRect();
+            const catW = rect.width || 60;
+            const catH = rect.height || 50;
+            const TASKBAR_H = 44;
+            const curR = parseInt(this.cat.style.right) || 30;
+            const curB = parseInt(this.cat.style.bottom) || 50;
+            const maxR = Math.max(20, window.innerWidth - catW - 10);
+            const maxB = Math.max(50, window.innerHeight - catH - 10);
+            const newR = Math.max(20, Math.min(maxR, curR));
+            const newB = Math.max(TASKBAR_H + 6, Math.min(maxB, curB));
+            if (newR !== curR || newB !== curB) {
+              this.cat.style.transition = 'none';
+              this.cat.style.right = newR + 'px';
+              this.cat.style.bottom = newB + 'px';
+              void this.cat.offsetWidth;
+              this.cat.style.transition = '';
             }
-            // Fallback: roam the upper half.
-            return { min: 50, span: Math.max(150, window.innerHeight - 220) };
+          }
+
+          // Vertical range for free-roam.
+          //
+          // Default ("ambient") mode: cat hugs the bottom strip just above
+          // the taskbar, both on desktop and mobile. The previous mobile
+          // fallback ("roam the upper half") let the cat drift into the
+          // middle of the screen on phones, which felt like a mascot bug.
+          //
+          // When the music window is open AND its rect actually blocks the
+          // bottom strip (e.g. on narrow viewports where it spans the width),
+          // we expand the range upward into whatever vertical room remains
+          // above the music window — better than scoring zero candidates and
+          // bouncing back to the corner forever.
+          //
+          // When ANY window is maximized we collapse to a tight 30px strip
+          // right above the taskbar so the cat doesn't obstruct content.
+          wanderYRange() {
+            if (this.hasMaximizedWindow()) return { min: 50, span: 30 };
+            const isMobile = window.innerWidth <= 520;
+            const defaultRange = { min: 50, span: 150 };
+            const avoid = this.getAvoidRect();
+            if (!avoid) return defaultRange;
+            // Music window present. Does it actually overlap the default
+            // bottom strip? If not, the cat can keep using it.
+            const stripTop = window.innerHeight - (defaultRange.min + defaultRange.span);
+            const stripBot = window.innerHeight - defaultRange.min;
+            const stripBlocked = !(avoid.bottom < stripTop || avoid.top > stripBot);
+            if (!stripBlocked) return defaultRange;
+            if (!isMobile) return defaultRange; // desktop: stay low, escape logic handles overlap
+            // Narrow viewport AND music covers the strip — roam in the gap
+            // above the music window so the cat still has somewhere to go.
+            const aboveMusic = window.innerHeight - avoid.top + 12;
+            const topRoom = window.innerHeight - 120 - aboveMusic;
+            if (topRoom > 40) return { min: aboveMusic, span: topRoom };
+            return defaultRange;
           }
 
           moveWalk(dur) {
@@ -6656,7 +6771,7 @@
             this.isMoving = true;
             const distance = Math.random() * 300 + 100;
             const currentRight = parseInt(this.cat.style.right) || 30;
-            const currentBottom = parseInt(this.cat.style.bottom) || 50;
+            let currentBottom = parseInt(this.cat.style.bottom) || 50;
             // Bias direction away from the left edge so the cat doesn't burn
             // half its walks clamped at right=30 (the bottom-right corner).
             const maxR = window.innerWidth - 100;
@@ -6665,7 +6780,18 @@
             else if (currentRight >= maxR - 20) walkDir = -1;  // near left edge → move right
             else                          walkDir = Math.random() < 0.5 ? 1 : -1;
             const rawRight = Math.max(30, Math.min(maxR, currentRight + (walkDir * distance)));
-            const safe = this.avoidMusicWindow(rawRight, currentBottom);
+            // When a window is maximized force the walk to happen in the
+            // taskbar strip; if the cat had drifted higher we also snap it
+            // down before transitioning so the move is a clean horizontal slide.
+            let targetBottom = currentBottom;
+            if (this.hasMaximizedWindow() && currentBottom > 60) {
+              this.cat.style.transition = 'none';
+              this.cat.style.bottom = '50px';
+              void this.cat.offsetWidth; // commit before re-enabling transitions
+              currentBottom = 50;
+              targetBottom = 50;
+            }
+            const safe = this.avoidMusicWindow(rawRight, targetBottom);
             const newRight = safe.right;
             this.direction = newRight > currentRight ? -1 : 1;
             this.setState('walking'); // setState calls updateDirection
@@ -6870,7 +6996,10 @@
             const paw = document.createElement('div');
             paw.className = 'paw-print';
             paw.style.left = (catRect.left + catRect.width / 2) + 'px';
-            paw.style.bottom = '45px';
+            // Drop the print just under the cat's feet, wherever it currently
+            // is — the old hardcoded bottom:45px stranded prints near the
+            // taskbar even when the cat had wandered upward.
+            paw.style.bottom = (window.innerHeight - catRect.bottom + 2) + 'px';
             document.body.appendChild(paw);
             setTimeout(() => paw.remove(), 2000);
           }
