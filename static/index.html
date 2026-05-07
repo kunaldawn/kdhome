@@ -6117,6 +6117,18 @@
             ];
             this.palette = this.pickPalette();
 
+            // ─── Frame variants (visual surprise) ───
+            // 15% of the time, animate() picks from this pool instead of the
+            // base frame. Pure cosmetic; doesn't affect transitions or moods.
+            this.frameVariants = {
+              idle:    [' _,/\\_/\\,_\n( o.o ) \n > ^ <  '],
+              sitting: [' /\\_/\\  \n>>=^.^=<<\n(> ^ <)  '],
+              coding:  [' /\\_/\\  \n( =.= )_\n > ^ <[]'],
+              hacking: [' /\\_/\\  \n( =.= ) \n > ^ <  '],
+              reading: [' /\\_/\\  \n( o.o )▤\n > ^ <  '],
+              vibing:  [' /\\_/\\  \n( ^.^ )♫\n > ^ <♪ '],
+            };
+
             // ─── State Durations ───
             this.stateDurations = {
               idle: 4000, sitting: 5000, thinking: 4000, coding: 6000,
@@ -6234,7 +6246,12 @@
             const key = this.currentState === 'idle_tip' ? 'idle' : this.currentState;
             const f = this.frames[key];
             if (!f) return;
-            this.body.textContent = f[this.frameIndex % f.length];
+            let frame = f[this.frameIndex % f.length];
+            const variants = this.frameVariants && this.frameVariants[key];
+            if (variants && variants.length && Math.random() < 0.15) {
+              frame = variants[Math.floor(Math.random() * variants.length)];
+            }
+            this.body.textContent = frame;
           }
 
           animateFrames(interval, duration = 0) {
