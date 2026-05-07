@@ -6199,6 +6199,7 @@
 
             this.cat.addEventListener('transitionstart', () => this.leavePawPrints());
             this.applyPalette();
+            this.installKeystrokeTriggers();
           }
 
           // ─── Mood Helpers ───
@@ -7189,6 +7190,113 @@
               this.setState('idle');
               this.restartBehaviorLoop(1500);
             }, 1500);
+          }
+
+          // ─── Surprises ───
+
+          triggerKonami() {
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState('matrix');
+            this.showMessage('Cheat enabled.');
+            this.animateFrames(150, 5000);
+            for (let i = 0; i < 8; i++) {
+              setTimeout(() => this.spawnEmote('✦', '#00ffff', 1500), i * 120);
+            }
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.setState('hacking');
+              this.showMessage('I\'m in.');
+              this.animateFrames(500, 2500);
+              this.stateTimer = setTimeout(() => {
+                this.hideMessage();
+                this.setState('idle');
+                this.restartBehaviorLoop(1500);
+              }, 2500);
+            }, 5000);
+          }
+
+          triggerMatrixHotkey() {
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState('matrix');
+            this.showMessage('Wake up, Neo...');
+            this.animateFrames(200, 4000);
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+              this.restartBehaviorLoop(1500);
+            }, 4000);
+          }
+
+          triggerCatWord() {
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState('playing');
+            this.showMessage('*ears perk*');
+            this.animateFrames(250, 2500);
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+              this.restartBehaviorLoop(1500);
+            }, 2500);
+          }
+
+          triggerMeowWord() {
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState('surprised');
+            this.showMessage('Mrrow?');
+            this.animateFrames(300, 2000);
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+              this.restartBehaviorLoop(1500);
+            }, 2000);
+          }
+
+          installKeystrokeTriggers() {
+            this._konamiSeq = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','KeyB','KeyA'];
+            this._codeBuffer = [];
+            this._wordBuffer = '';
+            document.addEventListener('keydown', (e) => {
+              if (document.hidden) return;
+              const tgt = e.target;
+              if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable)) return;
+              // Ctrl+Shift+M jump-to-matrix
+              if (e.ctrlKey && e.shiftKey && e.code === 'KeyM') {
+                e.preventDefault();
+                this.triggerMatrixHotkey();
+                return;
+              }
+              // Konami: rolling code buffer
+              this._codeBuffer.push(e.code);
+              if (this._codeBuffer.length > this._konamiSeq.length) this._codeBuffer.shift();
+              if (this._codeBuffer.length === this._konamiSeq.length &&
+                  this._codeBuffer.every((k, i) => k === this._konamiSeq[i])) {
+                this._codeBuffer = [];
+                this.triggerKonami();
+                return;
+              }
+              // Word triggers: rolling letter buffer (case-insensitive)
+              if (e.key && e.key.length === 1) {
+                this._wordBuffer = (this._wordBuffer + e.key.toLowerCase()).slice(-16);
+                if (this._wordBuffer.endsWith('meow')) {
+                  this._wordBuffer = '';
+                  this.triggerMeowWord();
+                } else if (this._wordBuffer.endsWith('cat')) {
+                  this._wordBuffer = '';
+                  this.triggerCatWord();
+                }
+              }
+            });
           }
 
           checkSpook(mx, my) {
