@@ -5923,6 +5923,8 @@
             .then(data => {
               if (el && data && data.count != null) {
                 el.textContent = data.count.toLocaleString() + ' visits';
+                // Let the cat react to milestone crossings.
+                window.dispatchEvent(new CustomEvent('kd-visit-count', { detail: { count: data.count } }));
               }
             })
             .catch(() => { /* silent: no counter is fine */ });
@@ -6200,6 +6202,7 @@
             this.cat.addEventListener('transitionstart', () => this.leavePawPrints());
             this.applyPalette();
             this.installKeystrokeTriggers();
+            window.addEventListener('kd-visit-count', (e) => this.onVisitCount(e.detail.count));
           }
 
           // ─── Mood Helpers ───
@@ -7225,6 +7228,40 @@
               this.setState('idle');
               this.restartBehaviorLoop(1200);
             }, dur);
+          }
+
+          onVisitCount(count) {
+            const tiers = [100, 500, 1000, 5000, 10000, 100000];
+            let crossed = 0;
+            for (const t of tiers) if (count >= t) crossed = t;
+            if (!crossed) return;
+            let prev = 0;
+            try { prev = parseInt(localStorage.getItem('kd:cat:last-visit-tier') || '0', 10) || 0; } catch (e) {}
+            if (crossed <= prev) return;
+            try { localStorage.setItem('kd:cat:last-visit-tier', String(crossed)); } catch (e) {}
+            this.cancelBehaviorLoop();
+            this.cancelFollow();
+            this.isMoving = false;
+            this.setState('celebrate');
+            const labels = {
+              100:    '100 visits! Mrow!',
+              500:    '500 visits!',
+              1000:   '1k visits! \u{1F389}',
+              5000:   '5k visits!',
+              10000:  '10k visits!',
+              100000: '100k visits! \u{1F389}',
+            };
+            this.showMessage(labels[crossed]);
+            this.animateFrames(300, 5000);
+            for (let i = 0; i < 8; i++) {
+              setTimeout(() => this.spawnEmote(['★','✨','♦','♥'][Math.floor(Math.random()*4)], '#ffd166', 1500), i * 100);
+            }
+            this.clearStateTimer();
+            this.stateTimer = setTimeout(() => {
+              this.hideMessage();
+              this.setState('idle');
+              this.restartBehaviorLoop(1500);
+            }, 5500);
           }
 
           // ─── Surprises ───
