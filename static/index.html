@@ -2120,27 +2120,23 @@
 
     .browser-btn svg { display: block; }
 
-    .browser-address {
+    .browser-title-strip {
       flex: 1;
       min-width: 0;
-      background: rgba(0, 0, 0, 0.5);
-      border: 1px solid rgba(0, 255, 150, 0.15);
       color: var(--neon);
       font-family: 'Share Tech Mono', monospace;
       font-size: 12px;
       padding: 6px 10px;
-      border-radius: 4px;
-      outline: none;
-      cursor: default;
+      text-align: center;
       text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
       text-shadow: 0 0 4px rgba(0, 255, 150, 0.25);
-      user-select: all;
+      opacity: 0.85;
+      user-select: text;
     }
-
-    .browser-address:focus {
-      border-color: rgba(0, 255, 150, 0.35);
-      background: rgba(0, 0, 0, 0.65);
-    }
+    .browser-reload.loading svg { animation: kd-spin 0.8s linear infinite; }
+    @keyframes kd-spin { to { transform: rotate(360deg); } }
 
     .browser-content {
       flex: 1;
@@ -2261,7 +2257,7 @@
         gap: 6px;
       }
 
-      .browser-address {
+      .browser-title-strip {
         font-size: 11px;
         padding: 5px 8px;
       }
@@ -5408,13 +5404,10 @@
         <span class="vault-titlebar-title" id="browser-title">browser@kd:~</span>
       </div>
       <div class="browser-toolbar">
-        <button class="browser-btn" id="browser-back" onclick="browserGoBack()" title="Back" disabled>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        <button class="browser-btn" id="browser-reload" onclick="browserReload()" title="Reload">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         </button>
-        <button class="browser-btn" id="browser-home" onclick="browserGoHome()" title="Home">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-5h-2v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/></svg>
-        </button>
-        <input type="text" class="browser-address" id="browser-address" readonly value="about:home" aria-label="Address">
+        <span class="browser-title-strip" id="browser-title-strip" aria-live="polite"></span>
         <button class="browser-btn" id="browser-external" onclick="browserOpenExternal()" title="Open in new tab">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
         </button>
@@ -8227,35 +8220,18 @@
         var win = document.getElementById('browser-window');
         var titlebar = document.getElementById('browser-titlebar');
         var titleEl = document.getElementById('browser-title');
-        var addrEl = document.getElementById('browser-address');
+        var titleStripEl = document.getElementById('browser-title-strip');
         var contentEl = document.getElementById('browser-content');
         var taskbar = document.getElementById('browser-taskbar');
         var taskbarLabel = document.getElementById('browser-taskbar-label');
-        var backBtn = document.getElementById('browser-back');
+        var reloadBtn = document.getElementById('browser-reload');
 
         var currentUrl = '';
         var currentLabel = '';
+        var currentHost = '';
         var isMax = false;
         var userUnmaxed = false; // set when user explicitly un-maximizes; suppresses mobile auto-max on next restore
         var prevStyles = {};
-        var historyStack = [];
-        var historyIndex = -1;
-
-        function updateBackBtn() {
-          if (!backBtn) return;
-          if (historyIndex > 0) backBtn.removeAttribute('disabled');
-          else backBtn.setAttribute('disabled', 'disabled');
-        }
-
-        function pushHistory(url, label) {
-          if (!url) return;
-          var top = historyStack[historyIndex];
-          if (top && top.url === url) return;
-          historyStack = historyStack.slice(0, historyIndex + 1);
-          historyStack.push({ url: url, label: label || '' });
-          historyIndex = historyStack.length - 1;
-          updateBackBtn();
-        }
 
         if (window.makeDraggable) window.makeDraggable(win, titlebar);
 
@@ -8278,100 +8254,21 @@
         }
 
 
-        function homeDoc() {
-          var sites = [
-            {u:'https://wiki.kunaldawn.com', l:'Wiki Archive', d:'36 offline wikis — Wikipedia, Stack Overflow, ArchWiki, iFixit, Gutenberg, survival knowledge.'},
-            {u:'https://pdf.kunaldawn.com', l:'PDF Archive', d:'23,000+ PDFs — hardware manuals, Byte Magazine, science journals, repair guides.'},
-            {u:'https://os.kunaldawn.com', l:'OS Archive', d:'Operating system images, drivers, bootable install media, BIOS updates.'},
-            {u:'https://iso.kunaldawn.com', l:'CD/DVD Archive', d:'Vintage CD/DVD disc images — warez, abandonware, commercial releases time forgot.'},
-            {u:'https://chiptune.kunaldawn.com', l:'Chiptune Archive', d:'Tracker modules, MOD/XM/S3M/IT, keygen music, demo scene audio.'},
-            {u:'https://tube.kunaldawn.com', l:'Tube Archive', d:'Curated YouTube mirrors of computer science, engineering, and scientific content.'},
-            {u:'https://audio.kunaldawn.com', l:'Audiobook Archive', d:'Audiobook collection — fiction, non-fiction, lectures, classic literature.'}
-          ];
-          var cards = sites.map(function(s) {
-            return '<a class="startcard" href="' + s.u + '" data-url="' + s.u + '" data-label="' + s.l + '">' +
-              '<div class="sc-title">' + s.l + '</div>' +
-              '<div class="sc-url">' + s.u.replace('https://','') + '</div>' +
-              '<div class="sc-desc">' + s.d + '</div>' +
-            '</a>';
-          }).join('');
-          return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
-'<meta name="viewport" content="width=device-width,initial-scale=1">' +
-'<title>Start Page</title>' +
-'<style>' +
-'html,body{margin:0;padding:0;background:#0a1518;color:#cfeee0;font-family:"Share Tech Mono",ui-monospace,monospace;min-height:100%}' +
-'html{scrollbar-width:thin;scrollbar-color:rgba(0,255,150,0.3) rgba(0,0,0,0.2)}' +
-'::-webkit-scrollbar{width:8px;height:8px}' +
-'::-webkit-scrollbar-track{background:rgba(0,0,0,0.2)}' +
-'::-webkit-scrollbar-thumb{background:rgba(0,255,150,0.25);border-radius:4px}' +
-'::-webkit-scrollbar-thumb:hover{background:rgba(0,255,150,0.45)}' +
-'body{background:radial-gradient(ellipse at center,#0d1f22 0%,#050b0c 70%);padding:40px 24px}' +
-'.hdr{text-align:center;margin-bottom:36px}' +
-'.hdr h1{color:#00ff99;font-size:22px;letter-spacing:2px;margin:0 0 6px;text-shadow:0 0 12px rgba(0,255,150,0.45)}' +
-'.hdr p{color:#7fd1b3;font-size:12px;margin:0;opacity:.8;letter-spacing:1px}' +
-'.grid{max-width:900px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}' +
-'.startcard{display:block;padding:18px;background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,150,0.12);border-radius:8px;text-decoration:none;color:inherit;cursor:pointer;transition:all .2s}' +
-'.startcard:hover{border-color:rgba(0,255,150,0.5);background:rgba(0,255,150,0.04);box-shadow:0 0 18px rgba(0,255,150,0.15);transform:translateY(-2px)}' +
-'.sc-title{color:#00ff99;font-size:14px;letter-spacing:1px;margin-bottom:6px;text-shadow:0 0 8px rgba(0,255,150,0.35)}' +
-'.sc-url{color:#7fd1b3;font-size:10px;opacity:.6;margin-bottom:10px;letter-spacing:.5px}' +
-'.sc-desc{color:#a8d8c4;font-size:11px;opacity:.85;line-height:1.6}' +
-'.foot{text-align:center;margin-top:40px;color:#7fd1b3;font-size:10px;opacity:.4;letter-spacing:1px}' +
-'</style></head><body>' +
-'<div class="hdr"><h1>// KD BROWSER //</h1><p>about:home · pick an archive</p></div>' +
-'<div class="grid">' + cards + '</div>' +
-'<div class="foot">homebrew · offline-first · solar-powered</div>' +
-'<script>' +
-'document.querySelectorAll(".startcard").forEach(function(el){' +
-'el.addEventListener("click",function(e){e.preventDefault();parent.postMessage({type:"browser-nav",url:el.dataset.url,label:el.dataset.label},"*");});' +
-'});' +
-'<\/script>' +
-'</body></html>';
-        }
-
-        function render(url, label, options) {
-          options = options || {};
+        function render(url, label) {
           currentUrl = url;
           currentLabel = label || '';
+          try { currentHost = new URL(url).host; } catch (e) { currentHost = url; }
           var iframe = document.createElement('iframe');
-          if (url === 'about:home') {
-            iframe.setAttribute('sandbox', 'allow-scripts');
-            addrEl.value = 'about:home';
-            titleEl.textContent = 'browser@kd:~/home';
-            taskbarLabel.textContent = 'Browser';
-            iframe.srcdoc = homeDoc();
-          } else {
-            var host;
-            try { host = new URL(url).host; } catch (e) { host = url; }
-            addrEl.value = url;
-            titleEl.textContent = 'browser@kd:~/' + (label || host);
-            taskbarLabel.textContent = label || host;
-            iframe.src = url;
-          }
+          iframe.src = url;
+          titleEl.textContent = 'browser@kd:~/' + (label || currentHost);
+          taskbarLabel.textContent = label || currentHost;
+          titleStripEl.textContent = (label ? label + ' — ' : '') + currentHost;
           contentEl.innerHTML = '';
           contentEl.appendChild(iframe);
-          if (!options.fromHistory) {
-            pushHistory(url, label);
-          }
-          updateBackBtn();
-        }
-
-        function recenter() {
-          // Drop any inline position styles left over from a prior drag so the
-          // CSS rule (left:50%; transform:translateX(-50%)) takes over again.
-          win.style.left = '';
-          win.style.top = '';
-          win.style.right = '';
-          win.style.bottom = '';
-          win.style.width = '';
-          win.style.height = '';
-          win.style.position = '';
-          win.style.margin = '';
-          win.style.transform = '';
         }
 
         function showWindow() {
           if (isMax) { win.classList.remove('maximized'); isMax = false; }
-          recenter();
           win.classList.remove('hidden');
           win.style.display = '';
           win.classList.add('restoring');
@@ -8389,7 +8286,8 @@
         }
 
         window.openBrowserWindow = function(url, label) {
-          render(url || 'about:home', label);
+          if (!url) return; // about:home is gone — every open requires an entry URL
+          render(url, label);
           showWindow();
         };
 
@@ -8405,19 +8303,28 @@
           }
         };
 
-        window.browserGoHome = function() {
-          render('about:home', '');
-        };
-
-        window.browserGoBack = function() {
-          if (historyIndex <= 0) return;
-          historyIndex--;
-          var prev = historyStack[historyIndex];
-          render(prev.url, prev.label, { fromHistory: true });
+        window.browserReload = function() {
+          if (!currentUrl) return;
+          var iframe = contentEl.querySelector('iframe');
+          if (!iframe) return;
+          if (reloadBtn) reloadBtn.classList.add('loading');
+          // Cache-buster forces a fresh fetch even when upstream serves
+          // strong Cache-Control. Stripped on next render so each archive
+          // window only carries the marker between explicit reloads.
+          var sep = currentUrl.indexOf('?') === -1 ? '?' : '&';
+          iframe.src = currentUrl + sep + '_kd_reload=' + Date.now();
+          var done = function() {
+            if (reloadBtn) reloadBtn.classList.remove('loading');
+            iframe.removeEventListener('load', done);
+          };
+          iframe.addEventListener('load', done);
+          // Safety: clear the spinner after 10s even if load never fires
+          // (e.g., archive offline behind cloudflared).
+          setTimeout(done, 10000);
         };
 
         window.browserOpenExternal = function() {
-          if (currentUrl && currentUrl !== 'about:home') {
+          if (currentUrl) {
             window.open(currentUrl, '_blank', 'noopener');
           }
         };
@@ -8432,11 +8339,11 @@
             taskbar.classList.remove('active', 'minimized');
             if (isMax) { win.classList.remove('maximized'); isMax = false; }
             userUnmaxed = false;
+            prevStyles = {};
             contentEl.innerHTML = '';
             currentUrl = '';
-            historyStack = [];
-            historyIndex = -1;
-            updateBackBtn();
+            currentLabel = '';
+            currentHost = '';
           }, 300);
         };
 
@@ -8500,43 +8407,6 @@
             userUnmaxed = true;
           }
         };
-
-        // Receive nav requests from the about:home iframe + URL updates
-        // from any iframed archive page (cross-origin iframes can't be
-        // inspected directly, so each archive opts into broadcasting its
-        // own location via postMessage on every page load).
-        window.addEventListener('message', function(e) {
-          if (!e.data) return;
-          if (e.data.type === 'browser-nav') {
-            render(e.data.url, e.data.label);
-            return;
-          }
-          if (e.data.type === 'kd-iframe-loc' && typeof e.data.url === 'string') {
-            // Only trust the message if it came from the iframe we're hosting.
-            var iframe = contentEl.querySelector('iframe');
-            if (!iframe || e.source !== iframe.contentWindow) return;
-            currentUrl = e.data.url;
-            addrEl.value = e.data.url;
-            try {
-              var host = new URL(e.data.url).host;
-              titleEl.textContent = 'browser@kd:~/' + (currentLabel || host);
-            } catch (err) {}
-            pushHistory(e.data.url, currentLabel);
-          }
-        });
-        // Same-origin fallback: for srcdoc (about:home) we can read
-        // location directly when the iframe loads.
-        contentEl.addEventListener('load', function(e) {
-          if (e.target.tagName !== 'IFRAME') return;
-          try {
-            var loc = e.target.contentWindow.location.href;
-            if (loc && loc !== 'about:blank' && loc !== 'about:srcdoc') {
-              currentUrl = loc;
-              addrEl.value = loc;
-              pushHistory(loc, currentLabel);
-            }
-          } catch (err) { /* cross-origin — ignore, postMessage covers it */ }
-        }, true);
 
         // Double-click titlebar toggles maximize (feels like a real window)
         titlebar.addEventListener('dblclick', function(e) {
