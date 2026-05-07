@@ -32,6 +32,19 @@
     var autoCycle = false;
     var autoTimer = null;
 
+    try {
+        if (window.localStorage) {
+            var savedAuto = window.localStorage.getItem('kd_music_viz_auto');
+            if (savedAuto === '1') autoCycle = true;
+            var savedIv = window.localStorage.getItem('kd_music_viz_interval');
+            if (savedIv) {
+                var n = parseInt(savedIv, 10);
+                var idx = AUTO_INTERVAL_OPTIONS_S.indexOf(n);
+                if (idx >= 0) autoIntervalIdx = idx;
+            }
+        }
+    } catch (e) {}
+
     // ---- deps loader ----
     function loadScript(src) {
         return new Promise(function (resolve, reject) {
@@ -148,6 +161,7 @@
         presetIdx = Math.floor(Math.random() * presetKeys.length);
         applyPreset(0);
         setStatus('');
+        scheduleAutoCycle();
         return true;
     }
 
@@ -199,9 +213,43 @@
         scheduleAutoCycle();
     }
 
-    // scheduleAutoCycle is implemented in Task 10; provide a no-op stub
-    // for now so prev/next/random work without auto-cycle.
-    var scheduleAutoCycle = function () {};
+    // Always tears the timer down and rebuilds. Manual nudges
+    // (prev/next/random) call this so the user's input doesn't get
+    // immediately overridden by the timer firing.
+    function scheduleAutoCycle() {
+        if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+        if (!autoCycle) return;
+        if (!viz) return;
+        if (window.kdMusic && !window.kdMusic.isWindowVisible()) return;
+        var ms = AUTO_INTERVAL_OPTIONS_S[autoIntervalIdx] * 1000;
+        autoTimer = setInterval(function () {
+            if (!viz) return;
+            if (window.kdMusic && !window.kdMusic.isWindowVisible()) return;
+            if (presetKeys && presetKeys.length > 1) {
+                var prevIdx = presetIdx;
+                do {
+                    presetIdx = Math.floor(Math.random() * presetKeys.length);
+                } while (presetIdx === prevIdx);
+                applyPreset(2.5);
+            }
+        }, ms);
+    }
+
+    function fmtIntervalLabel(s) {
+        return s < 60 ? (s + 's') : ((s / 60) + 'm');
+    }
+
+    function updateAutoUI() {
+        var btn = document.getElementById('mvm-auto');
+        var iv = document.getElementById('mvm-iv');
+        if (btn) {
+            if (autoCycle) btn.classList.add('on'); else btn.classList.remove('on');
+        }
+        if (iv) {
+            iv.hidden = !autoCycle;
+            iv.textContent = fmtIntervalLabel(AUTO_INTERVAL_OPTIONS_S[autoIntervalIdx]);
+        }
+    }
 
     // ---- preset menu ----
     function openMenu() {
@@ -264,7 +312,8 @@
         bindBtn('mvm-prev', prev);
         bindBtn('mvm-next', next);
         bindBtn('mvm-rand', random);
-        // mvm-auto / mvm-fs wired in Task 10/12
+        bindBtn('mvm-auto', function () { setAutoCycle(!autoCycle); });
+        // mvm-fs wired in Task 12; long-press / interval popover in Task 11
     }
 
     // ---- public API ----
@@ -292,8 +341,32 @@
             setStatus('viz unavailable');
         });
     }
-    function setAutoCycle(on) { /* Task 10 */ }
-    function setIntervalSec(s) { /* Task 10 */ }
+    function setAutoCycle(on) {
+        autoCycle = !!on;
+        try {
+            if (window.localStorage)
+                window.localStorage.setItem('kd_music_viz_auto', autoCycle ? '1' : '0');
+        } catch (e) {}
+        updateAutoUI();
+        scheduleAutoCycle();
+    }
+
+    function setIntervalSec(s) {
+        var idx = AUTO_INTERVAL_OPTIONS_S.indexOf(s);
+        if (idx < 0) return;
+        autoIntervalIdx = idx;
+        try {
+            if (window.localStorage)
+                window.localStorage.setItem('kd_music_viz_interval', String(s));
+        } catch (e) {}
+        // changing interval implicitly turns auto on
+        if (!autoCycle) {
+            setAutoCycle(true);
+        } else {
+            updateAutoUI();
+            scheduleAutoCycle();
+        }
+    }
     function toggleFullscreen() { /* Task 12 */ }
     function onResize() { /* Task 13 */ }
 
@@ -352,6 +425,7 @@
         findEls();
         bindMenuEvents();
         bindKeyboard();
+        updateAutoUI();
     }
 
     if (document.readyState === 'loading') {
