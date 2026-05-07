@@ -1622,38 +1622,118 @@
       height: 56px;
       margin-top: 6px;
       cursor: pointer;
-    }
-
-    .music-viz-wrap::after {
-      content: attr(data-mode);
-      position: absolute;
-      top: 1px;
-      right: 2px;
-      font-size: 7px;
-      color: rgba(0, 255, 150, 0.3);
-      font-family: 'Share Tech Mono', monospace;
-      pointer-events: none;
-    }
-
-    .music-viz {
-      display: flex;
-      align-items: flex-end;
-      gap: 1px;
-      height: 56px;
-    }
-
-    .music-viz-bar {
-      flex: 1;
-      background: var(--neon);
-      opacity: 0.4;
-      border-radius: 1px 1px 0 0;
-      min-height: 2px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 2px;
     }
 
     .music-viz-canvas {
       width: 100%;
-      height: 56px;
-      display: none;
+      height: 100%;
+      display: block;
+    }
+
+    .music-viz-status {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 8px;
+      color: rgba(0, 255, 150, 0.55);
+      font-family: 'Share Tech Mono', monospace;
+      pointer-events: none;
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    }
+
+    .music-viz-status:empty { display: none; }
+
+    .music-viz-menu {
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.78);
+      border: 1px solid rgba(0, 255, 150, 0.25);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-family: 'Share Tech Mono', monospace;
+      color: var(--neon);
+      backdrop-filter: blur(4px);
+      max-width: calc(100% - 16px);
+      box-shadow: 0 0 12px rgba(0, 255, 150, 0.15);
+    }
+
+    .music-viz-menu[hidden] { display: none; }
+
+    .mvm-name {
+      font-size: 9px;
+      opacity: 0.8;
+      max-width: 240px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+      text-align: center;
+    }
+
+    .mvm-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      justify-content: center;
+    }
+
+    .mvm-btn {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 150, 0.2);
+      color: var(--neon);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      line-height: 1;
+      transition: background 0.1s, border-color 0.1s;
+    }
+
+    .mvm-btn:hover { background: rgba(0, 255, 150, 0.15); border-color: rgba(0, 255, 150, 0.5); }
+    .mvm-btn.on { background: rgba(0, 255, 150, 0.25); border-color: var(--neon); }
+
+    .mvm-iv {
+      font-size: 9px;
+      opacity: 0.7;
+      padding: 0 2px;
+    }
+
+    .mvm-iv-pop {
+      display: flex;
+      gap: 3px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .mvm-iv-pop[hidden] { display: none; }
+
+    .mvm-iv-opt {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(0, 255, 150, 0.2);
+      color: var(--neon);
+      font-family: inherit;
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+
+    .mvm-iv-opt:hover { background: rgba(0, 255, 150, 0.15); }
+    .mvm-iv-opt.on { background: rgba(0, 255, 150, 0.25); border-color: var(--neon); }
+
+    .music-viz-wrap.fullscreen {
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      max-height: none;
+      border-radius: 0;
     }
 
     /* Controls */
@@ -5179,9 +5259,29 @@
       </div>
       <div class="music-display">
         <div class="music-track-name" id="music-info">Drop the needle...</div>
-        <div class="music-viz-wrap" id="music-viz-wrap" data-mode="BARS" title="Click to change visualization">
-          <div class="music-viz" id="music-viz"></div>
+        <div class="music-viz-wrap" id="music-viz-wrap" title="Click for presets">
           <canvas class="music-viz-canvas" id="music-viz-canvas"></canvas>
+          <div class="music-viz-status" id="music-viz-status">click play…</div>
+          <div class="music-viz-menu" id="music-viz-menu" hidden>
+            <div class="mvm-name" id="mvm-name">—</div>
+            <div class="mvm-row">
+              <button class="mvm-btn" id="mvm-prev"  type="button" title="Prev preset (←)">‹</button>
+              <button class="mvm-btn" id="mvm-rand"  type="button" title="Random preset (R)">⚄</button>
+              <button class="mvm-btn" id="mvm-next"  type="button" title="Next preset (→)">›</button>
+              <button class="mvm-btn" id="mvm-auto"  type="button" title="Auto-cycle (A) — long-press for interval">↻</button>
+              <span class="mvm-iv" id="mvm-iv" hidden>30s</span>
+              <button class="mvm-btn" id="mvm-fs"    type="button" title="Fullscreen (F)">⛶</button>
+            </div>
+            <div class="mvm-iv-pop" id="mvm-iv-pop" hidden>
+              <button class="mvm-iv-opt" type="button" data-s="5">5s</button>
+              <button class="mvm-iv-opt" type="button" data-s="10">10s</button>
+              <button class="mvm-iv-opt" type="button" data-s="15">15s</button>
+              <button class="mvm-iv-opt" type="button" data-s="30">30s</button>
+              <button class="mvm-iv-opt" type="button" data-s="60">60s</button>
+              <button class="mvm-iv-opt" type="button" data-s="120">2m</button>
+              <button class="mvm-iv-opt" type="button" data-s="300">5m</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="music-controls">
