@@ -1671,11 +1671,13 @@
 
     .music-viz-wrap {
       position: relative;
-      /* Square — height tracks the music-display's content width, so the
-         visualizer scales with the window's responsive width without
-         hard-coding a height. .maximized and .fullscreen variants below
-         override aspect-ratio with their own height rules. */
-      aspect-ratio: 1 / 1;
+      /* 4:3 — matches the aspect ratio Milkdrop presets were authored for
+         (CRT era), so most butterchurn presets read correctly. Height
+         tracks the music-display's content width, so the visualizer scales
+         with the window's responsive width without hard-coding a height.
+         .maximized and .fullscreen variants below override aspect-ratio
+         with their own height rules. */
+      aspect-ratio: 4 / 3;
       margin-top: 6px;
       cursor: pointer;
       overflow: hidden;
