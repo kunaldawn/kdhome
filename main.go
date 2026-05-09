@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +28,31 @@ import (
 var (
 	visitDB    *sql.DB
 	visitCount int64 // atomic, cached in memory
+)
+
+// archives mirrors the JS ARCHIVES registry in static/index.html.
+// Both sides need the seven IDs and URLs; with seven entries that change
+// rarely, mirroring beats a JSON file shared by both runtimes.
+var archives = []struct {
+	ID, URL string
+}{
+	{"wiki", "https://wiki.kunaldawn.com"},
+	{"pdf", "https://pdf.kunaldawn.com"},
+	{"os", "https://os.kunaldawn.com"},
+	{"iso", "https://iso.kunaldawn.com"},
+	{"chiptune", "https://chiptune.kunaldawn.com"},
+	{"tube", "https://tube.kunaldawn.com"},
+	{"audio", "https://audio.kunaldawn.com"},
+}
+
+// archiveURL is built from `archives` at startup for O(1) /go/<id> lookup.
+var archiveURL = map[string]string{}
+
+// archiveClicks holds the in-memory aggregate, mirrored to SQLite. Keyed by
+// archive ID. Guarded by archiveClicksMu.
+var (
+	archiveClicksMu sync.RWMutex
+	archiveClicks   = map[string]int64{}
 )
 
 func initVisitDB(dataDir string) {
@@ -80,6 +106,49 @@ func initVisitDB(dataDir string) {
 	var count int64
 	visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&count)
 	atomic.StoreInt64(&visitCount, count)
+
+	// ─── Archive click counts ───
+	for _, a := range archives {
+		archiveURL[a.ID] = a.URL
+	}
+
+	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS archive_click_count (
+		id TEXT PRIMARY KEY,
+		n  INTEGER NOT NULL DEFAULT 0
+	)`)
+	if err != nil {
+		log.Printf("[CLICKS] failed to create archive_click_count: %v", err)
+		return
+	}
+
+	// Seed the seven known IDs so /api/archive-clicks always returns a full
+	// shape and never misses a row.
+	for _, a := range archives {
+		if _, err := visitDB.Exec(
+			`INSERT OR IGNORE INTO archive_click_count (id, n) VALUES (?, 0)`, a.ID,
+		); err != nil {
+			log.Printf("[CLICKS] failed to seed %s: %v", a.ID, err)
+		}
+	}
+
+	// Hydrate the in-memory cache from disk.
+	rows, err := visitDB.Query(`SELECT id, n FROM archive_click_count`)
+	if err != nil {
+		log.Printf("[CLICKS] failed to hydrate cache: %v", err)
+	} else {
+		archiveClicksMu.Lock()
+		for rows.Next() {
+			var id string
+			var n int64
+			if err := rows.Scan(&id, &n); err == nil {
+				archiveClicks[id] = n
+			}
+		}
+		archiveClicksMu.Unlock()
+		rows.Close()
+		log.Printf("[CLICKS] hydrated %d archive(s)", len(archiveClicks))
+	}
+
 	log.Printf("[VISITS] initialized — total: %d", count)
 }
 
