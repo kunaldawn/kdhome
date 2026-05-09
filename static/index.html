@@ -5969,13 +5969,12 @@
           });
         };
 
-        // Visit counter. POST records the visit and returns the new count;
-        // we don't bother with a GET-only fallback because both endpoints
-        // share the same in-memory atomic and a transient POST failure
-        // just means "skip the counter for this visit".
+        // Visit counter. The increment happens server-side when staticHandler
+        // serves the index page, so this fetch is read-only display. A
+        // transient failure just means "no counter shown this load".
         (function () {
           const el = document.getElementById('visit-count');
-          fetch('/api/visit', { method: 'POST' })
+          fetch('/api/visit')
             .then(r => r.ok ? r.json() : null)
             .then(data => {
               if (el && data && data.count != null) {
