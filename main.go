@@ -217,7 +217,7 @@ func archiveGoHandler(w http.ResponseWriter, r *http.Request) {
 // archiveClicksHandler returns {"counts": {id: n, ...}} for all known
 // archive IDs. Read-only; no caching.
 func archiveClicksHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
