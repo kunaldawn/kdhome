@@ -136,6 +136,7 @@ func initVisitDB(dataDir string) {
 	if err != nil {
 		log.Printf("[CLICKS] failed to hydrate cache: %v", err)
 	} else {
+		defer rows.Close()
 		archiveClicksMu.Lock()
 		for rows.Next() {
 			var id string
@@ -145,7 +146,9 @@ func initVisitDB(dataDir string) {
 			}
 		}
 		archiveClicksMu.Unlock()
-		rows.Close()
+		if err := rows.Err(); err != nil {
+			log.Printf("[CLICKS] hydrate iteration error: %v", err)
+		}
 		log.Printf("[CLICKS] hydrated %d archive(s)", len(archiveClicks))
 	}
 
