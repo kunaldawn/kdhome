@@ -8600,19 +8600,20 @@
         window.openFeaturedArchive = function(id) {
           var entry = REGISTRY[id];
           if (!entry) return;
-          bumpCardCount(id);
           var useInternal = false;
           try { useInternal = localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; } catch(e) {}
           if (!useInternal) {
             // /go/<id> → server increments + 302s to the archive URL.
+            bumpCardCount(id);
             window.open('/go/' + id, '_blank', 'noopener');
             return;
           }
           var existing = instances.get(id);
           if (existing) {
-            // Restore if minimized; bring to front either way. No new
-            // /go/ hit — the original open already counted, and re-focusing
-            // an already-open window isn't a click.
+            // Restore if minimized; bring to front either way. No /go/ hit
+            // and no badge bump — re-focusing an already-open window isn't
+            // a click; bumping here would inflate the badge against server
+            // truth and undo on next reload.
             if (existing.isMin || existing.el.style.display === 'none') {
               toggleInstanceFromTaskbar(existing);
             } else {
@@ -8622,12 +8623,14 @@
             if (menu && menu.classList.contains('show')) toggleStartMenu();
             return;
           }
+          // New internal-browser instance — loadIframe will hit /go/<id>.
+          bumpCardCount(id);
           var inst = makeInstance(id);
           if (!inst) return;
           instances.set(id, inst);
           placeNewWindow(inst);
           showInstance(inst);
-          loadIframe(inst); // iframe loads /go/<id> → 302 → archive
+          loadIframe(inst);
           maybeMobileMaximize(inst);
           var menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) toggleStartMenu();
