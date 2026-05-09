@@ -26,16 +26,22 @@
     var rafId = null;
     var menuHideTimer = null;
 
-    // auto-cycle
+    // auto-cycle. Default: ON, every 15s. Users can toggle off via the
+    // visualizer control panel; the choice persists in localStorage.
     var AUTO_INTERVAL_OPTIONS_S = [5, 10, 15, 30, 60, 120, 300];
-    var autoIntervalIdx = 3; // default 30s
-    var autoCycle = false;
+    var autoIntervalIdx = 2; // default 15s (index of 15 in AUTO_INTERVAL_OPTIONS_S)
+    var autoCycle = true;
     var autoTimer = null;
+
+    // Default preset shown on first load. Picked because the oscilloscope
+    // pairs cleanly with tracker chiptune waveforms and isn't visually noisy.
+    var DEFAULT_PRESET_KEY = '_Mig_Oscilloscope008';
 
     try {
         if (window.localStorage) {
             var savedAuto = window.localStorage.getItem('kd_music_viz_auto');
             if (savedAuto === '1') autoCycle = true;
+            else if (savedAuto === '0') autoCycle = false;
             var savedIv = window.localStorage.getItem('kd_music_viz_interval');
             if (savedIv) {
                 var n = parseInt(savedIv, 10);
@@ -158,7 +164,10 @@
             setStatus('no presets');
             return false;
         }
-        presetIdx = Math.floor(Math.random() * presetKeys.length);
+        // Always start on the configured default preset; if the pack
+        // doesn't ship that exact key, fall back to a random pick.
+        var defaultIdx = presetKeys.indexOf(DEFAULT_PRESET_KEY);
+        presetIdx = defaultIdx >= 0 ? defaultIdx : Math.floor(Math.random() * presetKeys.length);
         applyPreset(0);
         setStatus('');
         scheduleAutoCycle();

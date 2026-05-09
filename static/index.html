@@ -9131,12 +9131,36 @@
         });
       }
 
+      // ─── Time / seek tick ───
+      // Polls the player every 250ms while a track is active and pushes
+      // current-time + duration into the slider and the two time labels.
+      // Skips updates while the user is dragging the slider so their
+      // input doesn't fight the readback. Started on player init,
+      // never stopped (the gate handles idle states).
+      var seekTickTimer = null;
+      function startSeekTick() {
+        if (seekTickTimer) return;
+        seekTickTimer = setInterval(function () {
+          if (!player || !player.currentPlayingNode) return;
+          if (!isPlaying || isSeeking) return;
+          try {
+            var dur = player.duration();
+            var cur = player.getCurrentTime();
+            if (!isFinite(dur) || dur <= 0) return;
+            timeDur.textContent = formatTime(dur);
+            timeCur.textContent = formatTime(cur);
+            seekSlider.value = Math.max(0, Math.min(1000, Math.round((cur / dur) * 1000)));
+          } catch (e) { /* libopenmpt heap not ready / module disposed */ }
+        }, 250);
+      }
+
       // ─── Player ───
       function initPlayer() {
         if (player) return;
         try {
           var config = new ChiptuneJsConfig(songLoopEnabled ? -1 : 0);
           player = new ChiptuneJsPlayer(config);
+          startSeekTick();
           gainNode = player.context.createGain();
           gainNode.gain.value = volSlider.value / 100;
           analyser = player.context.createAnalyser();
