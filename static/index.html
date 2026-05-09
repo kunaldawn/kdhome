@@ -6005,6 +6005,23 @@
             .catch(() => { /* silent: no counter is fine */ });
         })();
 
+        // Featured Archive click counters. Reads /api/archive-clicks once on
+        // load and writes each {id: n} into its .card-count badge. Optimistic
+        // bumps inside openFeaturedArchive() keep the UI live between loads.
+        (function () {
+          fetch('/api/archive-clicks')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (!data || !data.counts) return;
+              document.querySelectorAll('.card-count[data-archive-id]').forEach(el => {
+                const id = el.dataset.archiveId;
+                const n = data.counts[id] || 0;
+                el.textContent = n.toLocaleString() + ' opens';
+              });
+            })
+            .catch(() => { /* silent: badges keep their — placeholder */ });
+        })();
+
         // ═══════════════════════════════════════════════════════════
         // ARCHIVE CAT — A Clippy-inspired state machine companion
         // Mood-driven, context-aware, archive-themed digital familiar
