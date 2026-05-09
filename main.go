@@ -169,6 +169,65 @@ func recordVisit() {
 	}()
 }
 
+// ─── Archive Click Counter ───
+
+func recordArchiveClick(id string) {
+	if visitDB == nil {
+		return
+	}
+	go func() {
+		_, err := visitDB.Exec(`UPDATE archive_click_count SET n = n + 1 WHERE id = ?`, id)
+		if err != nil {
+			log.Printf("[CLICKS] update error for %s: %v", id, err)
+			return
+		}
+		archiveClicksMu.Lock()
+		archiveClicks[id]++
+		archiveClicksMu.Unlock()
+	}()
+}
+
+// archiveGoHandler increments the click count for an archive id and
+// 302-redirects to the archive's URL. Path: /go/<id>. Returns 404 on
+// unknown id so links never silently swallow a typo.
+func archiveGoHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	id := strings.TrimPrefix(r.URL.Path, "/go/")
+	if id == "" || strings.ContainsRune(id, '/') {
+		http.NotFound(w, r)
+		return
+	}
+	url, ok := archiveURL[id]
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	recordArchiveClick(id)
+	w.Header().Set("Cache-Control", "no-store")
+	http.Redirect(w, r, url, http.StatusFound)
+}
+
+// archiveClicksHandler returns {"counts": {id: n, ...}} for all known
+// archive IDs. Read-only; no caching.
+func archiveClicksHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	archiveClicksMu.RLock()
+	counts := make(map[string]int64, len(archiveClicks))
+	for id, n := range archiveClicks {
+		counts[id] = n
+	}
+	archiveClicksMu.RUnlock()
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{"counts": counts})
+}
+
 func visitHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		recordVisit()
@@ -514,7 +573,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/visit", visitHandler)
+	mux.HandleFunc("/api/archive-clicks", archiveClicksHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
+	mux.HandleFunc("/go/", archiveGoHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
 	srv := &http.Server{
