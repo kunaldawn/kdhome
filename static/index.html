@@ -8467,7 +8467,9 @@
 
         function loadIframe(inst) {
           var iframe = document.createElement('iframe');
-          iframe.src = inst.entry.url;
+          // Same-origin /go/<id> → server increments + 302s to inst.entry.url.
+          // CSP frame-src includes 'self' so the initial load isn't blocked.
+          iframe.src = '/go/' + inst.entry.id;
           inst.contentEl.classList.add('loading');
           var done = function() {
             inst.contentEl.classList.remove('loading');
@@ -8584,19 +8586,33 @@
           minimizeInstance(inst);
         }
 
+        // Optimistic bump on the home-view badge so the user sees their click
+        // immediately. Server is still authoritative; next reload reconciles.
+        function bumpCardCount(id) {
+          var badge = document.querySelector('.card-count[data-archive-id="' + id + '"]');
+          if (!badge) return;
+          var current = parseInt((badge.textContent || '').replace(/[^0-9]/g, ''), 10);
+          if (isNaN(current)) current = 0;
+          badge.textContent = (current + 1).toLocaleString() + ' opens';
+        }
+
         // ─── Public API ───
         window.openFeaturedArchive = function(id) {
           var entry = REGISTRY[id];
           if (!entry) return;
+          bumpCardCount(id);
           var useInternal = false;
           try { useInternal = localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; } catch(e) {}
           if (!useInternal) {
-            window.open(entry.url, '_blank', 'noopener');
+            // /go/<id> → server increments + 302s to the archive URL.
+            window.open('/go/' + id, '_blank', 'noopener');
             return;
           }
           var existing = instances.get(id);
           if (existing) {
-            // Restore if minimized; bring to front either way.
+            // Restore if minimized; bring to front either way. No new
+            // /go/ hit — the original open already counted, and re-focusing
+            // an already-open window isn't a click.
             if (existing.isMin || existing.el.style.display === 'none') {
               toggleInstanceFromTaskbar(existing);
             } else {
@@ -8611,7 +8627,7 @@
           instances.set(id, inst);
           placeNewWindow(inst);
           showInstance(inst);
-          loadIframe(inst);
+          loadIframe(inst); // iframe loads /go/<id> → 302 → archive
           maybeMobileMaximize(inst);
           var menu = document.getElementById('startMenu');
           if (menu && menu.classList.contains('show')) toggleStartMenu();
