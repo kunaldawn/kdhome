@@ -259,7 +259,7 @@ func securityHeaders(next http.Handler) http.Handler {
 				"media-src 'self' blob:; "+
 				"worker-src 'self' blob:; "+
 				"connect-src 'self' https://www.google-analytics.com https://analytics.google.com; "+
-				"frame-src https://wiki.kunaldawn.com https://pdf.kunaldawn.com https://os.kunaldawn.com https://iso.kunaldawn.com https://chiptune.kunaldawn.com https://tube.kunaldawn.com https://audio.kunaldawn.com; "+
+				"frame-src 'self' https://wiki.kunaldawn.com https://pdf.kunaldawn.com https://os.kunaldawn.com https://iso.kunaldawn.com https://chiptune.kunaldawn.com https://tube.kunaldawn.com https://audio.kunaldawn.com; "+
 				"frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
