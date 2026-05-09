@@ -233,20 +233,13 @@ func archiveClicksHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func visitHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		recordVisit()
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		fmt.Fprintf(w, `{"count":%d}`, atomic.LoadInt64(&visitCount))
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if r.Method == http.MethodGet {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		fmt.Fprintf(w, `{"count":%d}`, atomic.LoadInt64(&visitCount))
-		return
-	}
-	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	fmt.Fprintf(w, `{"count":%d}`, atomic.LoadInt64(&visitCount))
 }
 
 // ─── Middleware & Handlers ───
@@ -497,6 +490,16 @@ func staticHandler(fallback http.Handler) http.HandlerFunc {
 			fallback.ServeHTTP(w, r)
 			return
 		}
+
+		// Server-side visit counter. Counts every GET to the index page
+		// (including conditional 304 responses below) so cache, bfcache,
+		// no-JS clients, and bots are all reflected. Skips HEAD on purpose
+		// — HEAD is metadata-only, not a real page view.
+		if r.Method == http.MethodGet &&
+			(r.URL.Path == "/" || r.URL.Path == "/index.html") {
+			recordVisit()
+		}
+
 		cf, ok := staticCache[r.URL.Path]
 		if !ok {
 			// Disk fallback gets the same Cache-Control treatment, but
