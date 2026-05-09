@@ -205,7 +205,11 @@ func archiveGoHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	recordArchiveClick(id)
+	// HEAD is metadata-only (link previewers, uptime probes, curl -I) and
+	// must not inflate the counter. Same rule as the visit counter.
+	if r.Method == http.MethodGet {
+		recordArchiveClick(id)
+	}
 	w.Header().Set("Cache-Control", "no-store")
 	http.Redirect(w, r, url, http.StatusFound)
 }
