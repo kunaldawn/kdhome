@@ -1642,6 +1642,7 @@
     .music-window.maximized .music-viz-wrap {
       flex: 1;
       height: auto;
+      aspect-ratio: auto; /* override the square default; flex governs height */
     }
 
     .music-window.maximized .music-viz-canvas {
@@ -1670,7 +1671,11 @@
 
     .music-viz-wrap {
       position: relative;
-      height: 56px;
+      /* Square — height tracks the music-display's content width, so the
+         visualizer scales with the window's responsive width without
+         hard-coding a height. .maximized and .fullscreen variants below
+         override aspect-ratio with their own height rules. */
+      aspect-ratio: 1 / 1;
       margin-top: 6px;
       cursor: pointer;
       overflow: hidden;
@@ -1785,6 +1790,7 @@
       max-width: none;
       max-height: none;
       border-radius: 0;
+      aspect-ratio: auto; /* override the square default; viewport governs both axes */
     }
 
     /* Controls */
