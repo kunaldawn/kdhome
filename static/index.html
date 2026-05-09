@@ -6197,35 +6197,29 @@
               annoyed:  { color: '#ff6b6b', shadow: '0 0 4px #ff6b6b' },
             };
 
-            // ─── Color palettes (variant) ───
-            // Picked once per page load. Default neon (empty color string) is
-            // the most common; the others are little surprises that show up
-            // for the rest of a session. Per-state stateStyles still override.
+            // ─── Color palette ───
+            // Always neon. The previous "surprise palette" feature picked one
+            // of orange/tuxedo/pink/solar/darkgreen on 20% of page loads, but
+            // the tuxedo (white-grey) variant looked like a broken/unstyled
+            // cat to viewers — the bluish drop-shadow halo was too washed out
+            // against the dark page to read as intentional. Per-state
+            // stateStyles (hacking, matrix, glitch, bsod, love, coffee,
+            // annoyed) still override on a per-state basis.
             this.palettes = [
-              { name: 'neon',      weight: 80, color: '',          glow: '0 0 10px rgba(0, 255, 150, 0.6)' },
-              { name: 'orange',    weight:  7, color: '#ffaa44',   glow: '0 0 10px rgba(255, 170, 68, 0.7)' },
-              { name: 'tuxedo',    weight:  5, color: '#e8eef0',   glow: '0 0 10px rgba(180, 200, 220, 0.6)' },
-              { name: 'pink',      weight:  4, color: '#ff66cc',   glow: '0 0 10px rgba(255, 102, 204, 0.7)' },
-              { name: 'solar',     weight:  2, color: '#f4d35e',   glow: '0 0 10px rgba(244, 211, 94, 0.7)' },
-              // darkgreen layers two halos. drop-shadow() does NOT accept comma-
-              // separated multi-shadow syntax (unlike text-shadow), so the two
-              // shadows must come through as separate filter functions; we use
-              // an array here and applyPalette joins with `drop-shadow(...)` per entry.
-              { name: 'darkgreen', weight:  2, color: '#33ff77',   glow: ['0 0 8px rgba(51, 255, 119, 0.6)', '0 0 16px rgba(0, 80, 0, 0.5)'] },
+              { name: 'neon', weight: 1, color: '', glow: '0 0 10px rgba(0, 255, 150, 0.6)' },
             ];
-            this.palette = this.pickPalette();
+            this.palette = this.palettes[0];
 
-            // ─── Frame variants (visual surprise) ───
-            // 15% of the time, animate() picks from this pool instead of the
-            // base frame. Pure cosmetic; doesn't affect transitions or moods.
-            this.frameVariants = {
-              idle:    ['_,_/\\_/\\\n( o.o ) \n > ^ <  '],
-              sitting: [' /\\_/\\  \n>=^.^=<<\n(> ^ <) '],
-              coding:  [' /\\_/\\  \n( =.= )_\n > ^ <[]'],
-              hacking: [' /\\_/\\  \n( =.= ) \n > ^ <  '],
-              reading: [' /\\_/\\  \n( o.o )▤\n > ^ <  '],
-              vibing:  [' /\\_/\\  \n( ^.^ )♫\n > ^ <♪ '],
-            };
+            // ─── Frame variants ───
+            // Disabled. The 15% chance of swapping in a variant frame
+            // produced ASCII like '>=^.^=<<' for sitting that, blurred by
+            // the heavy text-shadow, read as garbled text — viewers
+            // mistook it for a rendering bug instead of a stylistic
+            // surprise. Variant frames also bypassed the width audit done
+            // on base frames, so the reading variant '▤' and vibing
+            // variant '♫'/'♪' drifted past the 8-cell grid.
+            // animate() handles frameVariants[key] == undefined gracefully.
+            this.frameVariants = {};
 
             // ─── State Durations ───
             this.stateDurations = {
