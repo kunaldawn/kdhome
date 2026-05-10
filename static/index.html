@@ -3443,6 +3443,18 @@
       color: #8acfff;
       text-shadow: -1px 0 rgba(0,180,255,0.4), 1px 0 rgba(120,200,255,0.4), 0 0 8px rgba(140,200,255,0.45);
     }
+    .fx-canvas.fx-clifford {
+      color: #d8a8ff;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,80,200,0.4), 0 0 8px rgba(200,160,255,0.5);
+    }
+    .fx-canvas.fx-lorenz {
+      color: #ffb678;
+      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,160,80,0.5);
+    }
+    .fx-canvas.fx-tree {
+      color: #c2ff8a;
+      text-shadow: -1px 0 rgba(120,80,40,0.45), 1px 0 rgba(160,255,100,0.45), 0 0 8px rgba(180,255,140,0.4);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5524,6 +5536,103 @@
         }
       }
 
+      /* ─── Scene: Clifford (strange attractor scatter, additive trail) ─── */
+      const cliffStateN = isMobile ? 600 : 1200;
+      let cliffParams = { a: -1.4, b: 1.6, c: 1.0, d: 0.7 };
+      let cliffMorphT = 0;
+      function drawClifford(now, dt) {
+        ensureTrailGeom();
+        decayTrail(8);
+        cliffMorphT += dt * 0.0001;
+        cliffParams.a = -1.4 + Math.sin(cliffMorphT * 1.1) * 0.6;
+        cliffParams.b =  1.6 + Math.cos(cliffMorphT * 0.9) * 0.5;
+        cliffParams.c =  1.0 + Math.sin(cliffMorphT * 0.7 + 1) * 0.4;
+        cliffParams.d =  0.7 + Math.cos(cliffMorphT * 1.3 + 2) * 0.4;
+        let x = 0.1, y = 0.1;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const sx = COLS * 0.3, sy = ROWS * 0.3;
+        for (let i = 0; i < cliffStateN; i++) {
+          const xn = Math.sin(cliffParams.a * y) + cliffParams.c * Math.cos(cliffParams.a * x);
+          const yn = Math.sin(cliffParams.b * x) + cliffParams.d * Math.cos(cliffParams.b * y);
+          x = xn; y = yn;
+          if (i < 30) continue; // burn-in
+          const px = Math.round(cx + x * sx);
+          const py = Math.round(cy + y * sy);
+          addTrail(px, py, 50);
+        }
+        paintTrailToBuf();
+      }
+
+      /* ─── Scene: Lorenz (butterfly attractor with auto-rotation) ─── */
+      let lorenzX = 0.1, lorenzY = 0, lorenzZ = 0;
+      function drawLorenz(now, dt) {
+        ensureTrailGeom();
+        decayTrail(10);
+        const rot = now * 0.0003;
+        const cosR = Math.cos(rot), sinR = Math.sin(rot);
+        const cx = COLS / 2, cy = ROWS / 2;
+        const stepN = isMobile ? 250 : 500;
+        const h = 0.008;
+        const sigma = 10, rho = 28, beta = 8 / 3;
+        for (let i = 0; i < stepN; i++) {
+          const dx = sigma * (lorenzY - lorenzX);
+          const dy = lorenzX * (rho - lorenzZ) - lorenzY;
+          const dz = lorenzX * lorenzY - beta * lorenzZ;
+          lorenzX += h * dx;
+          lorenzY += h * dy;
+          lorenzZ += h * dz;
+          // Project: rotate XY by rot, drop Z (or use as brightness)
+          const px = lorenzX * cosR - lorenzY * sinR;
+          const py = lorenzX * sinR + lorenzY * cosR;
+          const sx = Math.round(cx + px * (COLS * 0.018));
+          const sy = Math.round(cy - (lorenzZ - 25) * (ROWS * 0.022));
+          addTrail(sx, sy, 80);
+        }
+        paintTrailToBuf();
+      }
+
+      /* ─── Scene: Fractal tree (recursive L-system with wind sway) ─── */
+      function treeBranch(x, y, len, angle, depth) {
+        if (depth <= 0 || len < 0.5) return;
+        const dx = Math.cos(angle) * len;
+        const dy = Math.sin(angle) * len * 0.5; // chars are ~2x tall — squash y
+        const x1 = x + dx, y1 = y + dy;
+        // Bresenham line draw with depth-based char
+        const ch = depth > 4 ? 35 /*'#'*/ : depth > 2 ? 124 /*'|'*/ : 47 /*'/'*/;
+        let cx0 = Math.round(x), cy0 = Math.round(y);
+        const cx1 = Math.round(x1), cy1 = Math.round(y1);
+        const ldx = Math.abs(cx1 - cx0), ldy = -Math.abs(cy1 - cy0);
+        const sx = cx0 < cx1 ? 1 : -1, sy = cy0 < cy1 ? 1 : -1;
+        let err = ldx + ldy;
+        while (true) {
+          if (cx0 >= 0 && cx0 < COLS && cy0 >= 0 && cy0 < ROWS) {
+            buf[cy0 * COLS + cx0] = ch;
+          }
+          if (cx0 === cx1 && cy0 === cy1) break;
+          const e2 = 2 * err;
+          if (e2 >= ldy) { err += ldy; cx0 += sx; }
+          if (e2 <= ldx) { err += ldx; cy0 += sy; }
+        }
+        // Recurse two branches
+        treeBranch(x1, y1, len * 0.72, angle - 0.4, depth - 1);
+        treeBranch(x1, y1, len * 0.72, angle + 0.4, depth - 1);
+      }
+      function drawFractalTree(now) {
+        clearBuf();
+        const t = now * 0.001;
+        const sway = Math.sin(t * 0.8) * 0.15;
+        const rootX = COLS / 2;
+        const rootY = ROWS - 1;
+        const len = ROWS * 0.45;
+        const angle = -Math.PI / 2 + sway;
+        const maxDepth = isMobile ? 6 : 7;
+        treeBranch(rootX, rootY, len, angle, maxDepth);
+        // Ground
+        for (let x = 0; x < COLS; x++) {
+          if (buf[(ROWS - 1) * COLS + x] === SPACE) buf[(ROWS - 1) * COLS + x] = 95 /*'_'*/;
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5591,6 +5700,9 @@
         { name: 'SNAKE',      fn: drawSnake,      dur: 7000, cls: 'fx-snake' },
         { name: 'LIGHTNING',  fn: drawLightning,  dur: 6000, cls: 'fx-lightning' },
         { name: 'RAIN',       fn: drawRain,       dur: 7000, cls: 'fx-rain' },
+        { name: 'CLIFFORD',   fn: drawClifford,   dur: 7000, cls: 'fx-clifford' },
+        { name: 'LORENZ',     fn: drawLorenz,     dur: 8000, cls: 'fx-lorenz' },
+        { name: 'TREE',       fn: drawFractalTree,dur: 7000, cls: 'fx-tree' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
