@@ -4374,7 +4374,7 @@
         const t = now * 0.001;
         const cx = COLS / 2, cy = ROWS * 0.78;
         const GRID = isMobile ? 18 : 26;
-        for (let gz = 1; gz <= GRID; gz++) {
+        for (let gz = GRID; gz >= 1; gz--) {
           const zScale = 1.15 / (gz * 0.17 + 0.55);
           for (let gx = -GRID; gx <= GRID; gx++) {
             const h = Math.sin(gx * 0.42 + t * 1.3) + Math.cos(gz * 0.42 + t * 0.9) * 0.7 + Math.sin((gx + gz) * 0.19 + t) * 0.5;
