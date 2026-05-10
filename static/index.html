@@ -4615,15 +4615,14 @@
               a = ta;
               i++;
             }
-            let idx;
             if (i === maxIter) {
-              idx = 0;
-            } else {
-              // Smooth continuous escape count for banding-free shading.
-              const nu = Math.log(Math.log(Math.sqrt(r2 || 4)) / LOG2) / LOG2;
-              const smooth = Math.max(0, i + 1 - nu);
-              idx = Math.max(1, Math.min(RAMP_LEN - 1, ((smooth / maxIter) * RAMP_LEN) | 0));
+              buf[y * COLS + x] = 35 /* '#' bulb interior */;
+              continue;
             }
+            // Smooth continuous escape count for banding-free shading.
+            const nu = Math.log(Math.log(Math.sqrt(r2 || 4)) / LOG2) / LOG2;
+            const smooth = Math.max(0, i + 1 - nu);
+            const idx = Math.max(1, Math.min(RAMP_LEN - 1, ((smooth / maxIter) * RAMP_LEN) | 0));
             buf[y * COLS + x] = RAMP.charCodeAt(idx);
           }
         }
