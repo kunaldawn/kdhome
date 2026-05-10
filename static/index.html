@@ -3455,6 +3455,18 @@
       color: #c2ff8a;
       text-shadow: -1px 0 rgba(120,80,40,0.45), 1px 0 rgba(160,255,100,0.45), 0 0 8px rgba(180,255,140,0.4);
     }
+    .fx-canvas.fx-mbox {
+      color: #ffb0d5;
+      text-shadow: -1px 0 rgba(255,80,200,0.5), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,160,200,0.5);
+    }
+    .fx-canvas.fx-hilbert {
+      color: #b0d0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(160,200,255,0.45);
+    }
+    .fx-canvas.fx-julia {
+      color: #ffd28a;
+      text-shadow: -1px 0 rgba(255,40,180,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,180,80,0.5);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5633,6 +5645,117 @@
         }
       }
 
+      /* ─── Scene: Mandelbox (animated 2D slice) ─── */
+      function drawMandelbox(now) {
+        const t = now * 0.0005;
+        const scale = -1.5 + Math.sin(t) * 0.7;
+        const minRad2 = 0.5, fixedRad2 = 1.0;
+        const cx = -0.05 + Math.sin(t * 0.4) * 0.3;
+        const cy =  0.05 + Math.cos(t * 0.3) * 0.3;
+        const maxIter = 12;
+        for (let py = 0; py < ROWS; py++) {
+          for (let px = 0; px < COLS; px++) {
+            let x = (px - COLS / 2) / COLS * 4;
+            let y = (py - ROWS / 2) / ROWS * 4;
+            const cX = cx, cY = cy;
+            let i = 0;
+            for (; i < maxIter; i++) {
+              // Box fold
+              if (x > 1) x = 2 - x; else if (x < -1) x = -2 - x;
+              if (y > 1) y = 2 - y; else if (y < -1) y = -2 - y;
+              // Sphere fold
+              const r2 = x * x + y * y;
+              if (r2 < minRad2) { const m = fixedRad2 / minRad2; x *= m; y *= m; }
+              else if (r2 < fixedRad2) { const m = fixedRad2 / r2; x *= m; y *= m; }
+              x = x * scale + cX;
+              y = y * scale + cY;
+              if (x * x + y * y > 100) break;
+            }
+            const norm = i / maxIter;
+            const idx = Math.max(1, Math.min(RAMP_LEN - 1, (norm * RAMP_LEN) | 0));
+            buf[py * COLS + px] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: Hilbert curve (progressive draw + unwind) ─── */
+      // Snake the canvas: build a Hilbert-like ordering that fits COLS×ROWS.
+      // For ASCII clarity we approximate with a recursive Z-curve at order n
+      // sized to fit, then animate progressive reveal.
+      function hilbertPath() {
+        // Build a path using Hilbert curve over the largest power-of-2 square
+        // that fits in COLS×ROWS, then translate to canvas coords.
+        const side = 1 << Math.floor(Math.log2(Math.min(COLS, ROWS)));
+        function hilbert(n, x, y, xi, xj, yi, yj, out) {
+          if (n <= 0) {
+            out.push([x + (xi + yi) / 2, y + (xj + yj) / 2]);
+          } else {
+            hilbert(n - 1, x, y, yi/2, yj/2, xi/2, xj/2, out);
+            hilbert(n - 1, x + xi/2, y + xj/2, xi/2, xj/2, yi/2, yj/2, out);
+            hilbert(n - 1, x + xi/2 + yi/2, y + xj/2 + yj/2, xi/2, xj/2, yi/2, yj/2, out);
+            hilbert(n - 1, x + xi/2 + yi, y + xj/2 + yj, -yi/2, -yj/2, -xi/2, -xj/2, out);
+          }
+        }
+        const path = [];
+        const order = Math.log2(side);
+        hilbert(order, 0, 0, side, 0, 0, side, path);
+        // Center the path inside the canvas
+        const ox = ((COLS - side) / 2) | 0;
+        const oy = ((ROWS - side) / 2) | 0;
+        return path.map(([x, y]) => [Math.round(x) + ox, Math.round(y) + oy]);
+      }
+      let hilbertCache = null;
+      let hilbertGeomRev = -1;
+      function drawHilbert(now) {
+        if (hilbertGeomRev !== geometryRev || !hilbertCache) {
+          hilbertCache = hilbertPath();
+          hilbertGeomRev = geometryRev;
+        }
+        clearBuf();
+        const path = hilbertCache;
+        const total = path.length;
+        // Animate: 0→1 reveal, then 1→0 unwind, ping-pong
+        const t = (now * 0.001) % 8;
+        const phase = t < 4 ? t / 4 : 1 - (t - 4) / 4;
+        const visible = Math.floor(phase * total);
+        for (let i = 0; i < visible; i++) {
+          const [x, y] = path[i];
+          if (x < 0 || x >= COLS || y < 0 || y >= ROWS) continue;
+          const bright = 1 - (visible - i) / total;
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+          buf[y * COLS + x] = i === visible - 1 ? 64 /*'@'*/ : RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Julia set (animated complex parameter) ─── */
+      function drawJulia(now) {
+        const t = now * 0.0004;
+        // c traces a closed loop in the complex plane
+        const cR = 0.7885 * Math.cos(t);
+        const cI = 0.7885 * Math.sin(t);
+        const maxIter = 36;
+        for (let py = 0; py < ROWS; py++) {
+          for (let px = 0; px < COLS; px++) {
+            let x = (px - COLS / 2) / COLS * 3.2;
+            let y = (py - ROWS / 2) / ROWS * 2.4;
+            let i = 0, r2 = 0;
+            while (i < maxIter && (r2 = x * x + y * y) < 4) {
+              const xn = x * x - y * y + cR;
+              y = 2 * x * y + cI;
+              x = xn;
+              i++;
+            }
+            if (i === maxIter) {
+              buf[py * COLS + px] = 35 /*'#'*/;
+            } else {
+              const norm = i / maxIter;
+              const idx = Math.max(1, Math.min(RAMP_LEN - 1, (norm * RAMP_LEN) | 0));
+              buf[py * COLS + px] = RAMP.charCodeAt(idx);
+            }
+          }
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5703,6 +5826,9 @@
         { name: 'CLIFFORD',   fn: drawClifford,   dur: 7000, cls: 'fx-clifford' },
         { name: 'LORENZ',     fn: drawLorenz,     dur: 8000, cls: 'fx-lorenz' },
         { name: 'TREE',       fn: drawFractalTree,dur: 7000, cls: 'fx-tree' },
+        { name: 'MANDELBOX',  fn: drawMandelbox,  dur: 7000, cls: 'fx-mbox' },
+        { name: 'HILBERT',    fn: drawHilbert,    dur: 8000, cls: 'fx-hilbert' },
+        { name: 'JULIA',      fn: drawJulia,      dur: 7000, cls: 'fx-julia' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
