@@ -3999,7 +3999,7 @@
       // Per-effect geometry-rev cache. Effects with COLS/ROWS-sized state
       // increment this when they reallocate their helpers.
       const geomRev = {
-        fire: 0, life: 0, cell: 0, sphere: 0, voxel: 0
+        fire: 0, life: 0, cell: 0, sphere: 0, voxel: 0, torus: 0
       };
 
       function clearBuf() { buf.fill(SPACE); }
@@ -4398,8 +4398,12 @@
       }
 
       /* ─── Scene: Torus (donut.c style, ASCII shaded) ─── */
-      const zBuf = new Float32Array(COLS * ROWS);
+      let zBuf = new Float32Array(COLS * ROWS);
       function drawTorus(now) {
+        if (geomRev.torus !== geometryRev) {
+          zBuf = new Float32Array(COLS * ROWS);
+          geomRev.torus = geometryRev;
+        }
         clearBuf();
         zBuf.fill(0);
         const A = now * 0.0008;
@@ -4407,8 +4411,15 @@
         const cosA = Math.cos(A), sinA = Math.sin(A);
         const cosB = Math.cos(B), sinB = Math.sin(B);
         const R1 = 1, R2 = 2, K2 = 5;
-        const K1 = COLS * K2 * 3 / (4 * (R1 + R2));
-        const K1y = K1 * 0.5;
+        // Fit donut to whichever axis is more constrained (COLS in cells vs
+        // ROWS * CHAR_ASPECT in equivalent x-cells), so wide canvases don't
+        // overflow vertically.
+        // K1 sized so projected silhouette comfortably fills the canvas.
+        // Some rotations cause minor edge overflow — that's preferable to a
+        // donut that floats in a sea of empty cells.
+        const fit = Math.min(COLS, ROWS * CHAR_ASPECT);
+        const K1 = fit * 0.95;
+        const K1y = K1 / CHAR_ASPECT;
         for (let th = 0; th < 6.283; th += 0.17) {
           const cosT = Math.cos(th), sinT = Math.sin(th);
           const circleX = R2 + R1 * cosT;
@@ -4424,13 +4435,19 @@
             if (xp < 0 || xp >= COLS || yp < 0 || yp >= ROWS) continue;
             const L = cosP * cosT * sinB - cosA * cosT * sinP - sinA * sinT +
                       cosB * (cosA * sinT - cosT * sinA * sinP);
-            if (L > 0) {
-              const bi = yp * COLS + xp;
-              if (ooz > zBuf[bi]) {
-                zBuf[bi] = ooz;
+            // Render BOTH faces (z-buffered) so the torus reads as a solid
+            // ring from any rotation. Front-lit faces use the upper ramp;
+            // back faces use a dim band.
+            const bi = yp * COLS + xp;
+            if (ooz > zBuf[bi]) {
+              zBuf[bi] = ooz;
+              if (L > 0) {
                 let li = (L * 8) | 0;
                 if (li >= RAMP_LEN) li = RAMP_LEN - 1;
                 buf[bi] = RAMP.charCodeAt(li);
+              } else {
+                // Dim shading for back face: ramp index 2-5
+                buf[bi] = RAMP.charCodeAt(2 + (((-L) * 3) | 0));
               }
             }
           }
@@ -5253,12 +5270,16 @@
         const t = now * 0.0011;
         const cx = COLS / 2, cy = ROWS / 2;
         const segs = isMobile ? 140 : 220;
+        // Single fit scale (in cells) shared by x and y so rotation looks square;
+        // y divides by CHAR_ASPECT to compensate for tall monospace cells.
+        const projScale = Math.min(COLS, ROWS * CHAR_ASPECT) * 0.85;
         for (let i = 0; i < segs; i++) {
           const u = (i / segs) * 4 - 2; // -2..2
-          // ribbon parametric: x(u), y(u), z(u)
-          const x = u * 2;
-          const y0 = Math.sin(u * 1.8 + t * 2.2) * 1.0;
-          const z  = Math.cos(u * 1.5 + t * 1.7) * 1.2;
+          // ribbon parametric: x(u), y(u), z(u). Larger y oscillation so the
+          // ribbon's vertical sweep fills more of the canvas at most rotations.
+          const x = u * 1.4;
+          const y0 = Math.sin(u * 1.8 + t * 2.2) * 1.6;
+          const z  = Math.cos(u * 1.5 + t * 1.7) * 1.4;
           const A = t * 0.7, B = t * 0.5;
           const cosA = Math.cos(A), sinA = Math.sin(A);
           const cosB = Math.cos(B), sinB = Math.sin(B);
@@ -5269,8 +5290,8 @@
             // Rx
             let y2 = yy * cosB - z1 * sinB, z2 = yy * sinB + z1 * cosB;
             const ooz = 1 / (z2 + 5);
-            const sxp = Math.round(cx + x1 * ooz * COLS * 0.5);
-            const syp = Math.round(cy - y2 * ooz * ROWS * 1.1);
+            const sxp = Math.round(cx + x1 * ooz * projScale);
+            const syp = Math.round(cy - y2 * ooz * projScale / CHAR_ASPECT);
             if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
             const bright = Math.max(0.15, Math.min(1, ooz * 3));
             const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
@@ -6042,25 +6063,31 @@
         clearBuf();
         const t = now * 0.001;
         const cx = COLS / 2;
-        const amp = COLS * 0.32;
-        const turn = 0.8; // y units per radian
+        const amp = Math.min(COLS * 0.32, 18);
+        // Slower turn so 22 rows show ~1.5 visible twists, not 2.8.
+        const turn = 0.42;
         for (let y = 0; y < ROWS; y++) {
-          const phase = y * turn + t * 2;
+          const phase = y * turn + t * 1.4;
           const x1 = cx + Math.cos(phase) * amp;
-          const x2 = cx + Math.cos(phase + Math.PI) * amp;
-          const z1 = Math.sin(phase);             // -1..1
-          const z2 = Math.sin(phase + Math.PI);
+          const x2 = cx - Math.cos(phase) * amp;
+          const z1 = Math.sin(phase); // +1 in front, -1 behind
           const sx1 = Math.round(x1), sx2 = Math.round(x2);
-          // Brightness from depth
-          const idx1 = Math.max(2, Math.min(RAMP_LEN - 1, ((z1 * 0.5 + 0.5) * RAMP_LEN) | 0));
-          const idx2 = Math.max(2, Math.min(RAMP_LEN - 1, ((z2 * 0.5 + 0.5) * RAMP_LEN) | 0));
-          if (sx1 >= 0 && sx1 < COLS) buf[y * COLS + sx1] = RAMP.charCodeAt(idx1);
-          if (sx2 >= 0 && sx2 < COLS) buf[y * COLS + sx2] = RAMP.charCodeAt(idx2);
-          // Rung every 3 rows: connect with '-'
-          if (y % 3 === 0) {
-            const lo = Math.min(sx1, sx2), hi = Math.max(sx1, sx2);
-            for (let x = Math.max(0, lo + 1); x < Math.min(COLS, hi); x++) {
-              if (buf[y * COLS + x] === SPACE) buf[y * COLS + x] = 45 /*'-'*/;
+          // Distinct strand chars by depth; strand 2 mirrors via z2 = -z1
+          const ch1 = z1 >  0.5 ? 79 /*'O'*/ : z1 > -0.5 ? 111 /*'o'*/ : 46 /*'.'*/;
+          const ch2 = z1 < -0.5 ? 79          : z1 <  0.5 ? 111          : 46;
+          if (Math.abs(sx1 - sx2) <= 1) {
+            // Strands cross — draw a single 'X' at the meeting point
+            const xc = Math.round((sx1 + sx2) / 2);
+            if (xc >= 0 && xc < COLS) buf[y * COLS + xc] = 88 /*'X'*/;
+          } else {
+            if (sx1 >= 0 && sx1 < COLS) buf[y * COLS + sx1] = ch1;
+            if (sx2 >= 0 && sx2 < COLS) buf[y * COLS + sx2] = ch2;
+            // Rung every 2 rows; '-' between strand endpoints
+            if (y % 2 === 0) {
+              const lo = Math.min(sx1, sx2), hi = Math.max(sx1, sx2);
+              for (let x = Math.max(0, lo + 1); x < Math.min(COLS, hi); x++) {
+                if (buf[y * COLS + x] === SPACE) buf[y * COLS + x] = 45 /*'-'*/;
+              }
             }
           }
         }
