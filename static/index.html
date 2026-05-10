@@ -4648,23 +4648,22 @@
       /* ─── Scene: Cellular (rule 30, rolling history) ─── */
       let caRow = new Uint8Array(COLS);
       let caHistory = new Uint8Array(COLS * ROWS);
+      let caNext = new Uint8Array(COLS);
       let caAcc = 0;
       let caAge = 0;
-      let caNext = new Uint8Array(COLS);
+      let caHead = 0;
       function seedCellular() {
         caRow.fill(0);
         caRow[COLS >> 1] = 1;
         caHistory.fill(0);
         caAge = 0;
+        caHead = 0;
       }
       seedCellular();
+      // Ring buffer: caHead is the row index of the *most recent* generation;
+      // older generations live above it modulo ROWS. Render maps logical row
+      // (top of canvas) to physical row in caHistory.
       function stepCellular() {
-        // scroll history up
-        for (let y = 0; y < ROWS - 1; y++) {
-          for (let x = 0; x < COLS; x++) caHistory[y * COLS + x] = caHistory[(y + 1) * COLS + x];
-        }
-        for (let x = 0; x < COLS; x++) caHistory[(ROWS - 1) * COLS + x] = caRow[x];
-        // next row via rule 30
         for (let x = 0; x < COLS; x++) {
           const l = caRow[(x - 1 + COLS) % COLS];
           const c = caRow[x];
@@ -4672,6 +4671,8 @@
           const pat = (l << 2) | (c << 1) | r;
           caNext[x] = (30 >> pat) & 1;
         }
+        caHead = (caHead + 1) % ROWS;
+        for (let x = 0; x < COLS; x++) caHistory[caHead * COLS + x] = caRow[x];
         const tmp = caRow; caRow = caNext; caNext = tmp;
         caAge++;
         if (caAge > ROWS * 2) seedCellular();
@@ -4689,8 +4690,13 @@
           caAcc -= 75;
           stepCellular();
         }
-        for (let i = 0; i < caHistory.length; i++) {
-          buf[i] = caHistory[i] ? 35 /* # */ : 32;
+        // Render: oldest at top, newest at bottom of canvas.
+        // Physical row for canvas row y = (caHead - (ROWS - 1 - y) + ROWS) % ROWS
+        for (let y = 0; y < ROWS; y++) {
+          const phys = (caHead - (ROWS - 1 - y) + ROWS) % ROWS;
+          for (let x = 0; x < COLS; x++) {
+            buf[y * COLS + x] = caHistory[phys * COLS + x] ? 35 /* # */ : 32;
+          }
         }
       }
 
