@@ -4958,32 +4958,47 @@
         }
       }
 
-      /* ─── Scene: Twister (Amiga-style twisting vertical column of 4 dots) ─── */
+      /* ─── Scene: Twister (twisting 3D band that fills the canvas height) ─── */
       function drawTwister(now) {
         clearBuf();
         const cx = COLS / 2;
         const t = now * 0.001;
-        const width = Math.min(COLS * 0.45, 18);
+        const halfWidth = COLS * 0.32;
+        const RAMP_HOT = RAMP_LEN - 1;
         for (let y = 0; y < ROWS; y++) {
-          const angle = t * 2.2 + y * 0.32;
-          for (let corner = 0; corner < 4; corner++) {
-            const a = angle + (corner * Math.PI / 2);
-            const dx = Math.cos(a) * width * 0.5;
-            const sx = Math.round(cx + dx);
-            if (sx < 0 || sx >= COLS) continue;
-            // depth via sin(a): front corners brighter
-            const depth = Math.sin(a) * 0.5 + 0.5;
-            const idx = Math.max(2, Math.min(RAMP_LEN - 1, (depth * RAMP_LEN) | 0));
-            buf[y * COLS + sx] = RAMP.charCodeAt(idx);
+          const angle = t * 1.6 + y * 0.28;
+          // Four corner positions (the band's quad cross-section seen edge-on)
+          const corners = [0, 0, 0, 0]; // x positions
+          const depths  = [0, 0, 0, 0]; // sin(a) → -1..1
+          for (let c = 0; c < 4; c++) {
+            const a = angle + c * (Math.PI / 2);
+            corners[c] = cx + Math.cos(a) * halfWidth;
+            depths[c]  = Math.sin(a);
           }
-          // fill between corners (rails)
-          const a0 = angle, a1 = angle + Math.PI / 2;
-          const x0 = cx + Math.cos(a0) * width * 0.5;
-          const x1 = cx + Math.cos(a1) * width * 0.5;
-          const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
-          for (let sx = Math.max(0, Math.ceil(lo)); sx <= Math.min(COLS - 1, Math.floor(hi)); sx++) {
-            if (buf[y * COLS + sx] === SPACE) {
-              buf[y * COLS + sx] = 46; // '.'
+          // Sort corners left-to-right
+          const order = [0, 1, 2, 3];
+          order.sort((a, b) => corners[a] - corners[b]);
+          // Paint horizontal spans between consecutive corners
+          for (let s = 0; s < 3; s++) {
+            const ia = order[s], ib = order[s + 1];
+            const x0 = corners[ia], x1 = corners[ib];
+            const d0 = depths[ia],  d1 = depths[ib];
+            const lo = Math.max(0, Math.ceil(x0));
+            const hi = Math.min(COLS - 1, Math.floor(x1));
+            const span = Math.max(1, x1 - x0);
+            for (let sx = lo; sx <= hi; sx++) {
+              const u = (sx - x0) / span;
+              const depth = d0 + (d1 - d0) * u; // -1..1, front is +1
+              const bright = (depth * 0.5 + 0.5);
+              const idx = Math.max(2, Math.min(RAMP_HOT, (bright * RAMP_LEN) | 0));
+              buf[y * COLS + sx] = RAMP.charCodeAt(idx);
+            }
+          }
+          // Bright corner dots overlay so the band edges read crisp
+          for (let c = 0; c < 4; c++) {
+            const sx = Math.round(corners[c]);
+            if (sx >= 0 && sx < COLS) {
+              buf[y * COLS + sx] = depths[c] > 0 ? 64 /*'@'*/ : 35 /*'#'*/;
             }
           }
         }
