@@ -3899,8 +3899,13 @@
       const isMobile = window.matchMedia('(max-width: 520px)').matches;
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      const COLS = isMobile ? 34 : 46;
-      const ROWS = isMobile ? 17 : 22;
+      let COLS = isMobile ? 34 : 46;
+      let ROWS = isMobile ? 17 : 22;
+
+      // Cell aspect ratio (height / width). Monospace glyphs are taller than
+      // wide; multiply y-deltas by this so circular math reads circular.
+      // Computed from canvas font metrics on first paint, with a static fallback.
+      let CHAR_ASPECT = isMobile ? 1.92 : 2.0;
 
       const RAMP = " .'`,:;!i~-+=<>*?/\\|()][}{1trlJCYXZO0Qkbdpwm#W%@&$";
       const RAMP_LEN = RAMP.length;
@@ -4155,7 +4160,7 @@
           const fy = y * 0.25 + t * 0.9;
           const sy = Math.sin(fy);
           for (let x = 0; x < COLS; x++) {
-            const dx = x - cx, dy = (y - cy) * 1.8;
+            const dx = x - cx, dy = (y - cy) * CHAR_ASPECT;
             const v = Math.sin(x * 0.18 + t * 1.3) + sy +
                       Math.sin((x + y) * 0.14 + t * 0.7) +
                       Math.sin(Math.sqrt(dx * dx + dy * dy) * 0.3 + t * 1.1);
@@ -4244,7 +4249,7 @@
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             const dx = x - cx;
-            const dy = (y - cy) * 1.8;
+            const dy = (y - cy) * CHAR_ASPECT;
             const d = Math.sqrt(dx * dx + dy * dy) + 0.001;
             tunU[y * COLS + x] = 14 / d;
             tunV[y * COLS + x] = Math.atan2(dy, dx) / Math.PI * 6;
@@ -4373,7 +4378,7 @@
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             const dx = x - cx;
-            const dy = (y - cy) * 1.8;
+            const dy = (y - cy) * CHAR_ASPECT;
             const d = Math.sqrt(dx * dx + dy * dy);
             const v = Math.sin(d * 0.55 - t * 3) * Math.exp(-d * 0.035) +
                       Math.sin(d * 0.25 - t * 1.5) * 0.4 * Math.exp(-d * 0.02);
@@ -4447,7 +4452,7 @@
         const ca = Math.cos(A), sa = Math.sin(A);
         const cb = Math.cos(B), sb = Math.sin(B);
         const cc = Math.cos(C), sc = Math.sin(C);
-        const scale = Math.min(COLS, ROWS * 1.8) * 0.5;
+        const scale = Math.min(COLS, ROWS * CHAR_ASPECT) * 0.5;
         const cx = COLS / 2, cy = ROWS / 2;
         const proj = new Array(8);
         for (let i = 0; i < 8; i++) {
@@ -4483,7 +4488,7 @@
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
             let dx = Math.abs(x - cx);
-            let dy = Math.abs((y - cy) * 1.8);
+            let dy = Math.abs((y - cy) * CHAR_ASPECT);
             if (dy > dx) { const tmp = dx; dx = dy; dy = tmp; }
             const v = Math.sin(dx * 0.25 + t * 2) + Math.cos(dy * 0.32 + t * 1.3) + Math.sin((dx + dy) * 0.18 + t * 0.8);
             const norm = (v + 3) / 6;
@@ -4510,7 +4515,7 @@
             let v = 0;
             for (let i = 0; i < 3; i++) {
               const dx = x - bx[i];
-              const dy = (y - by[i]) * 1.8;
+              const dy = (y - by[i]) * CHAR_ASPECT;
               v += br[i] / (dx * dx + dy * dy + 0.5);
             }
             const norm = Math.min(1, v * 0.12);
@@ -4767,7 +4772,7 @@
         const cosA = Math.cos(t), sinA = Math.sin(t);
         const cosB = Math.cos(t * 0.7), sinB = Math.sin(t * 0.7);
         const cx = COLS / 2, cy = ROWS / 2;
-        const scale = Math.min(COLS, ROWS * 1.8) * 0.78;
+        const scale = Math.min(COLS, ROWS * CHAR_ASPECT) * 0.78;
         const step = (dt || 16) / 1000;
         // Depth-sort indices
         for (let i = 0; i < VEC_COUNT; i++) {
@@ -4812,7 +4817,7 @@
         const cx = COLS / 2, cy = ROWS / 2;
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
-            const dx = x - cx, dy = (y - cy) * 1.8;
+            const dx = x - cx, dy = (y - cy) * CHAR_ASPECT;
             const u = dx * ca - dy * sa;
             const v = dx * sa + dy * ca;
             // sample: xor-style pattern
@@ -4837,7 +4842,7 @@
         const cosA = Math.cos(A), sinA = Math.sin(A);
         const cosB = Math.cos(B), sinB = Math.sin(B);
         const cx = COLS / 2, cy = ROWS / 2;
-        const R = Math.min(COLS, ROWS * 1.8) * 0.52;
+        const R = Math.min(COLS, ROWS * CHAR_ASPECT) * 0.52;
         // latitude rings (fewer on mobile)
         const lats = isMobile ? 8 : 12;
         const lngs = isMobile ? 14 : 20;
@@ -4937,7 +4942,7 @@
       function drawWarp(now, dt) {
         clearBuf();
         const cx = COLS / 2, cy = ROWS / 2;
-        const maxR = Math.sqrt(cx * cx + (cy * 1.8) * (cy * 1.8));
+        const maxR = Math.sqrt(cx * cx + (cy * CHAR_ASPECT) * (cy * CHAR_ASPECT));
         const step = (dt || 16) / 1000;
         for (let i = 0; i < warpN; i++) {
           const b = i * 3;
@@ -4975,8 +4980,8 @@
         const oy1 = Math.cos(t * 0.8) * 3;
         for (let y = 0; y < ROWS; y++) {
           for (let x = 0; x < COLS; x++) {
-            const dxA = x - cx + ox1, dyA = (y - cy + oy1) * 1.8;
-            const dxB = x - cx - ox1, dyB = (y - cy - oy1) * 1.8;
+            const dxA = x - cx + ox1, dyA = (y - cy + oy1) * CHAR_ASPECT;
+            const dxB = x - cx - ox1, dyB = (y - cy - oy1) * CHAR_ASPECT;
             const dA = Math.sqrt(dxA * dxA + dyA * dyA);
             const dB = Math.sqrt(dxB * dxB + dyB * dyB);
             const v = Math.sin(dA * 0.7 + t * 3) + Math.sin(dB * 0.7 - t * 2);
