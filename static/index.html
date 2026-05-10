@@ -5240,7 +5240,7 @@
       }
 
       /* ─── Scene: Shadebobs (16 sine-orbiting bobs with additive trail) ─── */
-      const sbN = isMobile ? 12 : 24;
+      const sbN = isMobile ? 10 : 16;
       const sbPhase = new Float32Array(sbN * 4);
       function initShadebobs() {
         for (let i = 0; i < sbN; i++) {
@@ -5253,7 +5253,7 @@
       initShadebobs();
       function drawShadebobs(now) {
         ensureTrailGeom();
-        decayTrail(12);
+        decayTrail(28);
         const t = now * 0.001;
         const cx = COLS / 2, cy = ROWS / 2;
         const ax = (COLS - 4) * 0.5;
@@ -5262,16 +5262,11 @@
           const b = i * 4;
           const x = Math.round(cx + Math.sin(t * sbPhase[b + 2] + sbPhase[b + 0]) * ax);
           const y = Math.round(cy + Math.cos(t * sbPhase[b + 3] + sbPhase[b + 1]) * ay);
-          // Splat a 7x7 bob: set cell to max of current or new value (trail decays, no additive blowup)
-          for (let dy = -3; dy <= 3; dy++) {
-            for (let dx = -3; dx <= 3; dx++) {
-              const nx = x + dx, ny = y + dy;
-              if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
-              const d = Math.abs(dx) + Math.abs(dy);
-              const e = 220 - d * 25;
-              if (e <= 0) continue;
-              const ci = ny * COLS + nx;
-              if (trailBuf[ci] < e) trailBuf[ci] = e;
+          // Splat a 3x3 falloff bob
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const e = 110 - (Math.abs(dx) + Math.abs(dy)) * 35;
+              if (e > 0) addTrail(x + dx, y + dy, e);
             }
           }
         }
