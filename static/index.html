@@ -3475,6 +3475,14 @@
       color: #ffc8a0;
       text-shadow: -1px 0 rgba(255,80,160,0.4), 1px 0 rgba(255,200,80,0.4), 0 0 8px rgba(255,180,120,0.5);
     }
+    .fx-canvas.fx-hex {
+      color: #ff8aa6;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,180,40,0.4), 0 0 8px rgba(255,140,160,0.5);
+    }
+    .fx-canvas.fx-highlife {
+      color: #f0e890;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(180,255,80,0.35), 0 0 8px rgba(220,200,80,0.45);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5875,6 +5883,74 @@
         }
       }
 
+      /* ─── Scene: HexGrid (hexagonal pulse waves outward from center) ─── */
+      function drawHexGrid(now) {
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const HEX_W = 4; // approx hex tile width in chars
+        const HEX_H = 3;
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            // Convert pixel to axial-ish hex coord
+            const q = Math.round((x - cx) / HEX_W);
+            const r = Math.round(((y - cy) / HEX_H) - q * 0.5);
+            // Distance in hex coords
+            const hexDist = (Math.abs(q) + Math.abs(r) + Math.abs(-q - r)) / 2;
+            const wave = Math.sin(hexDist * 0.8 - t * 3) * 0.5 + 0.5;
+            const wave2 = Math.cos(hexDist * 0.4 - t * 1.5) * 0.4 + 0.5;
+            const v = wave * 0.7 + wave2 * 0.3;
+            const idx = Math.max(0, Math.min(RAMP_LEN - 1, (v * RAMP_LEN) | 0));
+            buf[y * COLS + x] = idx === 0 ? SPACE : RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: HighLife (B36/S23 variant of Conway's Life) ─── */
+      let hlCurr = new Uint8Array(COLS * ROWS);
+      let hlNext = new Uint8Array(COLS * ROWS);
+      let hlAcc = 0;
+      let hlAge = 0;
+      let hlGeomRev = -1;
+      function seedHighLife() {
+        for (let i = 0; i < hlCurr.length; i++) hlCurr[i] = Math.random() < 0.28 ? 1 : 0;
+        hlAge = 0;
+      }
+      function stepHighLife() {
+        for (let y = 0; y < ROWS; y++) {
+          const ym1 = (y - 1 + ROWS) % ROWS;
+          const yp1 = (y + 1) % ROWS;
+          for (let x = 0; x < COLS; x++) {
+            const xm1 = (x - 1 + COLS) % COLS;
+            const xp1 = (x + 1) % COLS;
+            const n = hlCurr[ym1 * COLS + xm1] + hlCurr[ym1 * COLS + x] + hlCurr[ym1 * COLS + xp1] +
+                      hlCurr[y   * COLS + xm1] +                              hlCurr[y   * COLS + xp1] +
+                      hlCurr[yp1 * COLS + xm1] + hlCurr[yp1 * COLS + x] + hlCurr[yp1 * COLS + xp1];
+            const alive = hlCurr[y * COLS + x];
+            // B36/S23: born on 3 or 6, survive on 2 or 3
+            hlNext[y * COLS + x] = alive ? ((n === 2 || n === 3) ? 1 : 0) : ((n === 3 || n === 6) ? 1 : 0);
+          }
+        }
+        const tmp = hlCurr; hlCurr = hlNext; hlNext = tmp;
+      }
+      function drawHighLife(now, dt) {
+        if (hlGeomRev !== geometryRev) {
+          hlCurr = new Uint8Array(COLS * ROWS);
+          hlNext = new Uint8Array(COLS * ROWS);
+          seedHighLife();
+          hlGeomRev = geometryRev;
+        }
+        hlAcc += dt;
+        if (hlAcc > 130) {
+          hlAcc = 0;
+          stepHighLife();
+          hlAge++;
+          if (hlAge > 50) seedHighLife();
+        }
+        for (let i = 0; i < hlCurr.length; i++) {
+          buf[i] = hlCurr[i] ? 35 /*'#'*/ : 32;
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5950,6 +6026,8 @@
         { name: 'JULIA',      fn: drawJulia,      dur: 7000, cls: 'fx-julia' },
         { name: 'REACTION',   fn: drawRD,         dur: 8000, cls: 'fx-rd' },
         { name: 'VORONOI',    fn: drawVoronoi,    dur: 7000, cls: 'fx-voronoi' },
+        { name: 'HEXGRID',    fn: drawHexGrid,    dur: 6000, cls: 'fx-hex' },
+        { name: 'HIGHLIFE',   fn: drawHighLife,   dur: 7000, cls: 'fx-highlife' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
