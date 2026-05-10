@@ -4333,38 +4333,58 @@
         }
       }
 
-      /* ─── Scene: Matrix rain ─── */
-      const mDrops = new Float32Array(COLS);
-      const mChars = new Uint16Array(COLS * ROWS);
+      /* ─── Scene: Matrix rain (per-cell decay buffer + 2 drops per col) ─── */
+      const M_DROPS_PER_COL = 2;
+      let mDrops = new Float32Array(COLS * M_DROPS_PER_COL);
+      let mChars = new Uint16Array(COLS * ROWS);
+      let mGlow = new Uint8Array(COLS * ROWS); // 0..255 fade buffer
       const MATRIX_POOL = "01_/\\|<>{}[]()KDHOMEARCHIVEMOD@#%*+=.";
       function initMatrix() {
-        for (let x = 0; x < COLS; x++) {
-          mDrops[x] = Math.random() * ROWS;
-          for (let y = 0; y < ROWS; y++) {
-            mChars[y * COLS + x] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
-          }
+        for (let i = 0; i < mDrops.length; i++) mDrops[i] = -Math.random() * ROWS * 2;
+        for (let i = 0; i < mChars.length; i++) {
+          mChars[i] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
         }
+        mGlow.fill(0);
       }
       initMatrix();
       function drawMatrix(now, dt) {
-        clearBuf();
+        // Geometry self-heal
+        if (mChars.length !== COLS * ROWS) {
+          mDrops = new Float32Array(COLS * M_DROPS_PER_COL);
+          mChars = new Uint16Array(COLS * ROWS);
+          mGlow = new Uint8Array(COLS * ROWS);
+          initMatrix();
+        }
         const step = (dt || 16) / 60;
+        // Decay every cell
+        for (let i = 0; i < mGlow.length; i++) {
+          const v = mGlow[i] - 22;
+          mGlow[i] = v < 0 ? 0 : v;
+        }
+        // Advance drops, paint heads
         for (let x = 0; x < COLS; x++) {
-          mDrops[x] += step * (0.4 + Math.random() * 0.35);
-          if (mDrops[x] > ROWS + 8) mDrops[x] = -Math.random() * 8;
-          const head = Math.floor(mDrops[x]);
-          const tail = 9;
-          for (let k = 0; k < tail; k++) {
-            const y = head - k;
-            if (y < 0 || y >= ROWS) continue;
-            if (k === 0) {
-              if (Math.random() < 0.4) mChars[y * COLS + x] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
-              buf[y * COLS + x] = mChars[y * COLS + x];
-            } else {
-              const rampI = Math.max(2, RAMP_LEN - 1 - k * 5);
-              buf[y * COLS + x] = RAMP.charCodeAt(rampI);
+          for (let d = 0; d < M_DROPS_PER_COL; d++) {
+            const di = x * M_DROPS_PER_COL + d;
+            mDrops[di] += step * (0.45 + Math.random() * 0.45);
+            if (mDrops[di] > ROWS + 4) {
+              mDrops[di] = -Math.random() * ROWS * 1.5;
+            }
+            const head = Math.floor(mDrops[di]);
+            if (head >= 0 && head < ROWS) {
+              if (Math.random() < 0.35) {
+                mChars[head * COLS + x] = MATRIX_POOL.charCodeAt((Math.random() * MATRIX_POOL.length) | 0);
+              }
+              mGlow[head * COLS + x] = 255;
             }
           }
+        }
+        // Render: bright head = mChars; trail = scaled ramp
+        for (let i = 0; i < mGlow.length; i++) {
+          const g = mGlow[i];
+          if (g === 0) { buf[i] = SPACE; continue; }
+          if (g >= 220) { buf[i] = mChars[i]; continue; }
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, ((g / 255) * RAMP_LEN) | 0));
+          buf[i] = RAMP.charCodeAt(idx);
         }
       }
 
