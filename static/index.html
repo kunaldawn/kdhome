@@ -4575,6 +4575,7 @@
       let caHistory = new Uint8Array(COLS * ROWS);
       let caAcc = 0;
       let caAge = 0;
+      let caNext = new Uint8Array(COLS);
       function seedCellular() {
         caRow.fill(0);
         caRow[COLS >> 1] = 1;
@@ -4589,15 +4590,14 @@
         }
         for (let x = 0; x < COLS; x++) caHistory[(ROWS - 1) * COLS + x] = caRow[x];
         // next row via rule 30
-        const next = new Uint8Array(COLS);
         for (let x = 0; x < COLS; x++) {
           const l = caRow[(x - 1 + COLS) % COLS];
           const c = caRow[x];
           const r = caRow[(x + 1) % COLS];
           const pat = (l << 2) | (c << 1) | r;
-          next[x] = (30 >> pat) & 1;
+          caNext[x] = (30 >> pat) & 1;
         }
-        caRow = next;
+        const tmp = caRow; caRow = caNext; caNext = tmp;
         caAge++;
         if (caAge > ROWS * 2) seedCellular();
       }
@@ -4666,6 +4666,7 @@
         const v = fy * fy * (3 - 2 * fy);
         return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
       }
+      const voxelYBuf = new Int16Array(COLS);
       function drawVoxel(now) {
         clearBuf();
         const t = now * 0.00035;
@@ -4681,8 +4682,7 @@
         const camZ = t * 10;
         const CAM_H = 0.45;        // camera altitude (world-units) above "sea level"
         const FOV = 15;            // effective focal length; bigger -> taller peaks
-        const yBuf = new Int16Array(COLS);
-        for (let x = 0; x < COLS; x++) yBuf[x] = ROWS;
+        for (let x = 0; x < COLS; x++) voxelYBuf[x] = ROWS;
         // Comanche Y-buffer: iterate near -> far. Close voxels below the horizon
         // (camera above), distant mountain peaks rise above horizon into the sky.
         for (let z = 1.4; z < 38; z += 0.38) {
@@ -4697,9 +4697,9 @@
                        voxelHeight(wx * 0.9 + 11, wz * 0.25 + 3) * 0.5 +
                        voxelHeight(wx * 2.1 + 7, wz * 0.55 + 9) * 0.22) * 0.52;
             const screenY = Math.round(horizon - (h - CAM_H) * FOV * invZ);
-            if (screenY < yBuf[sx]) {
+            if (screenY < voxelYBuf[sx]) {
               const top = Math.max(0, screenY);
-              const bot = yBuf[sx];
+              const bot = voxelYBuf[sx];
               // Per-column height influences shade so varying peaks don't all render identically.
               const heightTone = Math.max(0.25, Math.min(1, h * 0.75 + 0.25));
               for (let y = top; y < bot; y++) {
@@ -4708,7 +4708,7 @@
                 const ri = Math.max(1, Math.min(RAMP_LEN - 1, (shade * RAMP_LEN) | 0));
                 buf[y * COLS + sx] = RAMP.charCodeAt(ri);
               }
-              yBuf[sx] = screenY;
+              voxelYBuf[sx] = screenY;
             }
           }
         }
@@ -4756,6 +4756,11 @@
         }
       }
       initVecs();
+      const vecOrder = new Array(VEC_COUNT);
+      for (let i = 0; i < VEC_COUNT; i++) vecOrder[i] = i;
+      const vecZs = new Float32Array(VEC_COUNT);
+      const vecProjX = new Float32Array(VEC_COUNT);
+      const vecProjY = new Float32Array(VEC_COUNT);
       function drawVectors(now, dt) {
         clearBuf();
         const t = now * 0.0009;
@@ -4765,10 +4770,6 @@
         const scale = Math.min(COLS, ROWS * 1.8) * 0.78;
         const step = (dt || 16) / 1000;
         // Depth-sort indices
-        const order = new Array(VEC_COUNT);
-        const zs = new Float32Array(VEC_COUNT);
-        const projX = new Float32Array(VEC_COUNT);
-        const projY = new Float32Array(VEC_COUNT);
         for (let i = 0; i < VEC_COUNT; i++) {
           const b = i * 6;
           // bounce physics
@@ -4784,18 +4785,17 @@
           // Rx
           let y2 = y * cosB - z1 * sinB, z2 = y * sinB + z1 * cosB;
           const ooz = 1 / (z2 + 3);
-          projX[i] = cx + x1 * ooz * scale * 2;
-          projY[i] = cy - y2 * ooz * scale;
-          zs[i] = z2;
-          order[i] = i;
+          vecProjX[i] = cx + x1 * ooz * scale * 2;
+          vecProjY[i] = cy - y2 * ooz * scale;
+          vecZs[i] = z2;
         }
-        order.sort((a, b) => zs[b] - zs[a]);
+        vecOrder.sort((a, b) => vecZs[b] - vecZs[a]);
         for (let k = 0; k < VEC_COUNT; k++) {
-          const i = order[k];
-          const px = Math.round(projX[i]);
-          const py = Math.round(projY[i]);
+          const i = vecOrder[k];
+          const px = Math.round(vecProjX[i]);
+          const py = Math.round(vecProjY[i]);
           if (px < 0 || px >= COLS || py < 0 || py >= ROWS) continue;
-          const depth = (zs[i] + 1) / 2;
+          const depth = (vecZs[i] + 1) / 2;
           const bright = 1 - depth;
           let idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
           buf[py * COLS + px] = RAMP.charCodeAt(idx);
@@ -4829,14 +4829,15 @@
       }
 
       /* ─── Scene: Sphere3D (wireframe sphere with latitude/longitude grid) ─── */
+      const sphereZBuf = new Float32Array(COLS * ROWS);
       function drawSphere3d(now) {
         clearBuf();
+        sphereZBuf.fill(0);
         const A = now * 0.0009, B = now * 0.0013;
         const cosA = Math.cos(A), sinA = Math.sin(A);
         const cosB = Math.cos(B), sinB = Math.sin(B);
         const cx = COLS / 2, cy = ROWS / 2;
         const R = Math.min(COLS, ROWS * 1.8) * 0.52;
-        const zBufS = new Float32Array(COLS * ROWS);
         // latitude rings (fewer on mobile)
         const lats = isMobile ? 8 : 12;
         const lngs = isMobile ? 14 : 20;
@@ -4857,8 +4858,8 @@
             const sxp = Math.round(cx + x1 * ooz * R * 2);
             const syp = Math.round(cy - y2 * ooz * R);
             if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
-            if (ooz > zBufS[syp * COLS + sxp]) {
-              zBufS[syp * COLS + sxp] = ooz;
+            if (ooz > sphereZBuf[syp * COLS + sxp]) {
+              sphereZBuf[syp * COLS + sxp] = ooz;
               const bright = Math.max(0.1, 1 - z2 * 0.4);
               const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
               buf[syp * COLS + sxp] = RAMP.charCodeAt(idx);
@@ -4881,8 +4882,8 @@
             const sxp = Math.round(cx + x1 * ooz * R * 2);
             const syp = Math.round(cy - y2 * ooz * R);
             if (sxp < 0 || sxp >= COLS || syp < 0 || syp >= ROWS) continue;
-            if (ooz > zBufS[syp * COLS + sxp]) {
-              zBufS[syp * COLS + sxp] = ooz;
+            if (ooz > sphereZBuf[syp * COLS + sxp]) {
+              sphereZBuf[syp * COLS + sxp] = ooz;
               const bright = Math.max(0.1, 1 - z2 * 0.4);
               const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
               buf[syp * COLS + sxp] = RAMP.charCodeAt(idx);
