@@ -854,6 +854,24 @@
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-width: none;
+      /* Allow horizontal touch panning even when the touch starts on a
+         clickable child item (otherwise mobile users tap-cancel-swipe
+         instead of scrolling). */
+      touch-action: pan-x;
+      scroll-behavior: smooth;
+      /* Fade the strip's left and right edges so the user sees there's
+         more content to scroll to. The mask grows when there's actually
+         room to scroll in that direction (set by JS via CSS vars). */
+      -webkit-mask-image: linear-gradient(90deg,
+        transparent 0,
+        #000 var(--taskbar-fade-left, 0px),
+        #000 calc(100% - var(--taskbar-fade-right, 0px)),
+        transparent 100%);
+              mask-image: linear-gradient(90deg,
+        transparent 0,
+        #000 var(--taskbar-fade-left, 0px),
+        #000 calc(100% - var(--taskbar-fade-right, 0px)),
+        transparent 100%);
     }
     .taskbar-items::-webkit-scrollbar { display: none; }
 
@@ -6817,6 +6835,39 @@
         <span id="clock" style="color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 12px;">00:00:00</span>
       </div>
     </div>
+    <script>
+      // Taskbar overflow scroll affordances:
+      //  - Vertical mouse wheel → horizontal scroll (desktop has no native
+      //    horizontal-wheel and the scrollbar is hidden, so without this the
+      //    overflowing items are unreachable on a desktop without a touchpad).
+      //  - Edge fade (CSS mask) grows on the side that has hidden content,
+      //    so the user sees there's more to scroll to.
+      (function() {
+        var items = document.querySelector('.taskbar-items');
+        if (!items) return;
+        items.addEventListener('wheel', function(ev) {
+          // Don't hijack actual horizontal scrolls (touchpad two-finger).
+          if (Math.abs(ev.deltaX) > Math.abs(ev.deltaY)) return;
+          if (items.scrollWidth <= items.clientWidth) return;
+          ev.preventDefault();
+          items.scrollLeft += ev.deltaY;
+        }, { passive: false });
+        var FADE = 24; // px of fade on each overflow side
+        function updateFade() {
+          var max = items.scrollWidth - items.clientWidth;
+          var left = max <= 0 ? 0 : Math.min(FADE, items.scrollLeft);
+          var right = max <= 0 ? 0 : Math.min(FADE, max - items.scrollLeft);
+          items.style.setProperty('--taskbar-fade-left', left + 'px');
+          items.style.setProperty('--taskbar-fade-right', right + 'px');
+        }
+        items.addEventListener('scroll', updateFade, { passive: true });
+        // Recompute on viewport resize and when the taskbar's child set
+        // changes (windows opening/closing).
+        window.addEventListener('resize', updateFade);
+        new MutationObserver(updateFade).observe(items, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+        updateFade();
+      })();
+    </script>
 
     <div class="vault" role="main" aria-label="KD's Home">
       <!-- Window title bar -->
