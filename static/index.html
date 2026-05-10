@@ -4235,19 +4235,43 @@
         const speed = Math.min(0.05, (dt || 16) / 1000 * 0.55);
         for (let i = 0; i < starCount; i++) {
           const b = i * 3;
+          const z0 = stars[b + 2];
           stars[b + 2] -= speed;
           if (stars[b + 2] <= 0.05) {
             stars[b + 0] = (Math.random() - 0.5) * 2;
             stars[b + 1] = (Math.random() - 0.5) * 2;
             stars[b + 2] = 1.5;
+            continue;
           }
           const z = stars[b + 2];
           const sx = Math.round(stars[b + 0] / z * scaleX + cx);
           const sy = Math.round(stars[b + 1] / z * scaleY + cy);
-          if (sx < 0 || sx >= COLS || sy < 0 || sy >= ROWS) continue;
+          // Streak: project the star's previous position to draw a short trail
+          const sxPrev = Math.round(stars[b + 0] / z0 * scaleX + cx);
+          const syPrev = Math.round(stars[b + 1] / z0 * scaleY + cy);
           const bright = Math.min(1, (1.5 - z) / 1.4);
           const idx = Math.max(1, Math.min(RAMP_LEN - 1, (bright * bright * RAMP_LEN) | 0));
-          buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+          // Bresenham-ish line from prev to current
+          let x0 = sxPrev, y0 = syPrev, x1 = sx, y1 = sy;
+          const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+          const sxd = x0 < x1 ? 1 : -1, syd = y0 < y1 ? 1 : -1;
+          let err = dx + dy, steps = 0;
+          while (steps++ < 6) { // cap streak length
+            if (x0 >= 0 && x0 < COLS && y0 >= 0 && y0 < ROWS) {
+              const cur = buf[y0 * COLS + x0];
+              if (cur === SPACE || cur < RAMP.charCodeAt(idx)) {
+                buf[y0 * COLS + x0] = RAMP.charCodeAt(Math.max(1, idx - steps));
+              }
+            }
+            if (x0 === x1 && y0 === y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x0 += sxd; }
+            if (e2 <= dx) { err += dx; y0 += syd; }
+          }
+          // Final bright pixel
+          if (sx >= 0 && sx < COLS && sy >= 0 && sy < ROWS) {
+            buf[sy * COLS + sx] = RAMP.charCodeAt(idx);
+          }
         }
       }
 
