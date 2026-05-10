@@ -1410,20 +1410,24 @@
          the state-machine JS sets those via inline style to animate the cat
          around, and !important would pin it in the corner. z-index is
          intentionally NOT overridden here — cat must stay above all windows
-         (z-index 5001) so it's visible over the auto-maximized browser. */
+         (z-index 5001) so it's visible over the auto-maximized browser.
+         Sized so the 3-line ASCII frames stay legible — at the prior 9px
+         font the per-state eye/foot tweaks were sub-pixel and the cat
+         looked frozen even though the state machine was cycling. */
       .desktop-cat {
-        width: 40px !important;
+        width: 64px !important;
         min-width: 0 !important;
-        height: 35px !important;
+        height: 50px !important;
       }
 
       .cat-body {
-        font-size: 9px !important;
+        font-size: 12px !important;
+        line-height: 1.05 !important;
       }
 
       .cat-bubble {
-        font-size: 8px !important;
-        padding: 2px 4px !important;
+        font-size: 9px !important;
+        padding: 3px 6px !important;
       }
 
       /* Compact title bar on mobile */
@@ -2248,8 +2252,17 @@
       display: inline-block;
     }
     @media (max-width: 600px) {
-      .taskbar-item.archive-window .taskbar-item-label { display: none; }
-      .taskbar-item.archive-window { max-width: 36px; }
+      /* Mobile hides .taskbar-item span:first-child (the icon) globally,
+         so for archive items show the LABEL instead — otherwise the item
+         is a blank pill and the user can't tell wiki from chiptune. */
+      .taskbar-item.archive-window { max-width: 110px; }
+      .taskbar-item.archive-window .taskbar-item-label {
+        display: inline-block;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     /* ═══ Demoscene window ═══ */
