@@ -115,7 +115,12 @@
             canvas.width = W;
             canvas.height = H;
             if (viz && typeof viz.setRendererSize === 'function') {
-                try { viz.setRendererSize(W, H); } catch (e) {}
+                // butterchurn's setRendererSize is (w, h, opts) and dereferences
+                // opts.meshWidth/etc unconditionally — passing two args throws
+                // TypeError, the catch swallowed it, and the renderer kept the
+                // initial small viewport. That manifested as the visualization
+                // filling only the upper-left of the fullscreen canvas.
+                try { viz.setRendererSize(W, H, {}); } catch (e) {}
             }
         }
     }
