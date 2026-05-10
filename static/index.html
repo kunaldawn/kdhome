@@ -3483,6 +3483,14 @@
       color: #f0e890;
       text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(180,255,80,0.35), 0 0 8px rgba(220,200,80,0.45);
     }
+    .fx-canvas.fx-sdf {
+      color: #c8e0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(200,220,255,0.55);
+    }
+    .fx-canvas.fx-dna {
+      color: #ff9eea;
+      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,80,180,0.45), 0 0 8px rgba(255,160,220,0.5);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5951,6 +5959,90 @@
         }
       }
 
+      /* ─── Scene: Raymarch SDF (sphere + torus distance field, lambert shading) ─── */
+      function sdSphere(px, py, pz, r) {
+        return Math.sqrt(px*px + py*py + pz*pz) - r;
+      }
+      function sdTorus(px, py, pz, R, r) {
+        const qx = Math.sqrt(px*px + pz*pz) - R;
+        return Math.sqrt(qx*qx + py*py) - r;
+      }
+      function sdfScene(px, py, pz, t) {
+        // Rotate space around Y axis
+        const c = Math.cos(t * 0.7), s = Math.sin(t * 0.7);
+        const rx = px * c - pz * s;
+        const rz = px * s + pz * c;
+        const a = sdSphere(rx, py, rz, 0.7);
+        const b = sdTorus(rx, py, rz, 1.2, 0.25);
+        return Math.min(a, b);
+      }
+      function drawRaymarch(now) {
+        const t = now * 0.001;
+        const camZ = -3.5;
+        const lightX = Math.cos(t) * 0.7, lightY = -0.5, lightZ = Math.sin(t) * 0.7;
+        const lLen = Math.sqrt(lightX*lightX + lightY*lightY + lightZ*lightZ);
+        const lx = lightX / lLen, ly = lightY / lLen, lz = lightZ / lLen;
+        for (let py = 0; py < ROWS; py++) {
+          for (let px = 0; px < COLS; px++) {
+            // Ray dir
+            const u = (px - COLS / 2) / COLS * 2;
+            const v = -(py - ROWS / 2) / ROWS * 2 * (ROWS / COLS) * (CHAR_ASPECT * 0.5);
+            const rdLen = Math.sqrt(u*u + v*v + 1);
+            const rdX = u / rdLen, rdY = v / rdLen, rdZ = 1 / rdLen;
+            let dist = 0, hit = false, hx = 0, hy = 0, hz = 0;
+            for (let step = 0; step < 24; step++) {
+              hx = rdX * dist;
+              hy = rdY * dist;
+              hz = camZ + rdZ * dist;
+              const d = sdfScene(hx, hy, hz, t);
+              if (d < 0.01) { hit = true; break; }
+              dist += d;
+              if (dist > 8) break;
+            }
+            if (!hit) { buf[py * COLS + px] = SPACE; continue; }
+            // Estimate normal via central differences
+            const e = 0.05;
+            const nx = sdfScene(hx + e, hy, hz, t) - sdfScene(hx - e, hy, hz, t);
+            const ny = sdfScene(hx, hy + e, hz, t) - sdfScene(hx, hy - e, hz, t);
+            const nz = sdfScene(hx, hy, hz + e, t) - sdfScene(hx, hy, hz - e, t);
+            const nLen = Math.sqrt(nx*nx + ny*ny + nz*nz) || 1;
+            const dot = (nx / nLen) * lx + (ny / nLen) * ly + (nz / nLen) * lz;
+            const bright = Math.max(0.1, dot * 0.5 + 0.5);
+            const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+            buf[py * COLS + px] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
+      /* ─── Scene: DNA helix (rotating double helix with rungs) ─── */
+      function drawDnaHelix(now) {
+        clearBuf();
+        const t = now * 0.001;
+        const cx = COLS / 2;
+        const amp = COLS * 0.32;
+        const turn = 0.8; // y units per radian
+        for (let y = 0; y < ROWS; y++) {
+          const phase = y * turn + t * 2;
+          const x1 = cx + Math.cos(phase) * amp;
+          const x2 = cx + Math.cos(phase + Math.PI) * amp;
+          const z1 = Math.sin(phase);             // -1..1
+          const z2 = Math.sin(phase + Math.PI);
+          const sx1 = Math.round(x1), sx2 = Math.round(x2);
+          // Brightness from depth
+          const idx1 = Math.max(2, Math.min(RAMP_LEN - 1, ((z1 * 0.5 + 0.5) * RAMP_LEN) | 0));
+          const idx2 = Math.max(2, Math.min(RAMP_LEN - 1, ((z2 * 0.5 + 0.5) * RAMP_LEN) | 0));
+          if (sx1 >= 0 && sx1 < COLS) buf[y * COLS + sx1] = RAMP.charCodeAt(idx1);
+          if (sx2 >= 0 && sx2 < COLS) buf[y * COLS + sx2] = RAMP.charCodeAt(idx2);
+          // Rung every 3 rows: connect with '-'
+          if (y % 3 === 0) {
+            const lo = Math.min(sx1, sx2), hi = Math.max(sx1, sx2);
+            for (let x = Math.max(0, lo + 1); x < Math.min(COLS, hi); x++) {
+              if (buf[y * COLS + x] === SPACE) buf[y * COLS + x] = 45 /*'-'*/;
+            }
+          }
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -6028,6 +6120,8 @@
         { name: 'VORONOI',    fn: drawVoronoi,    dur: 7000, cls: 'fx-voronoi' },
         { name: 'HEXGRID',    fn: drawHexGrid,    dur: 6000, cls: 'fx-hex' },
         { name: 'HIGHLIFE',   fn: drawHighLife,   dur: 7000, cls: 'fx-highlife' },
+        { name: 'RAYMARCH',   fn: drawRaymarch,   dur: 8000, cls: 'fx-sdf' },
+        { name: 'DNA',        fn: drawDnaHelix,   dur: 7000, cls: 'fx-dna' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
