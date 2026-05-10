@@ -5293,10 +5293,32 @@
       // Seed the bag on the initial scene (PLASMA) so it's excluded from round 1.
       refillBag(sceneIdx);
 
-      function setSceneClass(cls) {
-        canvas.className = 'fx-canvas ' + cls;
+      // Color cross-fade state
+      let xfadeFrom = null; // {color, shadow}
+      let xfadeTo = null;
+      let xfadeStart = 0;
+      function snapshotStyle() {
+        const cs = window.getComputedStyle(canvas);
+        return { color: cs.color, shadow: cs.textShadow };
       }
-      setSceneClass(SCENES[0].cls);
+      function setSceneClass(cls, withCrossfade) {
+        if (withCrossfade) {
+          xfadeFrom = snapshotStyle();
+          canvas.className = 'fx-canvas ' + cls;
+          xfadeTo = snapshotStyle();
+          xfadeStart = performance.now();
+          // Apply 'from' inline so frame 0 of the new scene still looks old
+          canvas.style.color = xfadeFrom.color;
+          canvas.style.textShadow = xfadeFrom.shadow;
+        } else {
+          canvas.className = 'fx-canvas ' + cls;
+          canvas.style.color = '';
+          canvas.style.textShadow = '';
+          xfadeFrom = null;
+          xfadeTo = null;
+        }
+      }
+      setSceneClass(SCENES[0].cls, false);
       if (sceneLabel) sceneLabel.textContent = SCENES[0].name;
 
       function frame(now) {
@@ -5314,7 +5336,7 @@
           sceneIdx = nextSceneFromBag();
           sceneStart = now;
           const next = SCENES[sceneIdx];
-          setSceneClass(next.cls);
+          setSceneClass(next.cls, true);
           if (sceneLabel) sceneLabel.textContent = next.name;
           if (cfg.installDebug && window.__fxTransitionLog) window.__fxTransitionLog.push(next.name);
         }
@@ -5329,6 +5351,26 @@
 
         // Draw current scene
         SCENES[sceneIdx].fn(now, dt);
+
+        // Color cross-fade matched to the char dissolve duration
+        if (xfadeFrom && xfadeTo) {
+          const xe = now - xfadeStart;
+          if (xe < DISSOLVE_MS) {
+            const t01 = xe / DISSOLVE_MS;
+            // Linearly interpolate via CSS color-mix() (modern browsers).
+            // color-mix(in srgb, A pct, B (100-pct)).
+            const fromPct = (1 - t01) * 100;
+            canvas.style.color = `color-mix(in srgb, ${xfadeFrom.color} ${fromPct}%, ${xfadeTo.color})`;
+            // Text-shadow doesn't support color-mix interpolation; use cross-fade via opacity overlay
+            // approximation: drop shadow during transition, restore at end.
+            canvas.style.textShadow = t01 > 0.5 ? xfadeTo.shadow : xfadeFrom.shadow;
+          } else {
+            canvas.style.color = '';
+            canvas.style.textShadow = '';
+            xfadeFrom = null;
+            xfadeTo = null;
+          }
+        }
 
         // Dissolve from previous scene during first DISSOLVE_MS
         if (hasPrev) {
@@ -5372,7 +5414,7 @@
           hasPrev = true;
           sceneIdx = i;
           sceneStart = performance.now();
-          setSceneClass(SCENES[i].cls);
+          setSceneClass(SCENES[i].cls, false);
           if (sceneLabel) sceneLabel.textContent = SCENES[i].name;
           return true;
         };
