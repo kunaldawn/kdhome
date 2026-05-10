@@ -5249,6 +5249,32 @@
         window.__fxList = () => SCENES.map(s => s.name);
         window.__fxBag = () => sceneBag.map(i => SCENES[i].name);
         window.__fxBagSize = () => sceneBag.length;
+        // Verify a specific scene: jump to it, wait `settleMs`, then summarize
+        // the buf contents. Returns a Promise<{name, nonSpacePct, distinctChars, ok}>.
+        window.__fxVerify = function(name, settleMs) {
+          settleMs = settleMs == null ? 1500 : settleMs;
+          const ok = window.__fxJump(name);
+          if (!ok) return Promise.resolve({ name, ok: false, error: 'unknown scene' });
+          return new Promise(function(resolve) {
+            setTimeout(function() {
+              let nonSpace = 0;
+              const seen = Object.create(null);
+              for (let i = 0; i < buf.length; i++) {
+                const c = buf[i];
+                if (c !== SPACE) nonSpace++;
+                seen[c] = 1;
+              }
+              resolve({
+                name,
+                ok: true,
+                nonSpacePct: +(nonSpace / buf.length * 100).toFixed(1),
+                distinctChars: Object.keys(seen).length,
+                cols: COLS,
+                rows: ROWS
+              });
+            }, settleMs);
+          });
+        };
       }
 
       if (reducedMotion) {
