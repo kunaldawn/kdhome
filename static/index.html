@@ -3419,6 +3419,18 @@
       color: #c6d5ff;
       text-shadow: -1px 0 rgba(255,80,180,0.35), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(180,200,255,0.45);
     }
+    .fx-canvas.fx-shadebobs {
+      color: #ff8ad5;
+      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,140,200,0.5);
+    }
+    .fx-canvas.fx-bobs {
+      color: #ffd066;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
+    }
+    .fx-canvas.fx-fountain {
+      color: #b0f0ff;
+      text-shadow: -1px 0 rgba(255,100,200,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(180,220,255,0.5);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5199,6 +5211,159 @@
         }
       }
 
+      /* ─── Shared additive trail buffer (used by shadebobs/fountain/lightning/rain) ─── */
+      let trailBuf = new Uint8Array(COLS * ROWS);
+      function ensureTrailGeom() {
+        if (trailBuf.length !== COLS * ROWS) {
+          trailBuf = new Uint8Array(COLS * ROWS);
+        }
+      }
+      function decayTrail(amount) {
+        for (let i = 0; i < trailBuf.length; i++) {
+          const v = trailBuf[i] - amount;
+          trailBuf[i] = v < 0 ? 0 : v;
+        }
+      }
+      function addTrail(x, y, energy) {
+        if (x < 0 || x >= COLS || y < 0 || y >= ROWS) return;
+        const i = y * COLS + x;
+        const v = trailBuf[i] + energy;
+        trailBuf[i] = v > 255 ? 255 : v;
+      }
+      function paintTrailToBuf() {
+        for (let i = 0; i < trailBuf.length; i++) {
+          const g = trailBuf[i];
+          if (g === 0) { buf[i] = SPACE; continue; }
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, ((g / 255) * RAMP_LEN) | 0));
+          buf[i] = RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Shadebobs (16 sine-orbiting bobs with additive trail) ─── */
+      const sbN = isMobile ? 12 : 24;
+      const sbPhase = new Float32Array(sbN * 4);
+      function initShadebobs() {
+        for (let i = 0; i < sbN; i++) {
+          sbPhase[i * 4 + 0] = Math.random() * Math.PI * 2;
+          sbPhase[i * 4 + 1] = Math.random() * Math.PI * 2;
+          sbPhase[i * 4 + 2] = 0.6 + Math.random() * 1.2; // freq x
+          sbPhase[i * 4 + 3] = 0.5 + Math.random() * 1.1; // freq y
+        }
+      }
+      initShadebobs();
+      function drawShadebobs(now) {
+        ensureTrailGeom();
+        decayTrail(12);
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS / 2;
+        const ax = (COLS - 4) * 0.5;
+        const ay = (ROWS - 2) * 0.5;
+        for (let i = 0; i < sbN; i++) {
+          const b = i * 4;
+          const x = Math.round(cx + Math.sin(t * sbPhase[b + 2] + sbPhase[b + 0]) * ax);
+          const y = Math.round(cy + Math.cos(t * sbPhase[b + 3] + sbPhase[b + 1]) * ay);
+          // Splat a 7x7 bob: set cell to max of current or new value (trail decays, no additive blowup)
+          for (let dy = -3; dy <= 3; dy++) {
+            for (let dx = -3; dx <= 3; dx++) {
+              const nx = x + dx, ny = y + dy;
+              if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) continue;
+              const d = Math.abs(dx) + Math.abs(dy);
+              const e = 220 - d * 25;
+              if (e <= 0) continue;
+              const ci = ny * COLS + nx;
+              if (trailBuf[ci] < e) trailBuf[ci] = e;
+            }
+          }
+        }
+        paintTrailToBuf();
+      }
+
+      /* ─── Scene: Bobs (Lissajous bob cluster, depth-sorted) ─── */
+      const bobN = isMobile ? 18 : 32;
+      function drawBobs(now) {
+        clearBuf();
+        const t = now * 0.001;
+        const cx = COLS / 2, cy = ROWS / 2;
+        // Lissajous parameters slowly morph
+        const a = 3 + Math.sin(t * 0.3) * 1.5;
+        const b = 4 + Math.cos(t * 0.27) * 1.5;
+        const phaseShift = t * 0.6;
+        // Build positions and z-depth, sort back-to-front.
+        const xs = new Array(bobN), ys = new Array(bobN), zs = new Array(bobN);
+        for (let i = 0; i < bobN; i++) {
+          const u = (i / bobN) * Math.PI * 2;
+          xs[i] = Math.round(cx + Math.sin(a * u + phaseShift) * (COLS * 0.42));
+          ys[i] = Math.round(cy + Math.sin(b * u) * (ROWS * 0.42));
+          zs[i] = Math.cos(a * u + phaseShift); // -1..1 fake z
+        }
+        const order = xs.map((_, i) => i).sort((p, q) => zs[p] - zs[q]);
+        for (const i of order) {
+          const x = xs[i], y = ys[i];
+          const bright = (zs[i] * 0.5 + 0.5);
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+          // Splat 3x3 with center brightest
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const px = x + dx, py = y + dy;
+              if (px < 0 || px >= COLS || py < 0 || py >= ROWS) continue;
+              const fall = (Math.abs(dx) + Math.abs(dy));
+              const li = Math.max(1, idx - fall * 8);
+              if (buf[py * COLS + px] === SPACE || buf[py * COLS + px] < RAMP.charCodeAt(li)) {
+                buf[py * COLS + px] = RAMP.charCodeAt(li);
+              }
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Fountain (gravity-driven particle fountain) ─── */
+      const foN = isMobile ? 60 : 120;
+      const foPart = new Float32Array(foN * 5); // x, y, vx, vy, life
+      let foSpawnAcc = 0;
+      function spawnFountainParticle(i) {
+        const b = i * 5;
+        foPart[b + 0] = COLS / 2 + (Math.random() - 0.5) * 2;
+        foPart[b + 1] = ROWS - 1;
+        const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.0; // mostly upward
+        const speed = 12 + Math.random() * 10;
+        foPart[b + 2] = Math.cos(ang) * speed;
+        foPart[b + 3] = Math.sin(ang) * speed;
+        foPart[b + 4] = 1.4 + Math.random() * 0.8; // life seconds
+      }
+      for (let i = 0; i < foN; i++) {
+        foPart[i * 5 + 4] = 0; // start dead, spawn lazily
+      }
+      function drawFountain(now, dt) {
+        ensureTrailGeom();
+        decayTrail(20);
+        const step = (dt || 16) / 1000;
+        foSpawnAcc += step;
+        // Spawn ~30 particles/sec
+        while (foSpawnAcc > 0.033) {
+          foSpawnAcc -= 0.033;
+          for (let i = 0; i < foN; i++) {
+            if (foPart[i * 5 + 4] <= 0) {
+              spawnFountainParticle(i);
+              break;
+            }
+          }
+        }
+        // Update + draw
+        for (let i = 0; i < foN; i++) {
+          const b = i * 5;
+          if (foPart[b + 4] <= 0) continue;
+          foPart[b + 3] += 18 * step; // gravity
+          foPart[b + 0] += foPart[b + 2] * step;
+          foPart[b + 1] += foPart[b + 3] * step;
+          foPart[b + 4] -= step;
+          if (foPart[b + 4] <= 0 || foPart[b + 1] >= ROWS) continue;
+          const x = Math.round(foPart[b + 0]);
+          const y = Math.round(foPart[b + 1]);
+          addTrail(x, y, 180);
+        }
+        paintTrailToBuf();
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5260,6 +5425,9 @@
         { name: 'METABALLS',  fn: drawMetaballs,  dur: 7000, cls: 'fx-meta' },
         { name: 'MANDELBROT', fn: drawMandelbrot, dur: 7000, cls: 'fx-mandel' },
         { name: 'SPIRAL',     fn: drawSpiral,     dur: 6000, cls: 'fx-spiral' },
+        { name: 'SHADEBOBS',  fn: drawShadebobs,  dur: 7000, cls: 'fx-shadebobs' },
+        { name: 'BOBS',       fn: drawBobs,       dur: 6000, cls: 'fx-bobs' },
+        { name: 'FOUNTAIN',   fn: drawFountain,   dur: 7000, cls: 'fx-fountain' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
