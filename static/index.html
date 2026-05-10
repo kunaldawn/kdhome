@@ -5343,6 +5343,11 @@
 
       /* ─── Scene: Bobs (Lissajous bob cluster, depth-sorted) ─── */
       const bobN = isMobile ? 18 : 32;
+      const bobXs = new Int16Array(bobN);
+      const bobYs = new Int16Array(bobN);
+      const bobZs = new Float32Array(bobN);
+      const bobOrder = new Array(bobN);
+      for (let i = 0; i < bobN; i++) bobOrder[i] = i;
       function drawBobs(now) {
         clearBuf();
         const t = now * 0.001;
@@ -5352,17 +5357,17 @@
         const b = 4 + Math.cos(t * 0.27) * 1.5;
         const phaseShift = t * 0.6;
         // Build positions and z-depth, sort back-to-front.
-        const xs = new Array(bobN), ys = new Array(bobN), zs = new Array(bobN);
         for (let i = 0; i < bobN; i++) {
           const u = (i / bobN) * Math.PI * 2;
-          xs[i] = Math.round(cx + Math.sin(a * u + phaseShift) * (COLS * 0.42));
-          ys[i] = Math.round(cy + Math.sin(b * u) * (ROWS * 0.42));
-          zs[i] = Math.cos(a * u + phaseShift); // -1..1 fake z
+          bobXs[i] = Math.round(cx + Math.sin(a * u + phaseShift) * (COLS * 0.42));
+          bobYs[i] = Math.round(cy + Math.sin(b * u) * (ROWS * 0.42));
+          bobZs[i] = Math.cos(a * u + phaseShift); // -1..1 fake z
         }
-        const order = xs.map((_, i) => i).sort((p, q) => zs[p] - zs[q]);
-        for (const i of order) {
-          const x = xs[i], y = ys[i];
-          const bright = (zs[i] * 0.5 + 0.5);
+        bobOrder.sort((p, q) => bobZs[p] - bobZs[q]);
+        for (let k = 0; k < bobN; k++) {
+          const i = bobOrder[k];
+          const x = bobXs[i], y = bobYs[i];
+          const bright = (bobZs[i] * 0.5 + 0.5);
           const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
           // Splat 3x3 with center brightest
           for (let dy = -1; dy <= 1; dy++) {
