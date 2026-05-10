@@ -3911,10 +3911,16 @@
       const RAMP_LEN = RAMP.length;
       const SPACE = 32;
 
-      const buf = new Uint8Array(COLS * ROWS);
-      const prevBuf = new Uint8Array(COLS * ROWS);
+      let buf = new Uint8Array(COLS * ROWS);
+      let prevBuf = new Uint8Array(COLS * ROWS);
       let hasPrev = false;
-      const rowStrs = new Array(ROWS);
+      let rowStrs = new Array(ROWS);
+      let geometryRev = 0;
+      // Per-effect geometry-rev cache. Effects with COLS/ROWS-sized state
+      // increment this when they reallocate their helpers.
+      const geomRev = {
+        fire: 0, life: 0, cell: 0, sphere: 0, voxel: 0
+      };
 
       function clearBuf() { buf.fill(SPACE); }
 
@@ -4172,9 +4178,14 @@
       }
 
       /* ─── Scene: Fire (classic DOOM / PSX fire: propagate-up with drift + cool) ─── */
-      const fireH = ROWS + 1;
-      const fireBuf = new Float32Array(COLS * fireH);
+      let fireH = ROWS + 1;
+      let fireBuf = new Float32Array(COLS * fireH);
       function drawFire(now) {
+        if (geomRev.fire !== geometryRev) {
+          fireH = ROWS + 1;
+          fireBuf = new Float32Array(COLS * fireH);
+          geomRev.fire = geometryRev;
+        }
         const t = now * 0.001;
         // Seed bottom row: always hot but with per-cell jitter so flame bases flicker.
         for (let x = 0; x < COLS; x++) {
@@ -4241,9 +4252,15 @@
       }
 
       /* ─── Scene: Tunnel ─── */
-      const tunU = new Float32Array(COLS * ROWS);
-      const tunV = new Float32Array(COLS * ROWS);
-      const tunDist = new Float32Array(COLS * ROWS);
+      let tunU = new Float32Array(COLS * ROWS);
+      let tunV = new Float32Array(COLS * ROWS);
+      let tunDist = new Float32Array(COLS * ROWS);
+      function rebuildTunnelTables() {
+        tunU = new Float32Array(COLS * ROWS);
+        tunV = new Float32Array(COLS * ROWS);
+        tunDist = new Float32Array(COLS * ROWS);
+        buildTunnelTables();
+      }
       function buildTunnelTables() {
         const cx = COLS / 2, cy = ROWS / 2;
         for (let y = 0; y < ROWS; y++) {
@@ -4392,7 +4409,7 @@
       }
 
       /* ─── Scene: Life (Conway's Game of Life with periodic reseed) ─── */
-      const lifeSz = COLS * ROWS;
+      let lifeSz = COLS * ROWS;
       let lifeCurr = new Uint8Array(lifeSz);
       let lifeNext = new Uint8Array(lifeSz);
       let lifeAcc = 0;
@@ -4419,6 +4436,15 @@
         const tmp = lifeCurr; lifeCurr = lifeNext; lifeNext = tmp;
       }
       function drawLife(now, dt) {
+        if (geomRev.life !== geometryRev) {
+          lifeSz = COLS * ROWS;
+          lifeCurr = new Uint8Array(lifeSz);
+          lifeNext = new Uint8Array(lifeSz);
+          lifeAcc = 0;
+          lifeAge = 0;
+          seedLife();
+          geomRev.life = geometryRev;
+        }
         lifeAcc += dt;
         if (lifeAcc > 130) {
           lifeAcc = 0;
@@ -4607,6 +4633,13 @@
         if (caAge > ROWS * 2) seedCellular();
       }
       function drawCellular(now, dt) {
+        if (geomRev.cell !== geometryRev) {
+          caRow = new Uint8Array(COLS);
+          caHistory = new Uint8Array(COLS * ROWS);
+          caNext = new Uint8Array(COLS);
+          seedCellular();
+          geomRev.cell = geometryRev;
+        }
         caAcc += dt;
         while (caAcc > 75) {
           caAcc -= 75;
@@ -4671,8 +4704,12 @@
         const v = fy * fy * (3 - 2 * fy);
         return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
       }
-      const voxelYBuf = new Int16Array(COLS);
+      let voxelYBuf = new Int16Array(COLS);
       function drawVoxel(now) {
+        if (geomRev.voxel !== geometryRev) {
+          voxelYBuf = new Int16Array(COLS);
+          geomRev.voxel = geometryRev;
+        }
         clearBuf();
         const t = now * 0.00035;
         const horizon = Math.floor(ROWS * 0.5);
@@ -4834,8 +4871,12 @@
       }
 
       /* ─── Scene: Sphere3D (wireframe sphere with latitude/longitude grid) ─── */
-      const sphereZBuf = new Float32Array(COLS * ROWS);
+      let sphereZBuf = new Float32Array(COLS * ROWS);
       function drawSphere3d(now) {
+        if (geomRev.sphere !== geometryRev) {
+          sphereZBuf = new Float32Array(COLS * ROWS);
+          geomRev.sphere = geometryRev;
+        }
         clearBuf();
         sphereZBuf.fill(0);
         const A = now * 0.0009, B = now * 0.0013;
@@ -5225,6 +5266,8 @@
         running = false;
         if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
         document.removeEventListener('visibilitychange', onVisibility);
+        if (ro) ro.disconnect();
+        if (resizeTimer) clearTimeout(resizeTimer);
       }
 
       if (cfg.installDebug) {
@@ -5305,6 +5348,40 @@
         });
         obs.observe(gate, { attributes: true, attributeFilter: ['class'] });
       }
+
+      // Live geometry tracking — recompute COLS/ROWS and rebuild tables when
+      // the canvas changes size (orientation flip, window maximize, font load).
+      function measureGeometry() {
+        const cs = window.getComputedStyle(canvas);
+        const fontPx = parseFloat(cs.fontSize) || 11;
+        const lineH = parseFloat(cs.lineHeight) || (fontPx * 1.2);
+        // Char advance estimate: Share Tech Mono advance ≈ 0.6em.
+        const charW = fontPx * 0.6;
+        CHAR_ASPECT = lineH / charW;
+        const widthPx = canvas.clientWidth || canvas.offsetWidth || 280;
+        const heightPx = (canvas.clientHeight || canvas.offsetHeight || 200);
+        const newCols = Math.max(20, Math.min(120, Math.floor(widthPx / charW)));
+        const newRows = Math.max(10, Math.min(60, Math.floor(heightPx / lineH)));
+        if (newCols === COLS && newRows === ROWS) return false;
+        COLS = newCols;
+        ROWS = newRows;
+        buf = new Uint8Array(COLS * ROWS);
+        prevBuf = new Uint8Array(COLS * ROWS);
+        rowStrs = new Array(ROWS);
+        hasPrev = false;
+        geometryRev++;
+        // Rebuild director-owned lookup tables.
+        if (typeof rebuildTunnelTables === 'function') rebuildTunnelTables();
+        return true;
+      }
+      // First measurement after the first paint so font is loaded.
+      requestAnimationFrame(measureGeometry);
+      let resizeTimer = 0;
+      const ro = new ResizeObserver(function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(measureGeometry, 100);
+      });
+      ro.observe(canvas);
 
       // Pause when tab hidden to save CPU
       function onVisibility() {
