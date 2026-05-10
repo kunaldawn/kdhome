@@ -3431,6 +3431,18 @@
       color: #b0f0ff;
       text-shadow: -1px 0 rgba(255,100,200,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(180,220,255,0.5);
     }
+    .fx-canvas.fx-snake {
+      color: #b5ff8a;
+      text-shadow: -1px 0 rgba(0,200,120,0.35), 1px 0 rgba(180,255,80,0.45), 0 0 8px rgba(140,255,120,0.45);
+    }
+    .fx-canvas.fx-lightning {
+      color: #f0f0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.5), 1px 0 rgba(80,200,255,0.5), 0 0 12px rgba(220,220,255,0.7);
+    }
+    .fx-canvas.fx-rain {
+      color: #8acfff;
+      text-shadow: -1px 0 rgba(0,180,255,0.4), 1px 0 rgba(120,200,255,0.4), 0 0 8px rgba(140,200,255,0.45);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5359,6 +5371,159 @@
         paintTrailToBuf();
       }
 
+      /* ─── Scene: Snake (procedural worm chasing its tail) ─── */
+      const snakeMaxLen = isMobile ? 40 : 70;
+      const snakeBody = new Int16Array(snakeMaxLen * 2);
+      let snakeLen = 0;
+      let snakeHeadX = 0, snakeHeadY = 0;
+      let snakeDirX = 1, snakeDirY = 0;
+      let snakeAcc = 0;
+      function seedSnake() {
+        snakeHeadX = (COLS / 2) | 0;
+        snakeHeadY = (ROWS / 2) | 0;
+        snakeDirX = 1; snakeDirY = 0;
+        snakeLen = 1;
+        snakeBody[0] = snakeHeadX; snakeBody[1] = snakeHeadY;
+      }
+      seedSnake();
+      function drawSnake(now, dt) {
+        snakeAcc += dt;
+        while (snakeAcc > 90) {
+          snakeAcc -= 90;
+          // 12% chance to randomize direction (without 180° flip)
+          if (Math.random() < 0.18) {
+            const choices = [[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy]) => !(dx === -snakeDirX && dy === -snakeDirY));
+            const pick = choices[(Math.random() * choices.length) | 0];
+            snakeDirX = pick[0]; snakeDirY = pick[1];
+          }
+          snakeHeadX = (snakeHeadX + snakeDirX + COLS) % COLS;
+          snakeHeadY = (snakeHeadY + snakeDirY + ROWS) % ROWS;
+          // Self-collision check → reseed
+          let crashed = false;
+          for (let i = 0; i < snakeLen; i++) {
+            if (snakeBody[i * 2] === snakeHeadX && snakeBody[i * 2 + 1] === snakeHeadY) { crashed = true; break; }
+          }
+          if (crashed) { seedSnake(); continue; }
+          // Append head
+          if (snakeLen < snakeMaxLen) {
+            for (let i = snakeLen; i > 0; i--) {
+              snakeBody[i * 2] = snakeBody[(i - 1) * 2];
+              snakeBody[i * 2 + 1] = snakeBody[(i - 1) * 2 + 1];
+            }
+            snakeBody[0] = snakeHeadX; snakeBody[1] = snakeHeadY;
+            snakeLen++;
+          } else {
+            for (let i = snakeLen - 1; i > 0; i--) {
+              snakeBody[i * 2] = snakeBody[(i - 1) * 2];
+              snakeBody[i * 2 + 1] = snakeBody[(i - 1) * 2 + 1];
+            }
+            snakeBody[0] = snakeHeadX; snakeBody[1] = snakeHeadY;
+          }
+        }
+        clearBuf();
+        for (let i = 0; i < snakeLen; i++) {
+          const x = snakeBody[i * 2], y = snakeBody[i * 2 + 1];
+          if (x < 0 || x >= COLS || y < 0 || y >= ROWS) continue;
+          const bright = 1 - (i / snakeLen);
+          const idx = Math.max(2, Math.min(RAMP_LEN - 1, (bright * RAMP_LEN) | 0));
+          buf[y * COLS + x] = i === 0 ? 64 /*'@'*/ : RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Lightning (Brownian-motion bolts with screen flash) ─── */
+      let boltAcc = 0;
+      let flashUntil = 0;
+      function drawLightningBolt(rootX) {
+        let x = rootX, y = 0;
+        const maxY = ROWS - 1;
+        while (y < maxY) {
+          addTrail(x, y, 220);
+          // Maybe fork
+          if (Math.random() < 0.08 && x > 1 && x < COLS - 2) {
+            let fx = x, fy = y;
+            const fdir = Math.random() < 0.5 ? -1 : 1;
+            for (let k = 0; k < 6 + ((Math.random() * 6) | 0); k++) {
+              fx += fdir + ((Math.random() * 3) | 0) - 1;
+              fy += Math.random() < 0.7 ? 1 : 0;
+              if (fy >= ROWS || fx < 0 || fx >= COLS) break;
+              addTrail(fx, fy, 160);
+            }
+          }
+          y++;
+          x += ((Math.random() * 3) | 0) - 1;
+          if (x < 0) x = 0; else if (x >= COLS) x = COLS - 1;
+        }
+      }
+      function drawLightning(now, dt) {
+        ensureTrailGeom();
+        decayTrail(35);
+        boltAcc += dt;
+        if (boltAcc > 600 + Math.random() * 700) {
+          boltAcc = 0;
+          drawLightningBolt(((Math.random() * (COLS - 4)) | 0) + 2);
+          flashUntil = now + 90;
+        }
+        paintTrailToBuf();
+        // Flash overlay: fill empty cells with '.' briefly
+        if (now < flashUntil) {
+          for (let i = 0; i < buf.length; i++) {
+            if (buf[i] === SPACE && Math.random() < 0.25) {
+              buf[i] = 46 /*'.'*/;
+            }
+          }
+        }
+      }
+
+      /* ─── Scene: Rain (slanted fall + bottom splash row) ─── */
+      const rainN = isMobile ? 50 : 90;
+      const rainDrops = new Float32Array(rainN * 3); // x, y, speed
+      let rainSplashRow = new Uint8Array(COLS);
+      function initRain() {
+        for (let i = 0; i < rainN; i++) {
+          rainDrops[i * 3 + 0] = Math.random() * COLS;
+          rainDrops[i * 3 + 1] = Math.random() * ROWS;
+          rainDrops[i * 3 + 2] = 6 + Math.random() * 8;
+        }
+      }
+      initRain();
+      function drawRain(now, dt) {
+        if (rainSplashRow.length !== COLS) rainSplashRow = new Uint8Array(COLS);
+        clearBuf();
+        const step = (dt || 16) / 1000;
+        // Decay splash row
+        for (let x = 0; x < COLS; x++) {
+          const v = rainSplashRow[x] - 12;
+          rainSplashRow[x] = v < 0 ? 0 : v;
+        }
+        for (let i = 0; i < rainN; i++) {
+          const b = i * 3;
+          rainDrops[b + 0] += step * rainDrops[b + 2] * 0.4; // horizontal drift (slant)
+          rainDrops[b + 1] += step * rainDrops[b + 2];
+          if (rainDrops[b + 1] >= ROWS - 1) {
+            const sx = ((rainDrops[b + 0] | 0) + COLS) % COLS;
+            rainSplashRow[sx] = 200;
+            rainDrops[b + 0] = Math.random() * COLS;
+            rainDrops[b + 1] = -Math.random() * 4;
+            rainDrops[b + 2] = 6 + Math.random() * 8;
+            continue;
+          }
+          const x = ((rainDrops[b + 0] | 0) + COLS) % COLS;
+          const y = rainDrops[b + 1] | 0;
+          if (y >= 0 && y < ROWS - 1 && x >= 0 && x < COLS) {
+            buf[y * COLS + x] = 47 /*'/'*/;
+          }
+        }
+        // Bottom row splash
+        const baseRow = ROWS - 1;
+        for (let x = 0; x < COLS; x++) {
+          const g = rainSplashRow[x];
+          if (g > 150) buf[baseRow * COLS + x] = 42 /*'*'*/;
+          else if (g > 70) buf[baseRow * COLS + x] = 46 /*'.'*/;
+          else if (g > 0) buf[baseRow * COLS + x] = 95 /*'_'*/;
+          else buf[baseRow * COLS + x] = 95 /*'_'*/;
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5423,6 +5588,9 @@
         { name: 'SHADEBOBS',  fn: drawShadebobs,  dur: 7000, cls: 'fx-shadebobs' },
         { name: 'BOBS',       fn: drawBobs,       dur: 6000, cls: 'fx-bobs' },
         { name: 'FOUNTAIN',   fn: drawFountain,   dur: 7000, cls: 'fx-fountain' },
+        { name: 'SNAKE',      fn: drawSnake,      dur: 7000, cls: 'fx-snake' },
+        { name: 'LIGHTNING',  fn: drawLightning,  dur: 6000, cls: 'fx-lightning' },
+        { name: 'RAIN',       fn: drawRain,       dur: 7000, cls: 'fx-rain' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
