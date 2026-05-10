@@ -3467,6 +3467,14 @@
       color: #ffd28a;
       text-shadow: -1px 0 rgba(255,40,180,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,180,80,0.5);
     }
+    .fx-canvas.fx-rd {
+      color: #a8ffd0;
+      text-shadow: -1px 0 rgba(0,200,180,0.45), 1px 0 rgba(120,255,200,0.45), 0 0 8px rgba(140,255,200,0.5);
+    }
+    .fx-canvas.fx-voronoi {
+      color: #ffc8a0;
+      text-shadow: -1px 0 rgba(255,80,160,0.4), 1px 0 rgba(255,200,80,0.4), 0 0 8px rgba(255,180,120,0.5);
+    }
     @media (max-width: 520px) {
       .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
       .fx-ticker { font-size: 11px; line-height: 1.45; }
@@ -5756,6 +5764,117 @@
         }
       }
 
+      /* ─── Scene: Reaction-Diffusion (Gray-Scott on COLS×ROWS) ─── */
+      let rdU = new Float32Array(COLS * ROWS);
+      let rdV = new Float32Array(COLS * ROWS);
+      let rdU2 = new Float32Array(COLS * ROWS);
+      let rdV2 = new Float32Array(COLS * ROWS);
+      let rdAcc = 0;
+      let rdAge = 0;
+      let rdGeomRev = -1;
+      function seedRD() {
+        rdU.fill(1); rdV.fill(0);
+        // Seed several blobs
+        const blobs = 5;
+        for (let k = 0; k < blobs; k++) {
+          const cx = ((Math.random() * (COLS - 8)) | 0) + 4;
+          const cy = ((Math.random() * (ROWS - 6)) | 0) + 3;
+          for (let dy = -2; dy <= 2; dy++) {
+            for (let dx = -2; dx <= 2; dx++) {
+              const x = cx + dx, y = cy + dy;
+              if (x < 0 || x >= COLS || y < 0 || y >= ROWS) continue;
+              rdV[y * COLS + x] = 1;
+            }
+          }
+        }
+        rdAge = 0;
+      }
+      function rdStep() {
+        const Du = 0.16, Dv = 0.08, F = 0.035, K = 0.06;
+        for (let y = 1; y < ROWS - 1; y++) {
+          for (let x = 1; x < COLS - 1; x++) {
+            const i = y * COLS + x;
+            const u = rdU[i], v = rdV[i];
+            const lapU = (rdU[i - 1] + rdU[i + 1] + rdU[i - COLS] + rdU[i + COLS]) - 4 * u;
+            const lapV = (rdV[i - 1] + rdV[i + 1] + rdV[i - COLS] + rdV[i + COLS]) - 4 * v;
+            const uvv = u * v * v;
+            rdU2[i] = u + (Du * lapU - uvv + F * (1 - u));
+            rdV2[i] = v + (Dv * lapV + uvv - (K + F) * v);
+          }
+        }
+        const tu = rdU; rdU = rdU2; rdU2 = tu;
+        const tv = rdV; rdV = rdV2; rdV2 = tv;
+      }
+      function drawRD(now, dt) {
+        if (rdGeomRev !== geometryRev) {
+          rdU = new Float32Array(COLS * ROWS);
+          rdV = new Float32Array(COLS * ROWS);
+          rdU2 = new Float32Array(COLS * ROWS);
+          rdV2 = new Float32Array(COLS * ROWS);
+          seedRD();
+          rdGeomRev = geometryRev;
+        }
+        rdAcc += dt;
+        while (rdAcc > 18) {
+          rdAcc -= 18;
+          rdStep();
+          rdAge++;
+          if (rdAge > 600) { seedRD(); }
+        }
+        for (let i = 0; i < rdU.length; i++) {
+          const v = rdV[i];
+          const idx = Math.max(0, Math.min(RAMP_LEN - 1, (v * RAMP_LEN * 1.6) | 0));
+          buf[i] = idx === 0 ? SPACE : RAMP.charCodeAt(idx);
+        }
+      }
+
+      /* ─── Scene: Voronoi (drifting seed points, cell-id ramp) ─── */
+      const vorN = isMobile ? 8 : 14;
+      const vorSeeds = new Float32Array(vorN * 4); // x, y, vx, vy
+      function initVoronoi() {
+        for (let i = 0; i < vorN; i++) {
+          vorSeeds[i * 4 + 0] = Math.random() * COLS;
+          vorSeeds[i * 4 + 1] = Math.random() * ROWS;
+          vorSeeds[i * 4 + 2] = (Math.random() - 0.5) * 6;
+          vorSeeds[i * 4 + 3] = (Math.random() - 0.5) * 4;
+        }
+      }
+      initVoronoi();
+      function drawVoronoi(now, dt) {
+        const step = (dt || 16) / 1000;
+        for (let i = 0; i < vorN; i++) {
+          const b = i * 4;
+          vorSeeds[b + 0] += vorSeeds[b + 2] * step;
+          vorSeeds[b + 1] += vorSeeds[b + 3] * step;
+          if (vorSeeds[b + 0] < 0 || vorSeeds[b + 0] >= COLS) vorSeeds[b + 2] *= -1;
+          if (vorSeeds[b + 1] < 0 || vorSeeds[b + 1] >= ROWS) vorSeeds[b + 3] *= -1;
+        }
+        for (let y = 0; y < ROWS; y++) {
+          for (let x = 0; x < COLS; x++) {
+            let nearest = 0, bestD = 1e9, second = 1e9;
+            for (let i = 0; i < vorN; i++) {
+              const b = i * 4;
+              const dx = x - vorSeeds[b + 0];
+              const dy = (y - vorSeeds[b + 1]) * CHAR_ASPECT;
+              const d = dx * dx + dy * dy;
+              if (d < bestD) { second = bestD; bestD = d; nearest = i; }
+              else if (d < second) { second = d; }
+            }
+            // Edge intensity: ratio of nearest to second-nearest
+            const edge = bestD / Math.max(0.001, second);
+            // Hot cells near edges read as low brightness; interior cells map to id
+            let idx;
+            if (edge > 0.8) {
+              idx = RAMP_LEN - 1; // bright edge
+            } else {
+              const id = (nearest * 7) % RAMP_LEN;
+              idx = Math.max(2, Math.min(RAMP_LEN - 4, id));
+            }
+            buf[y * COLS + x] = RAMP.charCodeAt(idx);
+          }
+        }
+      }
+
       /* ─── BBS ticker scroller (bottom -> top) ─── */
       const tickerEl = cfg.ticker || document.getElementById('fx-ticker');
       let tickerY = 0;
@@ -5829,6 +5948,8 @@
         { name: 'MANDELBOX',  fn: drawMandelbox,  dur: 7000, cls: 'fx-mbox' },
         { name: 'HILBERT',    fn: drawHilbert,    dur: 8000, cls: 'fx-hilbert' },
         { name: 'JULIA',      fn: drawJulia,      dur: 7000, cls: 'fx-julia' },
+        { name: 'REACTION',   fn: drawRD,         dur: 8000, cls: 'fx-rd' },
+        { name: 'VORONOI',    fn: drawVoronoi,    dur: 7000, cls: 'fx-voronoi' },
       ];
       let sceneIdx = 0;
       let sceneStart = 0;
