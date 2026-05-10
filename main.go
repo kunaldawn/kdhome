@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"mime"
@@ -45,8 +46,9 @@ var archives = []struct {
 	{"audio", "https://audio.kunaldawn.com"},
 }
 
-// archiveURL is built from `archives` at startup for O(1) /go/<id> lookup.
-var archiveURL = map[string]string{}
+// archiveID lets archiveClicksHandler validate POST {"id": ...} bodies
+// against the known set without touching the DB.
+var archiveID = map[string]bool{}
 
 // archiveClicks holds the in-memory aggregate, mirrored to SQLite. Keyed by
 // archive ID. Guarded by archiveClicksMu.
@@ -109,7 +111,7 @@ func initVisitDB(dataDir string) {
 
 	// ─── Archive click counts ───
 	for _, a := range archives {
-		archiveURL[a.ID] = a.URL
+		archiveID[a.ID] = true
 	}
 
 	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS archive_click_count (
@@ -187,49 +189,41 @@ func recordArchiveClick(id string) {
 	}()
 }
 
-// archiveGoHandler increments the click count for an archive id and
-// 302-redirects to the archive's URL. Path: /go/<id>. Returns 404 on
-// unknown id so links never silently swallow a typo.
-func archiveGoHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	id := strings.TrimPrefix(r.URL.Path, "/go/")
-	if id == "" || strings.ContainsRune(id, '/') {
-		http.NotFound(w, r)
-		return
-	}
-	url, ok := archiveURL[id]
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-	// HEAD is metadata-only (link previewers, uptime probes, curl -I) and
-	// must not inflate the counter. Same rule as the visit counter.
-	if r.Method == http.MethodGet {
-		recordArchiveClick(id)
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	http.Redirect(w, r, url, http.StatusFound)
-}
-
-// archiveClicksHandler returns {"counts": {id: n, ...}} for all known
-// archive IDs. Read-only; no caching.
+// archiveClicksHandler serves both reads and writes:
+//   - GET / HEAD → {"counts": {id: n, ...}} for all known archive IDs.
+//   - POST {"id":"<id>"} → increments that archive's counter, returns 204.
+// POST is fire-and-forget from the client (sendBeacon-style); on unknown
+// id it 404s so typos surface in dev. The body is intentionally tiny so a
+// 1 KiB read cap is plenty.
 func archiveClicksHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+	switch r.Method {
+	case http.MethodGet, http.MethodHead:
+		archiveClicksMu.RLock()
+		counts := make(map[string]int64, len(archiveClicks))
+		for id, n := range archiveClicks {
+			counts[id] = n
+		}
+		archiveClicksMu.RUnlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		json.NewEncoder(w).Encode(map[string]any{"counts": counts})
+	case http.MethodPost:
+		var body struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<10)).Decode(&body); err != nil {
+			http.Error(w, "bad json", http.StatusBadRequest)
+			return
+		}
+		if !archiveID[body.ID] {
+			http.NotFound(w, r)
+			return
+		}
+		recordArchiveClick(body.ID)
+		w.WriteHeader(http.StatusNoContent)
+	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
 	}
-	archiveClicksMu.RLock()
-	counts := make(map[string]int64, len(archiveClicks))
-	for id, n := range archiveClicks {
-		counts[id] = n
-	}
-	archiveClicksMu.RUnlock()
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(map[string]any{"counts": counts})
 }
 
 func visitHandler(w http.ResponseWriter, r *http.Request) {
@@ -259,7 +253,7 @@ func securityHeaders(next http.Handler) http.Handler {
 				"media-src 'self' blob:; "+
 				"worker-src 'self' blob:; "+
 				"connect-src 'self' https://www.google-analytics.com https://analytics.google.com; "+
-				"frame-src 'self' https://wiki.kunaldawn.com https://pdf.kunaldawn.com https://os.kunaldawn.com https://iso.kunaldawn.com https://chiptune.kunaldawn.com https://tube.kunaldawn.com https://audio.kunaldawn.com; "+
+				"frame-src https://wiki.kunaldawn.com https://pdf.kunaldawn.com https://os.kunaldawn.com https://iso.kunaldawn.com https://chiptune.kunaldawn.com https://tube.kunaldawn.com https://audio.kunaldawn.com; "+
 				"frame-ancestors 'none'")
 		next.ServeHTTP(w, r)
 	})
@@ -582,7 +576,6 @@ func main() {
 	mux.HandleFunc("/api/visit", visitHandler)
 	mux.HandleFunc("/api/archive-clicks", archiveClicksHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
-	mux.HandleFunc("/go/", archiveGoHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
 	srv := &http.Server{

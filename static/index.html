@@ -9868,6 +9868,21 @@
           badge.textContent = (current + 1).toLocaleString() + ' opens';
         }
 
+        // Fire-and-forget click tracking. `keepalive: true` lets the request
+        // complete even if the page is navigating to a new tab. Failures are
+        // silent — older deployments without the POST handler return 405 and
+        // we just lose that tick (the optimistic badge still shows it).
+        function trackArchiveClick(id) {
+          try {
+            fetch('/api/archive-clicks', {
+              method: 'POST',
+              body: JSON.stringify({ id: id }),
+              headers: { 'Content-Type': 'application/json' },
+              keepalive: true
+            }).catch(function() {});
+          } catch (e) { /* sendBeacon-style — never throws to caller */ }
+        }
+
         // ─── Public API ───
         window.openFeaturedArchive = function(id) {
           var entry = REGISTRY[id];
@@ -9875,10 +9890,11 @@
           var useInternal = false;
           try { useInternal = localStorage.getItem('kd:prefs:archives-internal-browser') === 'on'; } catch(e) {}
           if (!useInternal) {
-            // Open the archive directly. The server's /go/<id> tracking
-            // redirect was added later; older deployments 404 on it. Going
-            // direct keeps clicks working regardless of server version.
+            // Open the archive directly in a new tab; track the click via
+            // a fire-and-forget POST so the server counter increments
+            // independently of any redirect path.
             bumpCardCount(id);
+            trackArchiveClick(id);
             window.open(entry.url, '_blank', 'noopener');
             return;
           }
@@ -9899,6 +9915,7 @@
           }
           // New internal-browser instance — loadIframe loads entry.url.
           bumpCardCount(id);
+          trackArchiveClick(id);
           var inst = makeInstance(id);
           if (!inst) return;
           instances.set(id, inst);
