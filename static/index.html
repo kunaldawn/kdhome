@@ -4040,7 +4040,10 @@
          identical monospace advance and borders span the full pane.
          Desktop W=56 cols (~428px of 436px content box); mobile W=42
          cols (~270px of 280px). Every line is padded to W so the right
-         edge of every row lines up with the right edge of every box. */
+         edge of every row lines up with the right edge of every box.
+         Style is intentionally late-90s warez-scene NFO: chunky banner,
+         dotted-leader info block, framed section breaks, sites list,
+         greetz, signature footer. */
       const TICKER_LINES = (function() {
         const W = isMobile ? 42 : 56;
         const R = (ch, n) => ch.repeat(Math.max(0, n | 0));
@@ -4056,13 +4059,12 @@
         const hr2 = () => '+' + R('=', W - 2) + '+';
         // Mid rule inside a box:  +------...------+
         const hr1 = () => '+' + R('-', W - 2) + '+';
-        // Full-width dashed divider (decorative):   - - - ... - - -
+        // Dashed-with-space full-width line:   - - - - - - - - - - -
         const divLine = () => clip(padR(R('- ', W >> 1)));
-        // Same but with a centered star.
-        const divStar = () => {
-          const pat = R('- ', W >> 1);                  // W chars
-          const mid = W >> 1;                           // center index
-          return pat.slice(0, mid - 2) + ' * * ' + pat.slice(mid + 3);
+        // Two-tone NFO break:  -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+        const divZag = () => {
+          const half = W >> 1;
+          return clip(padR(R('-=', half)));
         };
 
         // "| <centered inner> |" padded to exactly W.
@@ -4079,17 +4081,27 @@
           return '| ' + t + R(' ', inside - t.length) + ' |';
         };
 
-        // Hardware spec row: " label " + dots + " value", exactly W.
-        const hwRow = (label, value) => {
-          const pre = label ? ' ' + label + ' ' : ' ' + R(' ', 12);
-          const post = ' ' + value;
-          const dots = W - pre.length - post.length;
-          if (dots < 1) return padR(pre + post);
-          return pre + R('.', dots) + post;
+        // NFO-style dotted-leader inside a box:
+        //   "|  LABEL ........... : VALUE                        |"
+        const infoRow = (label, value) => {
+          const inside = W - 4;
+          const lead = ' ' + label + ' ';
+          const tail = ' : ' + value;
+          const dots = inside - lead.length - tail.length;
+          if (dots < 1) return rowL(label + tail);
+          return '| ' + lead + R('.', dots) + tail + ' |';
+        };
+        // Continuation row: same box, but the lead is spaces (no dotted
+        // leader) so the eye reads "still under the previous label".
+        //   "|                            : VALUE                |"
+        const infoRowCont = (value) => {
+          const inside = W - 4;
+          const tail = ' : ' + value;
+          const fill = inside - tail.length;
+          return '| ' + R(' ', fill) + tail + ' |';
         };
 
-        // Word-wrap prose to fit in (W-2) chars, 1-space left indent,
-        // right-padded to W so every prose line ends flush at W.
+        // Word-wrap prose. Body is indented 2 chars left.
         const wrap = (text, maxLen) => {
           const words = text.split(/\s+/).filter(Boolean);
           const out = [];
@@ -4107,29 +4119,66 @@
           return out;
         };
         const prose = (cls, text) => {
-          wrap(text, W - 2).forEach(l => L.push([cls, padR(' ' + l)]));
+          wrap(text, W - 4).forEach(l => L.push([cls, padR('  ' + l)]));
         };
 
         const L = [];
         const add = (cls, txt) => L.push([cls, padR(txt)]);
         const addRaw = (cls, txt) => L.push([cls, txt]);
         const blank = () => L.push(['', '']);
+
+        // NFO-style section break:
+        //
+        //   - - - - - - - - - - - - - - - - - - - - - - - - - -
+        //
+        //                  ..::  T I T L E  ::..
+        //
+        //   - - - - - - - - - - - - - - - - - - - - - - - - - -
+        //
         const section = (title) => {
           blank();
-          L.push(['tk-dim', divStar()]);
+          L.push(['tk-dim', divLine()]);
           blank();
-          L.push(['tk-hot', center('>>>  ' + title + '  <<<')]);
+          L.push(['tk-hot', center('..::  ' + title + '  ::..')]);
+          blank();
+          L.push(['tk-dim', divLine()]);
           blank();
         };
 
         // ─── TITLE BANNER ───────────────────────────────
+        // Big ASCII "K D" logo (7 rows × 19 cols, centered inside box).
+        const KD_LOGO = [
+          '##    ##   #######',
+          '##   ##    ##   ##',
+          '##  ##     ##   ##',
+          '####       ##   ##',
+          '##  ##     ##   ##',
+          '##   ##    ##   ##',
+          '##    ##   #######',
+        ];
         add('tk-ok',  hr2());
         add('tk-ok',  rowC(''));
-        add('tk-ok',  rowC('K D  ·  H O M E B R E W'));
-        add('tk-ok',  rowC('D I G I T A L  ·  A R C H I V E'));
+        for (const ln of KD_LOGO) add('tk-ok', rowC(ln));
         add('tk-ok',  rowC(''));
-        add('tk-dim', rowC('[ rel 0x01 · online · 2026 ]'));
+        add('tk-ok',  rowC('K D  ::  HOMEBREW DIGITAL ARCHIVE'));
+        add('tk-ok',  rowC(''));
         add('tk-ok',  hr2());
+        add('tk-dim', rowC('-=[  proudly presents  ]=-'));
+        add('tk-dim', rowC('rel.0x01  ::  online  ::  AD 2026'));
+        add('tk-ok',  hr2());
+
+        // ─── RELEASE INFO TABLE ─────────────────────────
+        blank();
+        add('tk-ok', hr2());
+        addRaw('', infoRow('SUPPLiER',   'KUNAL DAWN'));
+        addRaw('', infoRow('ARCHiViST',  'KUNAL DAWN'));
+        addRaw('', infoRow('PACKAGER',   'KUNAL DAWN'));
+        addRaw('', infoRow('PROTECTiON', 'NONE / OPEN'));
+        addRaw('', infoRow('FORMAT',     'WEB / HTTPS'));
+        addRaw('', infoRow('SiZE',       '~12.5 TB'));
+        addRaw('', infoRow('DATE',       '2026-05-12'));
+        addRaw('', infoRow('RATiNG',     '[X] PRESERVE  [ ] PROFiT'));
+        add('tk-ok', hr2());
 
         // ─── ABOUT ──────────────────────────────────────
         section('A B O U T');
@@ -4142,16 +4191,18 @@
 
         // ─── HARDWARE ───────────────────────────────────
         section('H A R D W A R E');
-        add('',       hwRow('compute',     '2x RPi4 8G'));
-        add('',       hwRow('',            '1x N150 12G'));
-        add('',       hwRow('network',     '5-port switch'));
-        add('',       hwRow('power',       '65W USB-C PSU'));
-        add('',       hwRow('hot storage', '4x 2TB HDD'));
-        add('',       hwRow('',            '2x 2TB SSD'));
-        add('tk-warn',hwRow('cold backup', '1x 12TB HDD'));
-        blank();
-        add('tk-warn',hwRow('total draw',  '~30 W'));
-        add('tk-warn',hwRow('design goal', 'off-grid solar'));
+        add('tk-ok', hr2());
+        addRaw('',       infoRow('compute',     '2x RPi4 8G'));
+        addRaw('',       infoRowCont(           '1x N150 12G'));
+        addRaw('',       infoRow('network',     '5-port switch'));
+        addRaw('',       infoRow('power',       '65W USB-C PSU'));
+        addRaw('',       infoRow('hot storage', '4x 2TB HDD'));
+        addRaw('',       infoRowCont(           '2x 2TB SSD'));
+        addRaw('tk-warn',infoRow('cold backup', '1x 12TB HDD'));
+        add('tk-ok', hr1());
+        addRaw('tk-warn',infoRow('total draw',  '~30 W'));
+        addRaw('tk-warn',infoRow('design goal', 'off-grid solar'));
+        add('tk-ok', hr2());
 
         // ─── KIT (cat + rack) ───────────────────────────
         section('K D   K I T');
@@ -4198,31 +4249,47 @@
           add('tk-ok', hr2());
         }
 
-        // ─── COLLECTIONS ────────────────────────────────
-        section('C O L L E C T I O N S');
-        prose('',       'wikis -- 36 offline in ZIM');
-        prose('tk-dim', 'wikipedia . stackoverflow . archwiki . ifixit . gutenberg . medical . survival');
-        blank();
-        prose('',       'pdfs -- 23,000+ across 800 GB');
-        prose('tk-dim', 'byte magazine . mit press . hardware manuals from the 1960s . science journals from the 1890s . repair guides . story books');
-        blank();
-        prose('',       'os -- 244 GB');
-        prose('tk-dim', 'operating system images . drivers . bootable install media . bios updates');
-        blank();
-        prose('',       'iso -- 27 GB');
-        prose('tk-dim', 'vintage cd/dvd . warez . abandonware . commercial releases time forgot');
-        blank();
-        prose('',       'chiptune -- 22 GB');
-        prose('tk-dim', 'tracker modules . mod/xm/s3m/it . keygen music . demo scene audio');
-        blank();
-        prose('',       'tube -- 228 GB');
-        prose('tk-dim', 'computer science . hardware . engineering . math . physics . science deep-dives');
-        blank();
-        prose('',       'audio -- audiobook collection');
-        prose('tk-dim', 'fiction . non-fiction . lectures . classic literature');
-        blank();
-        prose('',       'retro -- abandonware and orphans');
-        prose('tk-dim', 'software nobody ships . manuals for hardware no longer made . knowledge saved from 404s');
+        // ─── COLLECTIONS (NFO sites-list style table) ───
+        section('S U B - A R C H i V E S');
+        if (!isMobile) {
+          // Box-table: 56 cols total.
+          //   bars(4) + name(10) + size(9) + desc(33) = 56
+          const aw = 10, bw = 9, cw = 33;
+          const cell = (s, w) => {
+            const t = (s.length > w - 2 ? s.slice(0, w - 2) : s);
+            return ' ' + t + R(' ', w - 1 - t.length);
+          };
+          const tHead = () => '+' + R('=', aw) + '+' + R('=', bw) + '+' + R('=', cw) + '+';
+          const tSep  = () => '+' + R('-', aw) + '+' + R('-', bw) + '+' + R('-', cw) + '+';
+          const tRow  = (a, b, c) => '|' + cell(a, aw) + '|' + cell(b, bw) + '|' + cell(c, cw) + '|';
+          addRaw('tk-ok',  tHead());
+          addRaw('tk-ok',  tRow('ARCHiVE', 'SiZE', 'KiND'));
+          addRaw('tk-ok',  tSep());
+          addRaw('',       tRow('wiki',     '36 ZIMs', 'wikipedia + 35 more, offline'));
+          addRaw('',       tRow('pdf',      '800 GB',  '23,000+ documents in ~800 GB'));
+          addRaw('',       tRow('os',       '244 GB',  'images, drivers, install media'));
+          addRaw('',       tRow('iso',      '27 GB',   'vintage cd/dvd, abandonware'));
+          addRaw('',       tRow('chiptune', '22 GB',   'mod/xm/s3m/it, keygen music'));
+          addRaw('',       tRow('tube',     '228 GB',  'cs/eng/math/physics deep-dives'));
+          addRaw('',       tRow('audio',    'audiobk', 'fiction + lectures + classics'));
+          addRaw('',       tRow('retro',    'orphans', 'software/manuals saved from 404'));
+          addRaw('tk-ok',  tHead());
+        } else {
+          // Mobile: per-archive blocks of label+meta in prose.
+          const block = (name, size, kind) => {
+            addRaw('', padR('  ' + name + R(' ', Math.max(1, 10 - name.length)) + size));
+            prose('tk-dim', kind);
+            blank();
+          };
+          block('wiki',     '36 ZIMs',  'wikipedia + 35 more, offline');
+          block('pdf',      '800 GB',   '23,000+ documents');
+          block('os',       '244 GB',   'images, drivers, install media');
+          block('iso',      '27 GB',    'vintage cd/dvd, abandonware');
+          block('chiptune', '22 GB',    'mod/xm/s3m/it, keygen music');
+          block('tube',     '228 GB',   'cs/eng/math/physics deep-dives');
+          block('audio',    'audiobk',  'fiction + lectures + classics');
+          block('retro',    'orphans',  'software/manuals saved from 404');
+        }
 
         // ─── ETHOS ──────────────────────────────────────
         section('E T H O S');
@@ -4234,8 +4301,19 @@
 
         // ─── GREETZ ─────────────────────────────────────
         section('G R E E T Z');
-        add('tk-ok', center('greetz to the old-school scene'));
-        add('tk-ok', center('keep the scene alive'));
+        prose('', 'regards fly out to the old-school scene who kept it alive:');
+        blank();
+        add('tk-ok', center('. MYTH . CORE . RAZOR 1911 . FAiRLiGHT .'));
+        add('tk-ok', center('. DEViANCE . CLASS . PARADOX . TRSi .'));
+        add('tk-ok', center('. DRiNK OR DiE . LAXiTY . oDDiTy . SAC .'));
+        add('tk-ok', center('. RELOADED . SKiDROW . CODEX . HOODLUM .'));
+        blank();
+        prose('', 'and to the librarians still mirroring in 2026:');
+        blank();
+        add('tk-ok', center('. ARCHiVE.ORG . TOSEC . NO-iNTRO .'));
+        add('tk-ok', center('. ABANDONiA . HOME OF THE UNDERDOGS .'));
+        add('tk-ok', center('. SCENE.ORG . MOD ARCHIVE . DEMOZOO .'));
+        add('tk-ok', center('. ZENIUS-I-VANISHER . ANNA\'S ARCHiVE .'));
         blank();
         add('',      center('archive everything'));
         add('',      center('mirror everything'));
@@ -4245,17 +4323,64 @@
         blank();
         add('',      center('fighting link rot, one wget at a time'));
 
+        // ─── CONTACT ────────────────────────────────────
+        section('C O N T A C T');
+        add('tk-ok', hr2());
+        addRaw('', infoRow('WWW',    'kunaldawn.com'));
+        addRaw('', infoRow('GiTHUB', 'github.com/kunaldawn'));
+        addRaw('', infoRow('EMAiL',  'kunal.dawn@gmail.com'));
+        addRaw('', infoRow('iRC',    'we don\'t go there any more'));
+        add('tk-ok', hr2());
+        blank();
+        prose('tk-dim', 'NOTE: this archive does not password files, ever.');
+        prose('tk-dim', 'NOTE: nothing here is for sale, ever.');
+        prose('tk-dim', 'NOTE: no tech support, no missing-disk emails.');
+
+        // ─── DiSTRO / SiTES (the gag list) ──────────────
+        section('D i S T R O   S i T E S');
+        if (!isMobile) {
+          //   bars(4) + name(19) + status(10) + loc(23) = 56
+          const aw = 19, bw = 10, cw = 23;
+          const cell = (s, w) => {
+            const t = (s.length > w - 2 ? s.slice(0, w - 2) : s);
+            return ' ' + t + R(' ', w - 1 - t.length);
+          };
+          const tHead = () => '+' + R('=', aw) + '+' + R('=', bw) + '+' + R('=', cw) + '+';
+          const tSep  = () => '+' + R('-', aw) + '+' + R('-', bw) + '+' + R('-', cw) + '+';
+          const tRow  = (a, b, c) => '|' + cell(a, aw) + '|' + cell(b, bw) + '|' + cell(c, cw) + '|';
+          addRaw('tk-ok',  tHead());
+          addRaw('tk-ok',  tRow('SiTE NAME', 'STATUS', 'LOCATiON'));
+          addRaw('tk-ok',  tSep());
+          addRaw('',       tRow('the.kitchen.shelf', 'WHQ',     'a flat, somewhere'));
+          addRaw('',       tRow('the.solar.panel',   'POWER',   '~30W, off-grid'));
+          addRaw('',       tRow('the.warm.rpi',      'COMPUTE', 'always on'));
+          addRaw('',       tRow('the.warm.rpi.2',    'COMPUTE', 'also always on'));
+          addRaw('',       tRow('the.cold.disk',     'BACKUP',  'spins on schedule'));
+          addRaw('',       tRow('the.cat',           'QA',      'on top of the rack'));
+          addRaw('tk-ok',  tHead());
+        } else {
+          add('', center('the.kitchen.shelf  -  WHQ'));
+          add('', center('the.solar.panel    -  POWER'));
+          add('', center('the.warm.rpi       -  COMPUTE'));
+          add('', center('the.cold.disk      -  BACKUP'));
+          add('', center('the.cat            -  QA'));
+        }
+
         // ─── CLOSING BANNER ─────────────────────────────
         blank();
         add('tk-ok', hr2());
         add('tk-ok', rowC(''));
-        add('tk-ok', rowC('DEV  .  KUNAL DAWN  .  MADE WITH <3'));
+        add('tk-ok', rowC('DEV  ::  KUNAL DAWN  ::  MADE WITH <3'));
+        add('tk-ok', rowC('LOGO + LAYOUT  ::  KD  &  AI'));
+        add('tk-ok', rowC('LAST UPDATED   ::  2026-05-12'));
         add('tk-ok', rowC(''));
         add('tk-ok', hr2());
         blank();
+        add('tk-dim', center('-=*=- if you like this archive, BUY a hard drive -=*=-'));
+        blank();
 
         // ─── LOOP MARKER ────────────────────────────────
-        add('tk-dim', clip(R('*  ', (W / 3) | 0)));
+        add('tk-dim', divZag());
         blank();
 
         return L;
