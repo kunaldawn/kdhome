@@ -18,21 +18,83 @@ journals, and manuals for chips that stopped being made decades ago. Useless to 
 to the few who go looking.
 
 The project spans seven sub-archives totalling over 12 TB of curated content, served from
-a home-grown homelab cluster drawing about 30 watts off-grid. No ads, no tracking, no
+a home-grown archive in a home drawing about 30 watts off-grid. No ads, no tracking, no
 telemetry, no SLA, no monetization, no users — free for all, free forever.
 
 ## Sub-Archives
 
 ### Wiki Archive (wiki.kunaldawn.com)
-36 offline wiki snapshots in ZIM format including:
-- Wikipedia (26.6M articles), Wiktionary, Wikiquote, Wikibooks
-- Stack Overflow (66.4M articles), Computer Science SE, Super User
-- ArchWiki, Gentoo Wiki, Linux man pages, Cloudflare Learning Center
-- iFixit repair guides (862K articles)
+119 offline wiki snapshots in ZIM format, grouped by family:
+
+Wikipedia family:
+- Wikipedia (26.6M articles), Wiktionary (8.6M), Wikisource (4.9M),
+  Wikispecies (1.7M), Wikiquote (152K), Wikibooks (~750K)
+- Topical Wikipedia subsets: Climate change (33K), Computer (317K),
+  Knots (5.2K)
+
+Stack Exchange family (20+ sites):
+- Stack Overflow (66.4M), Super User (2.4M), Server Fault (1.5M),
+  Ask Ubuntu (1.9M), Unix & Linux (1M), MathOverflow (616K),
+  Software Engineering (395K), Code Golf (275K), Computer Science (209K),
+  Webmasters (180K), Cryptography (133K), Software Recommendations (108K),
+  Gardening & Landscaping (104K), Network Engineering (83K),
+  Astronomy (76K), Theoretical Computer Science (57K),
+  Retrocomputing (42K), 3D Printing (35K), Amateur Radio (28K),
+  Woodworking (26K)
+
+DevDocs developer reference (30+ tools):
+- Languages: C, C++, JavaScript, Python, Go, Zig, Bash
+- Build/SCM: Git, GNU Make, CMake, Docker, GCC
+- Databases: PostgreSQL, MariaDB, SQLite, Redis
+- ML/Scientific: PyTorch, TensorFlow C++, scikit-learn, Octave, Gnuplot
+- GUI/Graphics: Qt, OpenGL, Vulkan, Graphviz
+- Web: CSS, HTML, HTTP, Web APIs, Socket.IO
+
+LibreTexts academic libraries (12 subjects):
+- Mathematics, Physics, Chemistry, Biology, Engineering, Medicine,
+  Humanities, Social Sciences, Geosciences, Business, Statistics,
+  Workforce, K-12 Education
+
+Linux distro and OS docs:
+- ArchWiki (13K), Gentoo Wiki (9.7K)
+- Linux man pages (via DevDocs and ManKier, 12K + 73K)
+
+Repair, fix, and how-things-work:
+- iFixit (862K repair guides)
+- Restarters
+
+Medical and health:
+- MDWiki Medical Encyclopedia (473K), Medicine LibreTexts (77K),
+  MedlinePlus, NHS Medicines A-Z, Libre Pathology, Military Medicine,
+  Travelers' Health, Medical Library
+
+Survival and disaster preparedness:
+- WikiCiv (manual for rebuilding civilization), Food for Preppers,
+  USDA Guide to Home Canning, Water Treatment Library,
+  Post Disaster Resource Library, A Library of Knots
+
+Cooking and recipes:
+- based.cooking, FOSS cooking, GrimGrains, Public Domain Recipes
+
+Mathematics and computer science:
+- ProofWiki (79K mathematical proofs), The Stacks project (algebraic
+  geometry), Algorithms, Open Data Structures
+
+Science and education:
+- Khan Academy (580K — math, physics, chemistry, biology, history),
+  PhET Interactive Simulations, Astronomy Picture of the Day,
+  Environment Encyclopedia
+
+Public-domain literature and reference:
 - Project Gutenberg (4.2M literary works)
-- Medical references: MDWiki, MedlinePlus, Libre Pathology, NHS
-- Survival: WikiCiv, Food for Preppers, USDA Canning Guide
-- Reference: CIA World Factbook, Explain XKCD
+- CIA World Factbook (2020), Appropedia, RationalWiki, Psiram,
+  CloudFlare Learning Center, Explain XKCD, xkcd
+
+Digital well-being and anonymity:
+- Incognito cat, The Guide to Online Anonymity, Thales CPL Docs
+
+Other:
+- 100 Rabbits (low-tech research)
 
 ### PDF Archive (pdf.kunaldawn.com)
 23,000+ curated PDFs totalling ~800 GB across 13 categories:
@@ -96,7 +158,7 @@ circumvented.
 
 ## Technical Details
 
-Infrastructure is a small home-grown homelab cluster, not a single box:
+Infrastructure is a small home-grown archive in a home, not a single box:
 
 - Compute: 2x Raspberry Pi 4 (8 GB each) for services and scraping, plus an N150 mini-PC
   (12 GB) for heavier indexing workloads

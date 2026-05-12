@@ -66,6 +66,15 @@
   <meta name="theme-color" content="#071013">
   <link rel="canonical" href="https://kunaldawn.com/">
 
+  <!-- IndieWeb identity links. Each rel="me" pair (here + reciprocal link
+       back from the profile) cross-validates that the same person owns
+       both endpoints. Search engines treat this as a stronger entity
+       signal than schema.org sameAs alone. -->
+  <link rel="me" href="https://github.com/kunaldawn">
+  <link rel="me" href="https://gitlab.com/kunaldawn">
+  <link rel="me" href="mailto:kunal.dawn@gmail.com">
+  <link rel="author" href="https://kunaldawn.com/#kunaldawn">
+
   <!-- Favicons (generated via generate_favicon.py) -->
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -79,54 +88,90 @@
   <meta name="language" content="English">
 
   <!-- SEO Meta Tags -->
-  <meta name="description" content="KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge across 7 sub-archives, served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) drawing ~30W off-grid solar. 36 offline wikis (Wikipedia, Stack Overflow, iFixit, Project Gutenberg), 23,000+ vintage computing PDFs (Byte Magazine, 1960s hardware manuals, MIT Press, science journals from the 1890s), plus dedicated archives of OS images, vintage CD/DVDs, chiptune music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
-  <meta name="keywords" content="digital archive, digital preservation, internet archival, offline wikipedia, offline stack overflow, vintage computing manuals, Byte Magazine archive, PDF archive, wiki archive, OS archive, CD/DVD archive, chiptune archive, YouTube archive, audiobook archive, abandonware preservation, homebrew server, homelab, Raspberry Pi cluster, N150 mini-PC, off-grid solar hosting, open knowledge, knowledge preservation, iFixit offline, Project Gutenberg, data hoarding, digital history, self-hosted archive, personal archive project, link rot">
+  <meta name="description" content="KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge across 7 sub-archives, served from an archive in a home (2x Raspberry Pi 4 + N150 mini-PC) drawing ~30W off-grid solar. 119 offline wikis in ZIM (Wikipedia family + Wiktionary + Wikisource + Wikispecies, 20+ Stack Exchange sites including Stack Overflow and MathOverflow, 30+ DevDocs developer references, 12 LibreTexts academic libraries, Khan Academy, iFixit, Project Gutenberg, ArchWiki, MDWiki medical, WikiCiv survival), 23,000+ vintage computing PDFs (Byte Magazine, 1960s hardware manuals, MIT Press, science journals from the 1890s), plus dedicated archives of OS images, vintage CD/DVDs, chiptune music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+  <meta name="keywords" content="digital archive, digital preservation, internet archival, offline wikipedia, offline stack overflow, offline mathoverflow, offline stack exchange, devdocs offline, libretexts offline, khan academy offline, vintage computing manuals, Byte Magazine archive, PDF archive, wiki archive, OS archive, CD/DVD archive, chiptune archive, YouTube archive, audiobook archive, abandonware preservation, homebrew server, home archive, archive in a home, Raspberry Pi cluster, N150 mini-PC, off-grid solar hosting, open knowledge, knowledge preservation, iFixit offline, Project Gutenberg, ArchWiki offline, MDWiki, WikiCiv, data hoarding, digital history, self-hosted archive, personal archive project, link rot">
   <meta name="author" content="Kunal Dawn">
   <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://kunaldawn.com/">
-  <meta property="og:title" content="KD's Homebrew Digital Archive — 12 TB on a Homebrew Homelab">
-  <meta property="og:description" content="A home-grown mirror of the public internet. 7 sub-archives: 36 offline wikis, 23,000+ vintage computing PDFs, OS images, vintage CD/DVDs, chiptunes, curated YouTube mirrors, and audiobooks — 12 TB total, served from a 2x RPi4 + N150 cluster on ~30W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+  <meta property="og:title" content="Kunal Dawn — KD's Homebrew Digital Archive">
+  <meta property="og:description" content="Kunal Dawn's home-grown mirror of the public internet. 7 sub-archives: 119 offline wikis in ZIM (Wikipedia family, 20+ Stack Exchanges, 30+ DevDocs, 12 LibreTexts, Khan Academy, iFixit, Project Gutenberg), 23,000+ vintage computing PDFs, OS images, vintage CD/DVDs, chiptunes, curated YouTube mirrors, and audiobooks — 12 TB total, served from a 2x RPi4 + N150 cluster on ~30W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
   <meta property="og:site_name" content="KD's Homebrew Archive">
   <meta property="og:image" content="https://kunaldawn.com/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="KD's Homebrew Digital Archive — Preserve, Share, Rebuild. 7 sub-archives, 36 wikis, 23K+ PDFs, 12 TB total.">
+  <meta property="og:image:alt" content="KD's Homebrew Digital Archive by Kunal Dawn — Preserve, Share, Rebuild. 7 sub-archives, 119 wikis, 23K+ PDFs, 12 TB total.">
   <meta property="og:locale" content="en_US">
+  <meta property="article:author" content="Kunal Dawn">
+  <meta property="profile:first_name" content="Kunal">
+  <meta property="profile:last_name" content="Dawn">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:url" content="https://kunaldawn.com/">
-  <meta name="twitter:title" content="KD's Homebrew Digital Archive — 12 TB on a Homebrew Homelab">
-  <meta name="twitter:description" content="A home-grown mirror of the public internet. 7 sub-archives — wikis, PDFs, OS images, CD/DVDs, chiptunes, YouTube mirrors, audiobooks — 12 TB served from a 2x RPi4 + N150 cluster on ~30W. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+  <meta name="twitter:title" content="Kunal Dawn — KD's Homebrew Digital Archive">
+  <meta name="twitter:description" content="Kunal Dawn's home-grown mirror of the public internet. 7 sub-archives — 119 offline wikis (Wikipedia family, 20+ Stack Exchanges, 30+ DevDocs, 12 LibreTexts, Khan Academy, iFixit, Project Gutenberg), PDFs, OS images, CD/DVDs, chiptunes, YouTube mirrors, audiobooks — 12 TB served from a 2x RPi4 + N150 cluster on ~30W. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
   <meta name="twitter:image" content="https://kunaldawn.com/og-image.png">
-  <meta name="twitter:image:alt" content="KD's Homebrew Digital Archive — 7 sub-archives, 36 wikis, 23K+ PDFs, 12 TB preserved">
+  <meta name="twitter:image:alt" content="KD's Homebrew Digital Archive by Kunal Dawn — 7 sub-archives, 119 wikis, 23K+ PDFs, 12 TB preserved">
 
-  <!-- JSON-LD Structured Data -->
+  <!-- JSON-LD Structured Data.
+       Three blocks tied together by @id cross-references so Google treats
+       Person + WebSite + CollectionPage as one connected entity graph:
+       this is the entity-disambiguation fix (two "Kunal Dawn"s exist on
+       the SERP — sameAs links here pin the apex domain to the right one). -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "@id": "https://kunaldawn.com/#kunaldawn",
+      "name": "Kunal Dawn",
+      "givenName": "Kunal",
+      "familyName": "Dawn",
+      "url": "https://kunaldawn.com",
+      "image": "https://kunaldawn.com/og-image.png",
+      "description": "Maintainer of KD's Homebrew Digital Archive — 12 TB of preserved knowledge served from a home-grown archive in a flat on ~30 W off-grid solar.",
+      "knowsAbout": [
+        "Digital preservation",
+        "Home archives",
+        "Self-hosted archives",
+        "Retrocomputing",
+        "Off-grid solar computing"
+      ],
+      "sameAs": [
+        "https://github.com/kunaldawn",
+        "https://gitlab.com/kunaldawn"
+      ]
+    }
+  </script>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": "https://kunaldawn.com/#website",
       "url": "https://kunaldawn.com/",
       "name": "KD's Homebrew Digital Archive",
       "alternateName": ["Kunal Dawn's Archive", "KD's Homebrew Archive"],
-      "author": {
-        "@type": "Person",
-        "name": "Kunal Dawn",
-        "url": "https://kunaldawn.com"
-      },
-      "description": "A home-grown mirror of the public internet — 12 TB across seven sub-archives: offline wikis, vintage computing PDFs, OS images, vintage CD/DVD software, chiptune and keygen music, curated YouTube mirrors, and audiobooks. Curated and served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) drawing about 30 W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.",
-      "keywords": "digital archive, digital preservation, internet archival, offline wikipedia, vintage computing, abandonware, chiptune, keygen music, audiobook archive, YouTube archive, OS archive, homelab, Raspberry Pi cluster, off-grid solar, open knowledge, link rot, bit decay"
+      "author":    { "@id": "https://kunaldawn.com/#kunaldawn" },
+      "creator":   { "@id": "https://kunaldawn.com/#kunaldawn" },
+      "publisher": { "@id": "https://kunaldawn.com/#kunaldawn" },
+      "inLanguage": "en",
+      "description": "A home-grown mirror of the public internet — 12 TB across seven sub-archives: offline wikis, vintage computing PDFs, OS images, vintage CD/DVD software, chiptune and keygen music, curated YouTube mirrors, and audiobooks. Curated and served from an archive in a home (2x Raspberry Pi 4 + N150 mini-PC) drawing about 30 W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.",
+      "keywords": "digital archive, digital preservation, internet archival, offline wikipedia, vintage computing, abandonware, chiptune, keygen music, audiobook archive, YouTube archive, OS archive, home archive, archive in a home, Raspberry Pi cluster, off-grid solar, open knowledge, link rot, bit decay"
     }
   </script>
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
+      "@id": "https://kunaldawn.com/#page",
       "name": "KD's Homebrew Digital Archive",
       "url": "https://kunaldawn.com/",
+      "isPartOf": { "@id": "https://kunaldawn.com/#website" },
+      "author":   { "@id": "https://kunaldawn.com/#kunaldawn" },
+      "creator":  { "@id": "https://kunaldawn.com/#kunaldawn" },
+      "mainEntity": { "@id": "https://kunaldawn.com/#kunaldawn" },
       "description": "12 TB across seven sub-archives preserving knowledge from across the internet before it disappears. Offline wikis, vintage computing PDFs, OS images, CD/DVD software, chiptune music, curated YouTube mirrors, and audiobooks — open access, freely shared.",
       "about": {
         "@type": "Thing",
@@ -138,7 +183,7 @@
           "@type": "WebSite",
           "name": "Wiki Archive",
           "url": "https://wiki.kunaldawn.com/",
-          "description": "36 offline wiki snapshots in ZIM format — Wikipedia (26.6M articles), Stack Overflow (66M articles), ArchWiki, iFixit (862K repair guides), Project Gutenberg, medical references, and survival knowledge."
+          "description": "119 offline wiki snapshots in ZIM format. Wikipedia family (Wikipedia 26.6M articles, Wiktionary 8.6M, Wikisource 4.9M, Wikispecies 1.7M, Wikiquote, Wikibooks). 20+ Stack Exchange sites (Stack Overflow 66M, Super User 2.4M, Server Fault 1.5M, Ask Ubuntu 1.9M, Unix & Linux 1M, MathOverflow 616K, Software Engineering, Code Golf, Cryptography, Computer Science, Retrocomputing, Astronomy, Amateur Radio, Network Engineering, Webmasters, Woodworking, and more). 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Zig, Bash, Git, Docker, CMake, Qt, PostgreSQL, MariaDB, SQLite, Redis, PyTorch, TensorFlow, scikit-learn, OpenGL, Vulkan, CSS, HTML, HTTP, Web APIs, and more). 12 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, Geosciences, Business, Statistics, Workforce, K-12). Khan Academy (580K), iFixit (862K repair guides), Project Gutenberg (4.2M books), ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia (473K), MedlinePlus, NHS Medicines A-Z, Libre Pathology, WikiCiv, Food for Preppers, USDA Home Canning, Water Treatment, Post Disaster Resources, ProofWiki, The Stacks Project, RationalWiki, Explain XKCD, xkcd, Appropedia, CIA World Factbook, and more."
         },
         {
           "@type": "WebSite",
@@ -180,7 +225,7 @@
     }
   </script>
 
-  <title>KD's Homebrew Digital Archive — 12 TB Preserved on a Home-grown Homelab</title>
+  <title>Kunal Dawn — KD's Homebrew Digital Archive</title>
   <!-- Self-hosted fonts. Inter is a variable font (covers 300/400/600 in
        one file). Both files are latin subset only; the page never serves
        cyrillic/greek/vietnamese, so the extra Google subsets just
@@ -3929,7 +3974,7 @@
         </div>
         <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
       </div>
-      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from a homelab cluster: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 36 offline wikis including Wikipedia, Stack Overflow, ArchWiki, iFixit, and Project Gutenberg; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
+      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix & Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 12 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
       <h2 class="entry-gate-title" id="entry-gate-title">KD's Homebrew Digital Archive</h2>
 
       <div class="entry-terms" role="group" aria-label="Terms">
@@ -4253,8 +4298,9 @@
         section('S U B - A R C H i V E S');
         if (!isMobile) {
           // Box-table: 56 cols total.
-          //   bars(4) + name(10) + size(9) + desc(33) = 56
-          const aw = 10, bw = 9, cw = 33;
+          //   bars(4) + name(10) + size(10) + desc(32) = 56
+          //   (size col widened from 9 to 10 so "119 ZIMs" fits.)
+          const aw = 10, bw = 10, cw = 32;
           const cell = (s, w) => {
             const t = (s.length > w - 2 ? s.slice(0, w - 2) : s);
             return ' ' + t + R(' ', w - 1 - t.length);
@@ -4265,14 +4311,14 @@
           addRaw('tk-ok',  tHead());
           addRaw('tk-ok',  tRow('ARCHiVE', 'SiZE', 'KiND'));
           addRaw('tk-ok',  tSep());
-          addRaw('',       tRow('wiki',     '36 ZIMs', 'wikipedia + 35 more, offline'));
-          addRaw('',       tRow('pdf',      '800 GB',  '23,000+ documents in ~800 GB'));
-          addRaw('',       tRow('os',       '244 GB',  'images, drivers, install media'));
-          addRaw('',       tRow('iso',      '27 GB',   'vintage cd/dvd, abandonware'));
-          addRaw('',       tRow('chiptune', '22 GB',   'mod/xm/s3m/it, keygen music'));
-          addRaw('',       tRow('tube',     '228 GB',  'cs/eng/math/physics deep-dives'));
-          addRaw('',       tRow('audio',    'audiobk', 'fiction + lectures + classics'));
-          addRaw('',       tRow('retro',    'orphans', 'software/manuals saved from 404'));
+          addRaw('',       tRow('wiki',     '119 ZIMs', 'wikipedia, stackex + 117 more'));
+          addRaw('',       tRow('pdf',      '800 GB',   '23K+ docs, vintage mags + more'));
+          addRaw('',       tRow('os',       '244 GB',   'images, drivers, install media'));
+          addRaw('',       tRow('iso',      '27 GB',    'vintage cd/dvd, abandonware'));
+          addRaw('',       tRow('chiptune', '22 GB',    'mod/xm/s3m/it, keygen music'));
+          addRaw('',       tRow('tube',     '228 GB',   'cs/eng/math/physics deep-dives'));
+          addRaw('',       tRow('audio',    'audiobk',  'fiction + lectures + classics'));
+          addRaw('',       tRow('retro',    'orphans',  'software saved from 404 errors'));
           addRaw('tk-ok',  tHead());
         } else {
           // Mobile: per-archive blocks of label+meta in prose.
@@ -4281,7 +4327,7 @@
             prose('tk-dim', kind);
             blank();
           };
-          block('wiki',     '36 ZIMs',  'wikipedia + 35 more, offline');
+          block('wiki',     '119 ZIMs', 'wikipedia, stackex, devdocs + more');
           block('pdf',      '800 GB',   '23,000+ documents');
           block('os',       '244 GB',   'images, drivers, install media');
           block('iso',      '27 GB',    'vintage cd/dvd, abandonware');
@@ -7024,6 +7070,12 @@
           <div class="badge">██ KUNAL DAWN ██</div>
           <div>
             <h1>KD's Homebrew Digital Archive</h1>
+            <p class="byline" rel="author"
+               style="margin:6px 0 0;font-family:'Share Tech Mono',monospace;font-size:12px;letter-spacing:0.6px;color:#a8d8c4;">
+              by <a href="https://kunaldawn.com/#kunaldawn" rel="author"
+                    style="color:var(--neon);text-decoration:none;border-bottom:1px dotted rgba(0,255,150,0.4);">Kunal Dawn</a>
+              · maintainer · home archivist
+            </p>
             <p class="lead">Preserve • Share • Rebuild</p>
           </div>
         </div>
@@ -7033,8 +7085,7 @@
         <section class="panel" aria-labelledby="panel-heading">
           <div class="header-line">
             <div>
-              <div class="tag">// Maintained by kunaldawn //</div>
-              <h2 id="panel-heading" style="margin:8px 0 0;font-size:20px;color:#cfeee0;">Featured Archives</h2>
+              <h2 id="panel-heading" style="margin:0;font-size:20px;color:#cfeee0;">Featured Archives</h2>
             </div>
           </div>
 
@@ -7042,7 +7093,7 @@
             <div class="grid-cards">
               <a class="card" href="https://wiki.kunaldawn.com" rel="noopener" target="_blank" onclick="event.preventDefault(); openFeaturedArchive('wiki');">
                 <h4><span class="card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><ellipse cx="12" cy="12" rx="4" ry="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg></span><span class="card-title">Wiki Archive</span><span class="card-count" data-archive-id="wiki">—</span></h4>
-                <div class="muted">36 offline wikis in ZIM format — Wikipedia, Stack Overflow, ArchWiki, iFixit, Project Gutenberg, medical references, and survival knowledge. The internet's essential references, preserved for offline access.</div>
+                <div class="muted">119 offline wikis in ZIM format — the Wikipedia family (Wiktionary 8.6M, Wikisource 4.9M, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow 66M, Super User, Server Fault, MathOverflow, Ask Ubuntu), 30+ DevDocs developer references (C/C++/JS/Python/Go/Bash/Git/Docker/PyTorch/Qt), 12 LibreTexts academic libraries (Math, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences), Khan Academy, iFixit (862K), Project Gutenberg (4.2M), ArchWiki, Gentoo Wiki, MDWiki medical, WikiCiv survival, RationalWiki, Explain XKCD, and more.</div>
               </a>
 
               <a class="card" href="https://pdf.kunaldawn.com" rel="noopener" target="_blank" onclick="event.preventDefault(); openFeaturedArchive('pdf');">
@@ -7123,7 +7174,7 @@
               </div>
               <div class="info-body">
                 <small class="muted" style="font-size: 11px; opacity: 0.8; line-height: 1.6;">
-                  The archive runs on a small homelab cluster: <strong>two Raspberry Pi 4 (8 GB)</strong>
+                  The archive runs on a small home server cluster: <strong>two Raspberry Pi 4 (8 GB)</strong>
                   nodes for the services and scraping, plus an <strong>N150 mini-PC (12 GB)</strong> for
                   heavier indexing. They share a <strong>5-port switch</strong> and the whole rig is fed
                   from a single <strong>65 W USB-C power adapter</strong>. Storage is
@@ -7141,7 +7192,7 @@
                 -->
                 <video class="infra-media" src="/infra.mp4" poster="/infra-poster.webp"
                   width="480" height="270" autoplay loop muted playsinline preload="none"
-                  aria-label="Homelab hardware stack"></video>
+                  aria-label="Home archive hardware stack"></video>
               </div>
             </div>
 
