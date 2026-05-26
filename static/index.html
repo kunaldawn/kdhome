@@ -996,6 +996,33 @@
       border-left: 1px solid rgba(0, 255, 150, 0.1);
     }
 
+    /* Two-line visit counter: count + tiny label, humans (neon) over bots
+       (muted). 2-col grid right-aligns the numbers so the labels line up,
+       keeping the tray footprint narrow. */
+    .visit-widget {
+      display: grid;
+      grid-template-columns: auto auto;
+      column-gap: 5px;
+      row-gap: 1px;
+      align-content: center;
+      line-height: 1.1;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .visit-widget .vw-num {
+      text-align: right;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .visit-widget .vw-label {
+      align-self: center;
+      font-size: 8px;
+      letter-spacing: 0.5px;
+      opacity: 0.5;
+    }
+    .visit-widget .vw-human { color: var(--neon); }
+    .visit-widget .vw-num.vw-human { text-shadow: 0 0 6px rgba(0, 255, 150, 0.35); }
+    .visit-widget .vw-bot { color: var(--muted); }
+
     /* Minimize / restore animations (non-centered windows: .vault, .music-window) */
     @keyframes minimizeToTaskbar {
       0% {
@@ -1596,9 +1623,8 @@
         letter-spacing: 0.5px;
       }
 
-      #visit-count {
-        font-size: 9px;
-      }
+      .visit-widget .vw-num { font-size: 9.5px; }
+      .visit-widget .vw-label { font-size: 7px; }
 
       .taskbar-item span:last-child {
         max-width: 120px;
@@ -4098,17 +4124,15 @@
 <body class="entry-gate-locked">
   <script>
     /* Apply glass-effect preference before any paint — saved by Settings.
-       Defaults to OFF on both mobile and desktop (panels stay translucent
-       but the backdrop-filter blur is killed for GPU/heat reasons). User
-       pref always wins once set. The "no-transparency" class name is
-       historical — it now toggles glass blur, not the translucency itself. */
+       Defaults to ON; the blur is only killed when the user explicitly turns
+       it off (GPU/heat opt-out). User pref always wins once set. The
+       "no-transparency" class name is historical — it now toggles glass blur,
+       not the translucency itself. */
     (function () {
       try {
         var pref = localStorage.getItem('kd:prefs:transparency');
-        var off;
-        if (pref === 'on') off = false;
-        else off = true;
-        if (off) document.body.classList.add('no-transparency');
+        // On by default: only the explicit 'off' opt-out disables the blur.
+        if (pref === 'off') document.body.classList.add('no-transparency');
       } catch (e) {}
     })();
     /* If the user already accepted the entry-gate terms in a previous
@@ -7039,7 +7063,7 @@
           <div class="settings-row">
             <div class="settings-row-text">
               <div class="settings-row-label">Glass effect</div>
-              <div class="settings-row-help">Adds frosted-glass blur behind panels. Off by default — the blur is the expensive part and can heat the device. Panels stay translucent either way.</div>
+              <div class="settings-row-help">Adds frosted-glass blur behind panels. On by default; turn off to save GPU/battery (the blur is the expensive part and can heat the device). Panels stay translucent either way.</div>
             </div>
             <div class="settings-switch" id="settings-transparency-switch" role="switch" aria-checked="true" tabindex="0" onclick="toggleTransparencyPref()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleTransparencyPref();}"></div>
           </div>
@@ -7247,7 +7271,10 @@
       </div>
 
       <div class="system-tray">
-        <span id="visit-count" style="color: #7fd1b3; font-family: 'Share Tech Mono', monospace; font-size: 11px;" title="Humans · filtered bots">-- · --</span>
+        <div id="visit-count" class="visit-widget" title="Humans · filtered bots">
+          <span id="vc-humans" class="vw-num vw-human">--</span><span class="vw-label vw-human">human</span>
+          <span id="vc-bots" class="vw-num vw-bot">--</span><span class="vw-label vw-bot">bot</span>
+        </div>
         <span style="color: rgba(0,255,150,0.2);">|</span>
         <span id="clock" style="color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 12px;">00:00:00</span>
       </div>
@@ -7783,7 +7810,10 @@
             .then(r => r.ok ? r.json() : null)
             .then(data => {
               if (el && data && data.humans != null && data.bots != null) {
-                el.textContent = abbrev(data.humans) + ' human · ' + abbrev(data.bots) + ' bot';
+                const h = document.getElementById('vc-humans');
+                const b = document.getElementById('vc-bots');
+                if (h) h.textContent = abbrev(data.humans);
+                if (b) b.textContent = abbrev(data.bots);
                 el.title = data.humans.toLocaleString() + ' humans · ' +
                            data.bots.toLocaleString() + ' bots filtered';
                 // Let the cat react to milestone crossings (human count only).
