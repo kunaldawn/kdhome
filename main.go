@@ -560,9 +560,10 @@ func staticHandler(fallback http.Handler) http.HandlerFunc {
 		}
 
 		// Server-side visit counter. Counts every GET to the index page
-		// (including conditional 304 responses below) so cache, bfcache,
-		// no-JS clients, and bots are all reflected. Skips HEAD on purpose
-		// — HEAD is metadata-only, not a real page view.
+		// (including conditional 304 responses below) so cache, bfcache, and
+		// no-JS clients are all reflected; isBot(UA) routes each hit into the
+		// human or bot bucket. Skips HEAD on purpose — HEAD is metadata-only,
+		// not a real page view.
 		if r.Method == http.MethodGet &&
 			(r.URL.Path == "/" || r.URL.Path == "/index.html") {
 			recordVisit(isBot(r.UserAgent()))
