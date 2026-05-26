@@ -2829,7 +2829,9 @@
       position: absolute;
       top: 100%;
       left: 50%;
-      transform: translateX(-50%);
+      /* --arrow-shift counter-moves the pointer when the bubble is nudged off
+         a corner so it keeps aiming at the cat (set by positionBubble()). */
+      transform: translateX(calc(-50% + var(--arrow-shift, 0px)));
       border-left: 4px solid transparent;
       border-right: 4px solid transparent;
       border-top: 4px solid var(--neon);
@@ -9414,8 +9416,42 @@
 
           // ─── UI Helpers ───
 
-          showMessage(text) { this.bubble.textContent = text; this.bubble.classList.add('show'); }
+          showMessage(text) {
+            this.bubble.textContent = text;
+            this.bubble.classList.add('show');
+            this.positionBubble();
+          }
           hideMessage() { this.bubble.classList.remove('show'); }
+
+          // Keep the speech bubble inside the viewport. It's centred over the
+          // cat, so when the cat parks in a bottom corner half the bubble would
+          // spill off-screen. Measure its real (post-flip) box and nudge it back
+          // with margin-left; counter-shift the pointer so it still aims at the
+          // cat. marginLeft lives in the sprite's local space, which is mirrored
+          // when the cat faces left, hence the `* flip`.
+          positionBubble() {
+            const b = this.bubble;
+            if (!b || !b.classList.contains('show')) return;
+            // Compute from stable layout geometry — the cat's own box (centre)
+            // and the bubble's layout width — so the maths don't depend on the
+            // bubblePop scale animation or the facing flip mid-frame. The sprite
+            // is width:100% of the cat with transform-origin center, so the
+            // bubble's natural (un-nudged) centre is the cat's centre.
+            const catRect = this.cat.getBoundingClientRect();
+            const catCenter = catRect.left + catRect.width / 2;
+            const bw = b.offsetWidth;
+            const margin = 6;
+            const naturalLeft = catCenter - bw / 2;
+            const naturalRight = catCenter + bw / 2;
+            let shift = 0;
+            if (naturalLeft < margin) shift = margin - naturalLeft;                          // push right
+            else if (naturalRight > window.innerWidth - margin) shift = (window.innerWidth - margin) - naturalRight; // push left
+            // marginLeft lives in the sprite's local space, mirrored when the cat
+            // faces left; the arrow rides the bubble, so counter-shift it by -shift.
+            const flip = this.direction < 0 ? -1 : 1;
+            b.style.marginLeft = (shift * flip) + 'px';
+            b.style.setProperty('--arrow-shift', (-shift) + 'px');
+          }
 
           spawnEmote(char, color, lifetime) {
             const el = document.createElement('div');
