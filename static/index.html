@@ -8216,6 +8216,20 @@
               return;
             }
 
+            // Fullscreen/maximized mode: occasionally relocate to a bottom-bar
+            // corner (above Start / clock) between in-place activities. Kept
+            // infrequent — and never two patrols in a row — so the cat mostly
+            // settles at a corner and only drifts across now and then, instead
+            // of ping-ponging. Timer-driven, so it works without a pointer.
+            if (this.hasMaximizedWindow() && !this._justPatrolled && Math.random() < 0.15) {
+              this._justPatrolled = true;
+              const moveDur = this.moveToCorner();
+              const gap = Math.random() * 2500 + 2000;
+              this.behaviorTimer = setTimeout(() => this.scheduleNext(), moveDur + gap);
+              return;
+            }
+            this._justPatrolled = false;
+
             const next = this.getNextState();
             this.executeBehavior(next);
 
@@ -8786,15 +8800,27 @@
               if (document.hidden) return;
               if (this.isMoving) return;
               if (this.hasMaximizedWindow()) {
+                // Maximized mode owns positioning: settle onto the nearest
+                // bottom-bar corner (above Start / clock); the patrol loop then
+                // takes over. Always return — the music-window escape below has
+                // no free side to dart to when a window covers the viewport
+                // (a maximized music window would otherwise strand the loop).
+                const curR = parseInt(this.cat.style.right) || 30;
                 const curB = parseInt(this.cat.style.bottom) || 50;
-                if (curB > 80) {
+                const start = this.maximizedCornerTarget('start');
+                const clock = this.maximizedCornerTarget('clock');
+                const target = Math.abs(curR - start.right) <= Math.abs(curR - clock.right) ? start : clock;
+                if (Math.abs(curR - target.right) > 24 || curB > 80) {
                   this.cancelBehaviorLoop();
                   this.cancelFollow();
-                  this.cat.style.transition = 'bottom 0.3s ease-out';
-                  this.cat.style.bottom = '50px';
-                  setTimeout(() => { this.cat.style.transition = ''; this.restartBehaviorLoop(800); }, 320);
-                  return;
+                  this.cat.style.transition = 'all 0.4s ease-out';
+                  this.direction = target.right > curR ? -1 : 1;
+                  this.updateDirection();
+                  this.cat.style.right = target.right + 'px';
+                  this.cat.style.bottom = target.bottom + 'px';
+                  setTimeout(() => { this.cat.style.transition = ''; this.restartBehaviorLoop(800); }, 420);
                 }
+                return;
               }
               if (!this.isOnMusicWindow()) return;
               this.cancelBehaviorLoop();
@@ -8912,10 +8938,12 @@
 
           moveWalk(dur) {
             if (this.isMoving) return;
+            // In fullscreen/maximized mode every move settles to a home corner.
+            if (this.hasMaximizedWindow()) { this.moveToCorner(); return; }
             this.isMoving = true;
             const distance = Math.random() * 300 + 100;
             const currentRight = parseInt(this.cat.style.right) || 30;
-            let currentBottom = parseInt(this.cat.style.bottom) || 50;
+            const currentBottom = parseInt(this.cat.style.bottom) || 50;
             // Bias direction away from the left edge so the cat doesn't burn
             // half its walks clamped at right=30 (the bottom-right corner).
             const maxR = window.innerWidth - 100;
@@ -8924,18 +8952,7 @@
             else if (currentRight >= maxR - 20) walkDir = -1;  // near left edge → move right
             else                          walkDir = Math.random() < 0.5 ? 1 : -1;
             const rawRight = Math.max(30, Math.min(maxR, currentRight + (walkDir * distance)));
-            // When a window is maximized force the walk to happen in the
-            // taskbar strip; if the cat had drifted higher we also snap it
-            // down before transitioning so the move is a clean horizontal slide.
-            let targetBottom = currentBottom;
-            if (this.hasMaximizedWindow() && currentBottom > 60) {
-              this.cat.style.transition = 'none';
-              this.cat.style.bottom = '50px';
-              void this.cat.offsetWidth; // commit before re-enabling transitions
-              currentBottom = 50;
-              targetBottom = 50;
-            }
-            const safe = this.avoidMusicWindow(rawRight, targetBottom);
+            const safe = this.avoidMusicWindow(rawRight, currentBottom);
             const newRight = safe.right;
             this.direction = newRight > currentRight ? -1 : 1;
             this.setState('walking'); // setState calls updateDirection
@@ -8947,6 +8964,8 @@
 
           moveWander(dur) {
             if (this.isMoving) return;
+            // In fullscreen/maximized mode every move settles to a home corner.
+            if (this.hasMaximizedWindow()) { this.moveToCorner(); return; }
             this.isMoving = true;
             const currentRight = parseInt(this.cat.style.right) || 30;
             const rawX = Math.random() * (window.innerWidth - 130) + 30;
@@ -8962,6 +8981,66 @@
             this.cat.style.bottom = targetY + 'px';
             this.animateFrames(200, dur);
             setTimeout(() => { this.isMoving = false; this.cat.style.transition = ''; }, dur);
+          }
+
+          // ─── Fullscreen / maximized "corner" home bases ───
+          // When a window is maximized the cat treats the two bottom-bar
+          // corners — above the Start button (bottom-left) and above the clock
+          // (bottom-right) — as home bases. Returns a CSS right/bottom pair
+          // centring the cat over the requested anchor, just above the taskbar.
+          // Falls back to fixed edge insets if the anchor element is missing.
+          maximizedCornerTarget(which) {
+            const catRect = this.cat.getBoundingClientRect();
+            const catW = catRect.width || 80;
+            const bottom = 50; // just above the 44px taskbar
+            const minR = 8, maxR = Math.max(minR, window.innerWidth - catW - 8);
+            const anchor = which === 'start'
+              ? document.querySelector('.start-button')
+              : document.getElementById('clock');
+            if (anchor) {
+              const r = anchor.getBoundingClientRect();
+              if (r.width) {
+                const centerX = r.left + r.width / 2;
+                const right = window.innerWidth - centerX - catW / 2;
+                return { right: Math.max(minR, Math.min(maxR, right)), bottom };
+              }
+            }
+            // Fallback: Start hugs the left edge, clock hugs the right edge.
+            return which === 'start' ? { right: maxR, bottom } : { right: minR, bottom };
+          }
+
+          // Walk to one of the two home corners. Prefers the corner the cat is
+          // NOT currently near so it visibly patrols the bottom bar; 25% of the
+          // time it re-settles on a random corner for variety. Timer-driven, so
+          // it animates without any pointer (works on touch devices). Returns
+          // the movement duration so the behavior loop can reschedule after it.
+          moveToCorner() {
+            if (this.isMoving) return 0;
+            const dur = 2200;
+            const currentRight = parseInt(this.cat.style.right) || 30;
+            const start = this.maximizedCornerTarget('start');
+            const clock = this.maximizedCornerTarget('clock');
+            let target;
+            if (Math.random() < 0.75) {
+              target = Math.abs(currentRight - start.right) > Math.abs(currentRight - clock.right) ? start : clock;
+            } else {
+              target = Math.random() < 0.5 ? start : clock;
+            }
+            this.isMoving = true;
+            this.direction = target.right > currentRight ? -1 : 1;
+            this.setState('walking'); // setState calls updateDirection
+            this.cat.style.transition = `right ${dur}ms ease-in-out, bottom ${dur}ms ease-in-out`;
+            this.cat.style.right = target.right + 'px';
+            this.cat.style.bottom = target.bottom + 'px';
+            this.animateFrames(200, dur);
+            setTimeout(() => {
+              this.isMoving = false;
+              this.cat.style.transition = '';
+              // Brief settle so arriving at the corner reads as "parking".
+              this.setState('sitting');
+              this.animate();
+            }, dur);
+            return dur;
           }
 
           followPoint(x, y) {
