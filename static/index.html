@@ -4370,21 +4370,9 @@
         };
 
         // ─── TITLE BANNER ───────────────────────────────
-        // Big ASCII "K D" logo (7 rows × 19 cols, centered inside box).
-        const KD_LOGO = [
-          '##    ##   #######',
-          '##   ##    ##   ##',
-          '##  ##     ##   ##',
-          '####       ##   ##',
-          '##  ##     ##   ##',
-          '##   ##    ##   ##',
-          '##    ##   #######',
-        ];
         add('tk-ok',  hr2());
         add('tk-ok',  rowC(''));
-        for (const ln of KD_LOGO) add('tk-ok', rowC(ln));
-        add('tk-ok',  rowC(''));
-        add('tk-ok',  rowC('K D  ::  HOMEBREW DIGITAL ARCHIVE'));
+        add('tk-ok',  rowC('KD\'s HOMEBREW DIGITAL ARCHIVE'));
         add('tk-ok',  rowC(''));
         add('tk-ok',  hr2());
         add('tk-dim', rowC('-=[  proudly presents  ]=-'));
@@ -4394,9 +4382,7 @@
         // ─── RELEASE INFO TABLE ─────────────────────────
         blank();
         add('tk-ok', hr2());
-        addRaw('', infoRow('SUPPLiER',   'KUNAL DAWN'));
         addRaw('', infoRow('ARCHiViST',  'KUNAL DAWN'));
-        addRaw('', infoRow('PACKAGER',   'KUNAL DAWN'));
         addRaw('', infoRow('PROTECTiON', 'NONE / OPEN'));
         addRaw('', infoRow('FORMAT',     'WEB / HTTPS'));
         addRaw('', infoRow('SiZE',       '~12.5 TB'));
@@ -4452,10 +4438,10 @@
             return c.length >= CAT_COL ? c.slice(0, CAT_COL) : c + R(' ', CAT_COL - c.length);
           };
           addRaw('tk-ok', catCell(0) + rackTB);
-          addRaw('tk-ok', catCell(1) + rackRow('pi . pi . n150'));
+          addRaw('tk-ok', catCell(1) + rackRow('pi4 . pi4 . n150'));
           addRaw('tk-ok', catCell(2) + rackMD);
-          addRaw('tk-ok', catCell(3) + rackRow('hdd . hdd . hdd . hdd'));
-          addRaw('tk-ok', catCell(4) + rackRow('ssd . ssd . ext 12T'));
+          addRaw('tk-ok', catCell(3) + rackRow('hdd 2TB . hdd 2TB . hdd 2TB . hdd 2TB'));
+          addRaw('tk-ok', catCell(4) + rackRow('ssd 2TB . ssd 2TB . ext 12TB'));
           addRaw('tk-ok', catCell(5) + rackTB);
         } else {
           // Mobile: stacked — small cat centered, then rack box.
@@ -4464,7 +4450,7 @@
           add('tk-ok', center('> ^ <'));
           blank();
           add('tk-ok', hr2());
-          add('tk-ok', rowC('pi . pi . n150'));
+          add('tk-ok', rowC('pi4 . pi4 . n150'));
           add('tk-ok', rowC('5-port switch . 65W'));
           add('tk-ok', hr1());
           add('tk-ok', rowC('4x 2TB hdd'));
@@ -4600,8 +4586,6 @@
         add('tk-ok', rowC('LAST UPDATED   ::  2026-05-12'));
         add('tk-ok', rowC(''));
         add('tk-ok', hr2());
-        blank();
-        add('tk-dim', center('-=*=- if you like this archive, BUY a hard drive -=*=-'));
         blank();
 
         // ─── LOOP MARKER ────────────────────────────────
@@ -7302,7 +7286,7 @@
       <div class="vault-content">
       <header>
         <div class="logo" style="width:100%;">
-          <div class="badge">██ KUNAL DAWN ██</div>
+          <div class="badge">██ KD/HOMEBREW ██</div>
           <div>
             <h1>KD's Homebrew Digital Archive</h1>
             <p class="byline" rel="author"
