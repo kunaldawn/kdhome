@@ -33,9 +33,8 @@
     var autoCycle = true;
     var autoTimer = null;
 
-    // Default preset shown on first load. Picked because the oscilloscope
-    // pairs cleanly with tracker chiptune waveforms and isn't visually noisy.
-    var DEFAULT_PRESET_KEY = '_Mig_Oscilloscope008';
+    // Default preset shown on first load.
+    var DEFAULT_PRESET_KEY = 'martin - chain breaker';
 
     try {
         if (window.localStorage) {
