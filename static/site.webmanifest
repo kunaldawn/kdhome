@@ -4,7 +4,7 @@
   "description": "A home-grown mirror of the public internet. 12 TB across 7 sub-archives — 36 offline wikis, 23,000+ vintage computing PDFs, OS images, vintage CD/DVDs, chiptunes, YouTube mirrors, and audiobooks — served from a homelab cluster (2x Raspberry Pi 4 + N150 mini-PC) on ~30 W off-grid solar. A shelf in a house, not a rack in a data centre.",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "background_color": "#071013",
   "theme_color": "#071013",
   "icons": [
