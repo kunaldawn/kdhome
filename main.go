@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -174,6 +175,44 @@ func initVisitDB(dataDir string) {
 	log.Printf("[VISITS] initialized — total: %d", count)
 }
 
+// botUA matches self-declaring crawlers, monitors, HTTP libraries, and
+// link-preview fetchers. It's a deny-list: real browser User-Agents carry none
+// of these tokens and fall through to "human". Grouped only for maintenance —
+// order within the alternation is irrelevant. All tokens are literal (no regexp
+// metacharacters), so none need escaping.
+var botUA = regexp.MustCompile(`(?i)` + strings.Join([]string{
+	// generic
+	"bot", "crawl", "spider", "slurp", "scrape",
+	// AI / research
+	"gptbot", "oai-searchbot", "chatgpt", "claudebot", "anthropic-ai",
+	"ccbot", "perplexitybot", "google-extended", "bytespider", "amazonbot",
+	"applebot", "diffbot", "cohere-ai", "imagesiftbot", "omgili",
+	// search
+	"googlebot", "bingbot", "duckduckbot", "baiduspider", "yandexbot",
+	// SEO
+	"ahrefsbot", "semrushbot", "mj12bot", "dotbot", "dataforseo",
+	// monitors
+	"uptimerobot", "pingdom", "statuscake", "site24x7",
+	// HTTP libs / headless
+	"curl", "wget", "libwww", "python-requests", "go-http-client", "okhttp",
+	"java/", "node-fetch", "axios", "headlesschrome", "phantomjs",
+	// link preview
+	"facebookexternalhit", "twitterbot", "slackbot", "discordbot",
+	// NOTE: "whatsapp" deliberately excluded — WhatsApp's in-app browser
+	// (a real human) shares the "WhatsApp/" UA token with its link-unfurl
+	// bot, so matching it would undercount real visitors.
+	"telegrambot", "linkedinbot", "embedly", "redditbot",
+}, "|"))
+
+// isBot reports whether a request's User-Agent looks automated. An empty or
+// whitespace-only UA counts as a bot (scripts that send no UA).
+func isBot(ua string) bool {
+	if strings.TrimSpace(ua) == "" {
+		return true
+	}
+	return botUA.MatchString(ua)
+}
+
 func recordVisit() {
 	if visitDB == nil {
 		return
@@ -209,6 +248,7 @@ func recordArchiveClick(id string) {
 // archiveClicksHandler serves both reads and writes:
 //   - GET / HEAD → {"counts": {id: n, ...}} for all known archive IDs.
 //   - POST {"id":"<id>"} → increments that archive's counter, returns 204.
+//
 // POST is fire-and-forget from the client (sendBeacon-style); on unknown
 // id it 404s so typos surface in dev. The body is intentionally tiny so a
 // 1 KiB read cap is plenty.
