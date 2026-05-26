@@ -1,4 +1,7 @@
 .claude/
 .playwright*/
-docs/superpowers/
+# ignore all except plans and specs
+docs/superpowers/*
+docs/superpowers/!plans/
+docs/superpowers/!specs/
 data/*
