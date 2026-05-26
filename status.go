@@ -50,11 +50,12 @@ var (
 
 // probeState holds the per-archive debounce counters. effectiveOK is the
 // reported (debounced) status; consecFails counts failures since the last
-// success. State is in-memory and resets on restart, with archives assumed
-// up until proven down.
+// success; seenSuccess records whether the archive has ever responded OK since
+// the process started. State is in-memory and resets on restart.
 type probeState struct {
 	consecFails int
 	effectiveOK bool
+	seenSuccess bool
 }
 
 var (
@@ -64,22 +65,26 @@ var (
 
 // debounceProbe folds a single raw probe result into the archive's running
 // state and returns the effective status. A success resets the failure count
-// and reports up immediately; failures only flip the archive down once
-// failureThreshold consecutive failures accumulate.
+// and reports up immediately. Failures only flip an *established* archive down
+// once failureThreshold consecutive failures accumulate — but an archive that
+// has never succeeded (no "up" baseline to protect, e.g. a dead DNS name right
+// after a restart) is reported down on its first failure rather than showing a
+// misleading "online".
 func debounceProbe(id string, rawOK bool) bool {
 	probeStateMu.Lock()
 	defer probeStateMu.Unlock()
 	st := probeStates[id]
 	if st == nil {
-		st = &probeState{effectiveOK: true} // optimistic until proven down
+		st = &probeState{}
 		probeStates[id] = st
 	}
 	if rawOK {
 		st.consecFails = 0
 		st.effectiveOK = true
+		st.seenSuccess = true
 	} else {
 		st.consecFails++
-		if st.consecFails >= failureThreshold {
+		if st.consecFails >= failureThreshold || !st.seenSuccess {
 			st.effectiveOK = false
 		}
 	}
