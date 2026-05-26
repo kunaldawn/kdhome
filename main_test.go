@@ -1,6 +1,14 @@
 package main
 
-import "testing"
+import (
+	"database/sql"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"sync/atomic"
+	"testing"
+	"time"
+)
 
 func TestIsBot(t *testing.T) {
 	cases := []struct {
@@ -39,5 +47,101 @@ func TestIsBot(t *testing.T) {
 				t.Errorf("isBot(%q) = %v, want %v", c.ua, got, c.want)
 			}
 		})
+	}
+}
+
+func TestVisitHandlerJSON(t *testing.T) {
+	atomic.StoreInt64(&humanCount, 7)
+	atomic.StoreInt64(&botCount, 3)
+	req := httptest.NewRequest(http.MethodGet, "/api/visit", nil)
+	rec := httptest.NewRecorder()
+	visitHandler(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if got, want := rec.Body.String(), `{"humans":7,"bots":3}`; got != want {
+		t.Fatalf("body = %q, want %q", got, want)
+	}
+}
+
+func TestInitVisitDBResetAndHydrate(t *testing.T) {
+	tmp := t.TempDir()
+
+	// Seed a pre-split DB shaped like production: visit_count(id, n) with a
+	// non-zero total and user_version still 0.
+	seed, err := sql.Open("sqlite3", filepath.Join(tmp, "visits.db"))
+	if err != nil {
+		t.Fatalf("open seed: %v", err)
+	}
+	if _, err := seed.Exec(`CREATE TABLE visit_count (id INTEGER PRIMARY KEY CHECK (id = 1), n INTEGER NOT NULL DEFAULT 0)`); err != nil {
+		t.Fatalf("seed create: %v", err)
+	}
+	if _, err := seed.Exec(`INSERT INTO visit_count (id, n) VALUES (1, 500)`); err != nil {
+		t.Fatalf("seed insert: %v", err)
+	}
+	seed.Close()
+
+	// First boot: migration should zero everything and bump user_version.
+	initVisitDB(tmp)
+	var n, human, bot, uv int64
+	if err := visitDB.QueryRow(`SELECT n, human, bot FROM visit_count WHERE id = 1`).Scan(&n, &human, &bot); err != nil {
+		t.Fatalf("read after init: %v", err)
+	}
+	visitDB.QueryRow(`PRAGMA user_version`).Scan(&uv)
+	if n != 0 || human != 0 || bot != 0 {
+		t.Fatalf("after reset got n=%d human=%d bot=%d, want 0/0/0", n, human, bot)
+	}
+	if uv != 1 {
+		t.Fatalf("user_version = %d, want 1", uv)
+	}
+	if h, b := atomic.LoadInt64(&humanCount), atomic.LoadInt64(&botCount); h != 0 || b != 0 {
+		t.Fatalf("atomics after reset = %d/%d, want 0/0", h, b)
+	}
+
+	// Accumulate, then re-init: the reset must NOT run again, and the atomics
+	// must hydrate from disk.
+	if _, err := visitDB.Exec(`UPDATE visit_count SET human = 5, bot = 3 WHERE id = 1`); err != nil {
+		t.Fatalf("accumulate: %v", err)
+	}
+	visitDB.Close()
+	initVisitDB(tmp)
+	if err := visitDB.QueryRow(`SELECT human, bot FROM visit_count WHERE id = 1`).Scan(&human, &bot); err != nil {
+		t.Fatalf("read after re-init: %v", err)
+	}
+	if human != 5 || bot != 3 {
+		t.Fatalf("reset re-ran: human=%d bot=%d, want 5/3", human, bot)
+	}
+	if h, b := atomic.LoadInt64(&humanCount), atomic.LoadInt64(&botCount); h != 5 || b != 3 {
+		t.Fatalf("atomics after re-init = %d/%d, want 5/3", h, b)
+	}
+}
+
+func TestRecordVisitRoutesToBucket(t *testing.T) {
+	tmp := t.TempDir()
+	initVisitDB(tmp) // fresh DB → human=0, bot=0
+	t.Cleanup(func() { visitDB.Close() })
+
+	recordVisit(false)
+	recordVisit(false)
+	recordVisit(true)
+
+	// recordVisit writes on a goroutine; poll the atomics briefly.
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if atomic.LoadInt64(&humanCount) == 2 && atomic.LoadInt64(&botCount) == 1 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if h := atomic.LoadInt64(&humanCount); h != 2 {
+		t.Fatalf("humanCount = %d, want 2", h)
+	}
+	if b := atomic.LoadInt64(&botCount); b != 1 {
+		t.Fatalf("botCount = %d, want 1", b)
+	}
+	var human, bot int64
+	visitDB.QueryRow(`SELECT human, bot FROM visit_count WHERE id = 1`).Scan(&human, &bot)
+	if human != 2 || bot != 1 {
+		t.Fatalf("db human=%d bot=%d, want 2/1", human, bot)
 	}
 }

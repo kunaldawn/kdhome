@@ -29,7 +29,8 @@ import (
 
 var (
 	visitDB    *sql.DB
-	visitCount int64 // atomic, cached in memory
+	humanCount int64 // atomic, cached in memory
+	botCount   int64 // atomic, cached in memory
 )
 
 // archives mirrors the JS ARCHIVES registry in static/index.html.
@@ -87,28 +88,38 @@ func initVisitDB(dataDir string) {
 		return
 	}
 
-	// One-shot migration: if the legacy per-row `visits` table exists and the
-	// aggregate is still 0, copy the count over so we don't reset to zero on
-	// upgrade. Leaves the old table in place for archival; nothing else
-	// references it.
-	var legacy int
-	visitDB.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='visits'`).Scan(&legacy)
-	if legacy > 0 {
-		var aggregate, legacyCount int64
-		visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&aggregate)
-		visitDB.QueryRow(`SELECT COUNT(*) FROM visits`).Scan(&legacyCount)
-		if aggregate == 0 && legacyCount > 0 {
-			if _, err := visitDB.Exec(`UPDATE visit_count SET n = ? WHERE id = 1`, legacyCount); err != nil {
-				log.Printf("[VISITS] migration update failed: %v", err)
-			} else {
-				log.Printf("[VISITS] migrated %d rows from legacy table to aggregate", legacyCount)
-			}
+	// Add the human/bot split columns. ADD COLUMN errors on the second boot
+	// ("duplicate column name"), which is benign; any other error is real and
+	// would leave the columns absent, so surface it. The old `n` column is
+	// retired — no longer read/written. (col is a fixed constant set here.)
+	for _, col := range []string{"human", "bot"} {
+		if _, err := visitDB.Exec(`ALTER TABLE visit_count ADD COLUMN ` + col + ` INTEGER NOT NULL DEFAULT 0`); err != nil &&
+			!strings.Contains(err.Error(), "duplicate column name") {
+			log.Printf("[VISITS] failed to add column %s: %v", col, err)
 		}
 	}
 
-	var count int64
-	visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&count)
-	atomic.StoreInt64(&visitCount, count)
+	// One-time reset, gated by PRAGMA user_version so restarts never re-zero
+	// accumulating counts. The pre-existing total can't be split (no UA was
+	// ever stored), so the human/bot tally starts clean at the 0 → 1 bump.
+	var userVersion int
+	visitDB.QueryRow(`PRAGMA user_version`).Scan(&userVersion)
+	if userVersion < 1 {
+		if _, err := visitDB.Exec(`UPDATE visit_count SET n = 0, human = 0, bot = 0 WHERE id = 1`); err != nil {
+			log.Printf("[VISITS] reset migration failed: %v", err)
+		} else if _, err := visitDB.Exec(`PRAGMA user_version = 1`); err != nil {
+			// Counters were reset but the gate didn't advance; without this
+			// bump the next restart would reset them again. Surface it.
+			log.Printf("[VISITS] failed to bump user_version after reset: %v", err)
+		} else {
+			log.Printf("[VISITS] reset visit counters to 0 (human/bot split migration)")
+		}
+	}
+
+	var human, bot int64
+	visitDB.QueryRow(`SELECT human, bot FROM visit_count WHERE id = 1`).Scan(&human, &bot)
+	atomic.StoreInt64(&humanCount, human)
+	atomic.StoreInt64(&botCount, bot)
 
 	// ─── Archive click counts ───
 	for _, a := range archives {
@@ -172,7 +183,7 @@ func initVisitDB(dataDir string) {
 		log.Printf("[CLICKS] hydrated %d archive(s)", len(archiveClicks))
 	}
 
-	log.Printf("[VISITS] initialized — total: %d", count)
+	log.Printf("[VISITS] initialized — humans: %d, bots: %d", human, bot)
 }
 
 // botUA matches self-declaring crawlers, monitors, HTTP libraries, and
@@ -213,17 +224,22 @@ func isBot(ua string) bool {
 	return botUA.MatchString(ua)
 }
 
-func recordVisit() {
+func recordVisit(bot bool) {
 	if visitDB == nil {
 		return
 	}
+	col, ctr := "human", &humanCount
+	if bot {
+		col, ctr = "bot", &botCount
+	}
 	go func() {
-		_, err := visitDB.Exec(`UPDATE visit_count SET n = n + 1 WHERE id = 1`)
-		if err != nil {
-			log.Printf("[VISITS] update error: %v", err)
+		// col is from a fixed two-value set (never user input), so building the
+		// SQL by concatenation is safe here.
+		if _, err := visitDB.Exec(`UPDATE visit_count SET ` + col + ` = ` + col + ` + 1 WHERE id = 1`); err != nil {
+			log.Printf("[VISITS] update error (%s): %v", col, err)
 			return
 		}
-		atomic.AddInt64(&visitCount, 1)
+		atomic.AddInt64(ctr, 1)
 	}()
 }
 
@@ -290,7 +306,8 @@ func visitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	fmt.Fprintf(w, `{"count":%d}`, atomic.LoadInt64(&visitCount))
+	fmt.Fprintf(w, `{"humans":%d,"bots":%d}`,
+		atomic.LoadInt64(&humanCount), atomic.LoadInt64(&botCount))
 }
 
 // ─── Middleware & Handlers ───
@@ -548,7 +565,7 @@ func staticHandler(fallback http.Handler) http.HandlerFunc {
 		// — HEAD is metadata-only, not a real page view.
 		if r.Method == http.MethodGet &&
 			(r.URL.Path == "/" || r.URL.Path == "/index.html") {
-			recordVisit()
+			recordVisit(isBot(r.UserAgent()))
 		}
 
 		cf, ok := staticCache[r.URL.Path]
