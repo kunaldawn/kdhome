@@ -89,7 +89,10 @@ var botUA = regexp.MustCompile(`(?i)` + strings.Join([]string{
     `java/`, `node-fetch`, `axios`, `headlesschrome`, `phantomjs`,
     // link preview
     `facebookexternalhit`, `twitterbot`, `slackbot`, `discordbot`,
-    `telegrambot`, `whatsapp`, `linkedinbot`, `embedly`, `redditbot`,
+    // NOTE: "whatsapp" is deliberately excluded — WhatsApp's in-app browser
+    // (a real human) shares the "WhatsApp/" UA token with its link-unfurl
+    // bot, so matching it would undercount real visitors.
+    `telegrambot`, `linkedinbot`, `embedly`, `redditbot`,
 }, `|`))
 
 func isBot(ua string) bool {
