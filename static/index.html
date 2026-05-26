@@ -10124,46 +10124,55 @@
         };
 
         // Maximize/Restore window
-        document.querySelector('.vault .window-btn.maximize')?.addEventListener('click', () => {
+        function maximizeVault(animate) {
+          if (isMaximized) return;
           const vault = document.querySelector('.vault');
-
-          if (!isMaximized) {
-            // Maximize
+          if (animate) {
             vault.style.transition = 'all 0.3s ease';
-            vault.style.position = 'fixed';
-            vault.style.top = '0';
-            vault.style.left = '0';
-            vault.style.right = '0';
-            vault.style.bottom = '44px'; // Leave space for taskbar
-            vault.style.width = '100%';
-            vault.style.maxWidth = '100%';
-            vault.style.height = 'calc(100dvh - 44px)';
-            // Lift the base .vault max-height cap (calc(100dvh - 108px)) so the
-            // explicit maximized height isn't clamped — otherwise the vault ends
-            // ~64px short, leaving a gap above the taskbar.
-            vault.style.maxHeight = 'none';
-            vault.style.margin = '0';
-            vault.style.borderRadius = '0';
-            vault.style.transform = 'none';
-            vault.style.display = 'flex';
-            vault.style.flexDirection = 'column';
-            // Let vault-content scroll, not the vault itself
-            const content = vault.querySelector('.vault-content');
-            if (content) content.style.maxHeight = 'calc(100dvh - 44px - 42px)'; // viewport - taskbar - titlebar
-
-            // Clear transition after animation completes
-            setTimeout(() => { vault.style.transition = ''; }, 300);
-
-            isMaximized = true;
-          } else {
-            // Restore - clear all maximize inline styles
-            vault.style.transition = 'all 0.3s ease';
-            clearMaximizeStyles(vault);
-
-            // Clear transition after animation completes
             setTimeout(() => { vault.style.transition = ''; }, 300);
           }
+          vault.style.position = 'fixed';
+          vault.style.top = '0';
+          vault.style.left = '0';
+          vault.style.right = '0';
+          vault.style.bottom = '44px'; // Leave space for taskbar
+          vault.style.width = '100%';
+          vault.style.maxWidth = '100%';
+          vault.style.height = 'calc(100dvh - 44px)';
+          // Lift the base .vault max-height cap (calc(100dvh - 108px)) so the
+          // explicit maximized height isn't clamped — otherwise the vault ends
+          // ~64px short, leaving a gap above the taskbar.
+          vault.style.maxHeight = 'none';
+          vault.style.margin = '0';
+          vault.style.borderRadius = '0';
+          vault.style.transform = 'none';
+          vault.style.display = 'flex';
+          vault.style.flexDirection = 'column';
+          // Let vault-content scroll, not the vault itself
+          const content = vault.querySelector('.vault-content');
+          if (content) content.style.maxHeight = 'calc(100dvh - 44px - 42px)'; // viewport - taskbar - titlebar
+          isMaximized = true;
+        }
+
+        function restoreVault() {
+          if (!isMaximized) return;
+          const vault = document.querySelector('.vault');
+          vault.style.transition = 'all 0.3s ease';
+          clearMaximizeStyles(vault);
+          // Clear transition after animation completes
+          setTimeout(() => { vault.style.transition = ''; }, 300);
+        }
+
+        document.querySelector('.vault .window-btn.maximize')?.addEventListener('click', () => {
+          if (!isMaximized) maximizeVault(true); else restoreVault();
         });
+
+        // On mobile the vault opens full-screen by default — mirrors the
+        // chiptunes player, which maximizes on mobile when opened. animate=false
+        // so it simply starts full-screen with no first-paint zoom.
+        if (window.matchMedia('(max-width: 800px)').matches) {
+          maximizeVault(false);
+        }
 
         // ─── Matrix cursor trail (desktop) ───
         if (window.innerWidth > 768 && !('ontouchstart' in window)) {
