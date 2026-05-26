@@ -3747,7 +3747,7 @@
       color: #d8c8ff;
       text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 10px rgba(200,180,255,0.55);
     }
-    .fx-canvas.fx-glitch {
+    .fx-canvas.fx-kdfx {
       color: #00ff99;
       text-shadow: -2px 0 rgba(255,0,128,0.6), 2px 0 rgba(0,200,255,0.6), 0 0 6px rgba(0,255,150,0.5);
     }
@@ -4145,8 +4145,8 @@
   <div class="entry-gate" id="entry-gate" role="dialog" aria-modal="true" aria-labelledby="entry-gate-title">
     <div class="entry-gate-glass">
       <div class="fx-wrap" aria-hidden="true">
-        <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">PLASMA</span></span></div>
-        <pre class="fx-canvas fx-plasma" id="fx-canvas"></pre>
+        <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">KD.FX</span></span></div>
+        <pre class="fx-canvas fx-kdfx" id="fx-canvas"></pre>
         <div class="fx-ticker-wrap">
           <pre class="fx-ticker" id="fx-ticker"></pre>
         </div>
@@ -4371,10 +4371,7 @@
 
         // ─── TITLE BANNER ───────────────────────────────
         add('tk-ok',  hr2());
-        add('tk-ok',  rowC(''));
         add('tk-ok',  rowC('KD\'s HOMEBREW DIGITAL ARCHIVE'));
-        add('tk-ok',  rowC(''));
-        add('tk-ok',  hr2());
         add('tk-dim', rowC('-=[  proudly presents  ]=-'));
         add('tk-dim', rowC('rel.0x01  ::  online  ::  AD 2026'));
         add('tk-ok',  hr2());
@@ -6495,16 +6492,20 @@
         }
       }
 
-      /* ─── Scene: Glitch text ("KD HOMEBREW" with data-mosh corruption) ─── */
+      /* ─── Scene: KD.FX transition ("KD HOMEBREW" data-mosh bumper) ───
+         Plays between every effect as the signature transition: it glitches IN,
+         holds the title, then glitches OUT across its (scene-relative) duration. */
+      const KDFX_DUR = 4000;
       const GLITCH_TEXT = "KD  HOMEBREW";
       const GLITCH_POOL = "#@%&*+=<>/\\|01.:;~^?!";
       function drawGlitchText(now) {
         clearBuf();
-        const t = now * 0.001;
-        // Cycle: 0..2 stable, 2..3 glitch, 3..5 recover
-        const cyc = (t % 5);
-        const corrupting = cyc > 1.8;
-        const recoveryT = corrupting ? Math.max(0, (cyc - 1.8) / 1.2) : 0;
+        // Scene-relative progress: corruption is heavy at the start (glitch-in)
+        // and end (glitch-out), and clears in the middle so the title reads.
+        const p = Math.min(1, Math.max(0, (now - sceneStart) / KDFX_DUR));
+        const edge = Math.max(1 - p / 0.32, (p - 0.68) / 0.32, 0); // 1 at edges → 0 mid
+        const corrupting = edge > 0.02;
+        const recoveryT = edge * 1.5;
         const textRow = (ROWS / 2) | 0;
         const startX = Math.max(0, ((COLS - GLITCH_TEXT.length) / 2) | 0);
         for (let i = 0; i < GLITCH_TEXT.length; i++) {
@@ -6624,9 +6625,11 @@
         { name: 'RAYMARCH',   fn: drawRaymarch,   dur: 8000, cls: 'fx-sdf' },
         { name: 'DNA',        fn: drawDnaHelix,   dur: 7000, cls: 'fx-dna' },
         { name: 'GALAXY',     fn: drawGalaxy,     dur: 7000, cls: 'fx-galaxy' },
-        { name: 'GLITCH',     fn: drawGlitchText, dur: 6000, cls: 'fx-glitch' },
+        { name: 'KD.FX',      fn: drawGlitchText, dur: KDFX_DUR, cls: 'fx-kdfx' },
       ];
-      let sceneIdx = 0;
+      // KD.FX is the transition scene woven between every random effect.
+      const KDFX_IDX = SCENES.findIndex(s => s.name === 'KD.FX');
+      let sceneIdx = KDFX_IDX; // KD.FX opens the show, then alternates with random effects
       let sceneStart = 0;
       let rafId = 0;
       let lastFrame = 0;
@@ -6639,7 +6642,8 @@
       let sceneBag = [];
       if (cfg.installDebug) window.__fxBagHistory = [];
       function refillBag(excludeIdx) {
-        sceneBag = SCENES.map((_, i) => i);
+        // KD.FX is the transition between effects, not a random scene — keep it out of the bag.
+        sceneBag = SCENES.map((_, i) => i).filter(i => i !== KDFX_IDX);
         for (let i = sceneBag.length - 1; i > 0; i--) {
           const j = (Math.random() * (i + 1)) | 0;
           const t = sceneBag[i]; sceneBag[i] = sceneBag[j]; sceneBag[j] = t;
@@ -6651,11 +6655,14 @@
         }
         if (cfg.installDebug) window.__fxBagHistory.push({ size: sceneBag.length, snapshot: sceneBag.slice(), excludeIdx });
       }
+      let prevRandomIdx = sceneIdx; // last real (non-transition) scene, for anti-repeat across refills
       function nextSceneFromBag() {
-        if (sceneBag.length === 0) refillBag(sceneIdx);
-        return sceneBag.pop();
+        if (sceneBag.length === 0) refillBag(prevRandomIdx);
+        prevRandomIdx = sceneBag.pop();
+        return prevRandomIdx;
       }
-      // Seed the bag on the initial scene (PLASMA) so it's excluded from round 1.
+      // Seed the bag. KD.FX opens (it's not in the bag), so no random effect
+      // needs excluding from round 1 — the first random pick can be anything.
       refillBag(sceneIdx);
 
       // Color cross-fade state
@@ -6683,8 +6690,8 @@
           xfadeTo = null;
         }
       }
-      setSceneClass(SCENES[0].cls, false);
-      if (sceneLabel) sceneLabel.textContent = SCENES[0].name;
+      setSceneClass(SCENES[sceneIdx].cls, false);
+      if (sceneLabel) sceneLabel.textContent = SCENES[sceneIdx].name;
 
       function frame(now) {
         if (!running) return;
@@ -6694,11 +6701,13 @@
         const elapsed = now - sceneStart;
         const cur = SCENES[sceneIdx];
 
-        // Advance scene (bag-style random: all scenes play once before any repeats)
+        // Advance scene: KD.FX transition alternates with bag-style random effects
+        // (every random effect plays once before any repeats).
         if (elapsed >= cur.dur) {
           prevBuf.set(buf);
           hasPrev = true;
-          sceneIdx = nextSceneFromBag();
+          // KD.FX is the transition: alternate <random FX> → KD.FX → <random FX> → …
+          sceneIdx = (sceneIdx === KDFX_IDX) ? nextSceneFromBag() : KDFX_IDX;
           sceneStart = now;
           const next = SCENES[sceneIdx];
           setSceneClass(next.cls, true);
@@ -7143,9 +7152,9 @@
           <div class="fx-header">
             <span class="fx-tag">KD/HOMEBREW</span>
             <span class="fx-mid">DEMOSCENE/0x01</span>
-            <span class="fx-fx">FX:<span class="fx-scene" id="demo-fx-scene">PLASMA</span></span>
+            <span class="fx-fx">FX:<span class="fx-scene" id="demo-fx-scene">KD.FX</span></span>
           </div>
-          <pre class="fx-canvas fx-plasma" id="demo-fx-canvas"></pre>
+          <pre class="fx-canvas fx-kdfx" id="demo-fx-canvas"></pre>
           <div class="fx-ticker-wrap">
             <pre class="fx-ticker" id="demo-fx-ticker"></pre>
           </div>
