@@ -59,7 +59,7 @@
     })();
   </script>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -263,14 +263,15 @@
     }
 
     html {
-      height: 100%;
       overflow-x: hidden;
       scroll-behavior: smooth;
     }
 
     body {
       margin: 0;
-      min-height: 100vh;
+      /* dvh tracks Chrome's retractable URL bar so full-height layout always
+         equals the *visible* viewport — no stale gap under the fixed taskbar. */
+      min-height: 100dvh;
       font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Share Tech Mono', monospace;
       background:
         radial-gradient(1200px 400px at 10% 10%, rgba(0, 255, 150, 0.05), transparent),
@@ -287,7 +288,6 @@
       /* Account for taskbar */
       box-sizing: border-box;
       overflow-x: hidden;
-      overflow-y: auto;
       position: relative;
     }
 
@@ -296,7 +296,7 @@
       max-width: 1200px;
       /* Cap to viewport minus body padding (32 top + 76 bottom) so the
          vault scrolls internally instead of pushing the desktop. */
-      max-height: calc(100vh - 108px);
+      max-height: calc(100dvh - 108px);
       display: flex;
       flex-direction: column;
       background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
@@ -863,6 +863,9 @@
       display: flex;
       align-items: center;
       padding: 0 12px;
+      /* Keep the bar clear of the home-indicator / gesture area when the page
+         draws edge-to-edge (viewport-fit=cover). Zero on devices without insets. */
+      padding-bottom: env(safe-area-inset-bottom, 0px);
       /* Above any window, including one focused via bringToFront (z-index 1005). */
       z-index: 5000;
       backdrop-filter: blur(18px) saturate(1.5);
@@ -1889,7 +1892,7 @@
 
     .music-viz-wrap.fullscreen {
       width: 100vw;
-      height: 100vh;
+      height: 100dvh;
       max-width: none;
       max-height: none;
       border-radius: 0;
@@ -2096,7 +2099,7 @@
       left: 50%;
       transform: translateX(-50%);
       width: min(1100px, 92vw);
-      height: min(720px, calc(100vh - 100px));
+      height: min(720px, calc(100dvh - 100px));
       z-index: 999;
       border-radius: 10px;
       overflow: hidden;
@@ -2126,7 +2129,7 @@
       right: 0 !important;
       bottom: 44px !important;
       width: 100% !important;
-      height: calc(100vh - 44px) !important;
+      height: calc(100dvh - 44px) !important;
       transform: none !important;
       border-radius: 0;
       margin: 0 !important;
@@ -2352,7 +2355,7 @@
       right: 0 !important;
       bottom: 44px !important;
       width: 100% !important;
-      height: calc(100vh - 44px) !important;
+      height: calc(100dvh - 44px) !important;
       transform: none !important;
       border-radius: 0;
       margin: 0 !important;
@@ -2424,7 +2427,7 @@
       right: 0 !important;
       bottom: 44px !important;
       width: 100% !important;
-      height: calc(100vh - 44px) !important;
+      height: calc(100dvh - 44px) !important;
       transform: none !important;
       border-radius: 0;
       margin: 0 !important;
@@ -2443,7 +2446,7 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
-      max-height: calc(100vh - 160px);
+      max-height: calc(100dvh - 160px);
       font-size: 12px;
       color: #cfeee0;
     }
@@ -2566,7 +2569,7 @@
       .browser-window {
         top: 8px;
         width: calc(100vw - 12px);
-        height: calc(100vh - 60px);
+        height: calc(100dvh - 60px);
       }
 
       .demo-window {
@@ -2581,7 +2584,7 @@
         top: 8px;
         width: calc(100vw - 12px);
       }
-      .status-content { max-height: calc(100vh - 100px); }
+      .status-content { max-height: calc(100dvh - 100px); }
 
       .browser-toolbar {
         padding: 6px 8px;
@@ -3429,7 +3432,7 @@
     .entry-gate-glass {
       max-width: 520px;
       width: 100%;
-      max-height: calc(100vh - 48px);
+      max-height: calc(100dvh - 48px);
       overflow-y: auto;
       padding: 26px 26px 18px;
       border-radius: 14px;
@@ -7281,6 +7284,32 @@
         new MutationObserver(updateFade).observe(items, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
         updateFade();
       })();
+
+      // Safety net for Chrome/Android's retractable URL bar: dvh fixes the
+      // height model, but if the UA still leaves the fixed taskbar detached
+      // from the visible bottom, nudge it down to the visualViewport's bottom
+      // edge. Measure the bar's natural position (transform cleared), then only
+      // ever translate DOWN — never up — so the already-correct URL-bar-shown
+      // state is never dented. No-op where visualViewport is absent.
+      (function() {
+        var vv = window.visualViewport;
+        var taskbar = document.querySelector('.taskbar');
+        if (!vv || !taskbar) return;
+        var raf = 0;
+        function pin() {
+          raf = 0;
+          taskbar.style.transform = '';
+          var barBottom = taskbar.getBoundingClientRect().bottom;
+          var visibleBottom = vv.height + vv.offsetTop;
+          var delta = visibleBottom - barBottom;
+          if (delta > 0.5) taskbar.style.transform = 'translateY(' + delta + 'px)';
+        }
+        function schedule() { if (!raf) raf = requestAnimationFrame(pin); }
+        vv.addEventListener('resize', schedule);
+        vv.addEventListener('scroll', schedule);
+        window.addEventListener('orientationchange', schedule);
+        schedule();
+      })();
     </script>
 
     <div class="vault" role="main" aria-label="KD's Home">
@@ -9826,7 +9855,7 @@
             document.body.style.transition = 'opacity 1s';
             document.body.style.opacity = '0';
             setTimeout(() => {
-              document.body.innerHTML = '<div style="display:flex;height:100vh;align-items:center;justify-content:center;font-family:monospace;color:#00ff99;font-size:20px;">SYSTEM HALTED</div>';
+              document.body.innerHTML = '<div style="display:flex;height:100dvh;align-items:center;justify-content:center;font-family:monospace;color:#00ff99;font-size:20px;">SYSTEM HALTED</div>';
               document.body.style.opacity = '1';
             }, 1000);
           }
@@ -10107,7 +10136,7 @@
             vault.style.bottom = '44px'; // Leave space for taskbar
             vault.style.width = '100%';
             vault.style.maxWidth = '100%';
-            vault.style.height = 'calc(100vh - 44px)';
+            vault.style.height = 'calc(100dvh - 44px)';
             vault.style.margin = '0';
             vault.style.borderRadius = '0';
             vault.style.transform = 'none';
@@ -10115,7 +10144,7 @@
             vault.style.flexDirection = 'column';
             // Let vault-content scroll, not the vault itself
             const content = vault.querySelector('.vault-content');
-            if (content) content.style.maxHeight = 'calc(100vh - 44px - 42px)'; // viewport - taskbar - titlebar
+            if (content) content.style.maxHeight = 'calc(100dvh - 44px - 42px)'; // viewport - taskbar - titlebar
 
             // Clear transition after animation completes
             setTimeout(() => { vault.style.transition = ''; }, 300);
