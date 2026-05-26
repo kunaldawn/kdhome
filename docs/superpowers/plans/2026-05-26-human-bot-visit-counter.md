@@ -335,10 +335,15 @@ with:
 	}
 
 	// Add the human/bot split columns. ADD COLUMN errors on the second boot
-	// ("duplicate column name"); that's benign, so run unconditionally and
-	// ignore the error. The old `n` column is retired — no longer read/written.
-	visitDB.Exec(`ALTER TABLE visit_count ADD COLUMN human INTEGER NOT NULL DEFAULT 0`)
-	visitDB.Exec(`ALTER TABLE visit_count ADD COLUMN bot   INTEGER NOT NULL DEFAULT 0`)
+	// ("duplicate column name"), which is benign; any other error is real and
+	// would leave the columns absent, so surface it. The old `n` column is
+	// retired — no longer read/written. (col is a fixed constant set here.)
+	for _, col := range []string{"human", "bot"} {
+		if _, err := visitDB.Exec(`ALTER TABLE visit_count ADD COLUMN ` + col + ` INTEGER NOT NULL DEFAULT 0`); err != nil &&
+			!strings.Contains(err.Error(), "duplicate column name") {
+			log.Printf("[VISITS] failed to add column %s: %v", col, err)
+		}
+	}
 
 	// One-time reset, gated by PRAGMA user_version so restarts never re-zero
 	// accumulating counts. The pre-existing total can't be split (no UA was
@@ -348,8 +353,11 @@ with:
 	if userVersion < 1 {
 		if _, err := visitDB.Exec(`UPDATE visit_count SET n = 0, human = 0, bot = 0 WHERE id = 1`); err != nil {
 			log.Printf("[VISITS] reset migration failed: %v", err)
+		} else if _, err := visitDB.Exec(`PRAGMA user_version = 1`); err != nil {
+			// Counters were reset but the gate didn't advance; without this
+			// bump the next restart would reset them again. Surface it.
+			log.Printf("[VISITS] failed to bump user_version after reset: %v", err)
 		} else {
-			visitDB.Exec(`PRAGMA user_version = 1`)
 			log.Printf("[VISITS] reset visit counters to 0 (human/bot split migration)")
 		}
 	}
