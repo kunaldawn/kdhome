@@ -9552,6 +9552,7 @@
           vault.style.width = '';
           vault.style.maxWidth = '';
           vault.style.height = '';
+          vault.style.maxHeight = '';
           vault.style.margin = '';
           vault.style.borderRadius = '';
           vault.style.transform = '';
@@ -10137,6 +10138,10 @@
             vault.style.width = '100%';
             vault.style.maxWidth = '100%';
             vault.style.height = 'calc(100dvh - 44px)';
+            // Lift the base .vault max-height cap (calc(100dvh - 108px)) so the
+            // explicit maximized height isn't clamped — otherwise the vault ends
+            // ~64px short, leaving a gap above the taskbar.
+            vault.style.maxHeight = 'none';
             vault.style.margin = '0';
             vault.style.borderRadius = '0';
             vault.style.transform = 'none';
