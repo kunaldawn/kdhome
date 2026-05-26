@@ -529,7 +529,8 @@ with:
           // Compact form for the cramped tray slot: 248 → "248", 1203 → "1.2k".
           const abbrev = (n) => {
             if (n < 1000) return n.toLocaleString();
-            if (n < 1e6) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+            // < 999500, not 1e6: above it toFixed(1) rounds up to a bogus "1000k".
+            if (n < 999500) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
             return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
           };
           fetch('/api/visit')
