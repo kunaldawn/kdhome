@@ -9771,6 +9771,12 @@
         window.makeDraggable = function makeDraggable(windowEl, handleEl) {
           let isDragging = false;
           let startX, startY, origLeft, origTop;
+          // Every listener below is registered against this signal so a
+          // destroyed window (see closeInstance) can drop its document-level
+          // drag handlers in one shot. Singleton windows (vault/music/demo/
+          // status) never abort it — identical to the old always-on behaviour.
+          const dragAbort = new AbortController();
+          const sig = dragAbort.signal;
 
           function dragStart(clientX, clientY, e) {
             if (e.target.closest('.window-btn')) return;
@@ -9827,21 +9833,24 @@
           }
 
           // Mouse events
-          handleEl.addEventListener('mousedown', (e) => dragStart(e.clientX, e.clientY, e));
-          document.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY, e));
-          document.addEventListener('mouseup', dragEnd);
+          handleEl.addEventListener('mousedown', (e) => dragStart(e.clientX, e.clientY, e), { signal: sig });
+          document.addEventListener('mousemove', (e) => dragMove(e.clientX, e.clientY, e), { signal: sig });
+          document.addEventListener('mouseup', dragEnd, { signal: sig });
 
           // Touch events
           handleEl.addEventListener('touchstart', (e) => {
             const t = e.touches[0];
             dragStart(t.clientX, t.clientY, e);
-          }, { passive: false });
+          }, { passive: false, signal: sig });
           document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             const t = e.touches[0];
             dragMove(t.clientX, t.clientY, e);
-          }, { passive: false });
-          document.addEventListener('touchend', dragEnd);
+          }, { passive: false, signal: sig });
+          document.addEventListener('touchend', dragEnd, { signal: sig });
+
+          // Returned so destroyable windows can tear these listeners down.
+          return dragAbort;
         }
 
         // On resize, clamp all positioned windows back into view
@@ -9983,6 +9992,10 @@
           var unlockBtn = lockScreen.querySelector('.unlock-btn');
           unlockBtn.addEventListener('click', function() {
             lockScreen._pipesStop = true;
+            // Drop the window 'resize' listener the pipes screensaver added,
+            // else every lock/unlock cycle leaks a handler holding a detached
+            // canvas + 2D context. _removeResize is installed by initPipes below.
+            if (lockScreen._removeResize) lockScreen._removeResize();
             lockScreen.remove();
           });
 
@@ -10008,6 +10021,9 @@
             }
             resize();
             window.addEventListener('resize', resize);
+            // Expose a remover so the unlock handler can detach this listener
+            // when the lock screen goes away (prevents a per-unlock leak).
+            lockScreen._removeResize = function () { window.removeEventListener('resize', resize); };
 
             var W = function() { return canvas.width / dpr; };
             var H = function() { return canvas.height / dpr; };
@@ -10339,7 +10355,8 @@
             isMax: false,
             isMin: false,
             userUnmaxed: false,
-            prevStyles: {}
+            prevStyles: {},
+            dragAbort: null
           };
 
           // Wire titlebar buttons
@@ -10365,7 +10382,7 @@
           taskbarHost.appendChild(taskbarEl);
 
           // Drag
-          if (window.makeDraggable) window.makeDraggable(el, titlebar);
+          if (window.makeDraggable) inst.dragAbort = window.makeDraggable(el, titlebar);
 
           return inst;
         }
@@ -10500,6 +10517,10 @@
           setTimeout(function() {
             try { inst.el.remove(); } catch (e) {}
             try { inst.taskbarEl.remove(); } catch (e) {}
+            // Drop the document-level drag listeners this window registered,
+            // so the detached window (and its iframe) can be GC'd and we don't
+            // accumulate dead mousemove/touchmove handlers across open/close.
+            if (inst.dragAbort) { try { inst.dragAbort.abort(); } catch (e) {} inst.dragAbort = null; }
             instances.delete(inst.id);
             if (window.__focusedWindow === inst.el) window.__focusedWindow = null;
             if (instances.size === 0) cascadeIndex = 0;
@@ -10697,6 +10718,11 @@
           setTimeout(function() {
             win.style.display = 'none';
             win.classList.remove('minimizing');
+            // Stop the fx engine while hidden — it doesn't pause on a
+            // display:none window (only on tab-hidden), so leaving it running
+            // burns a full 60fps render behind an invisible canvas. Restored
+            // fresh in toggleDemoWindow, matching openDemoWindow's behaviour.
+            stopFx();
           }, 500);
         };
 
@@ -10707,6 +10733,8 @@
             win.classList.add('restoring');
             taskbar.classList.remove('minimized');
             taskbar.classList.add('active');
+            // Re-arm the fx engine stopped by minimizeDemoWindow.
+            startFx();
             setTimeout(function() { win.classList.remove('restoring'); }, 500);
             if (window.bringToFront) window.bringToFront(win);
             if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
@@ -11008,7 +11036,9 @@
       window['libopenmpt'] = {};
       libopenmpt.locateFile = function(filename) { return '/music/' + filename; };
     </script>
-    <script defer src="/music/kd-visualizer.js"></script>
+    <!-- ?v bumped on visualizer changes: the file is served immutable/max-age=1yr,
+         so without a fresh URL returning visitors keep the old cached copy. -->
+    <script defer src="/music/kd-visualizer.js?v=20260527"></script>
     <script>
     (function() {
       var SVG_PLAY = '<svg class="icon-play" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>';
@@ -11146,6 +11176,8 @@
         chipTaskbar.style.display = '';
         chipTaskbar.classList.remove('minimized');
         chipTaskbar.classList.add('active');
+        // Window visible again — resume the visualizer if a track is playing.
+        if (window.kdVisualizer && window.kdVisualizer.wake) window.kdVisualizer.wake();
         if (window.bringToFront) window.bringToFront(win);
         var menu = document.getElementById('startMenu');
         if (menu && menu.classList.contains('show')) toggleStartMenu();
@@ -11196,6 +11228,8 @@
           win.style.display = '';
           chipTaskbar.classList.remove('minimized');
           chipTaskbar.classList.add('active');
+          // Window visible again — resume the visualizer if a track is playing.
+          if (window.kdVisualizer && window.kdVisualizer.wake) window.kdVisualizer.wake();
           if (window.bringToFront) window.bringToFront(win);
           if (window.matchMedia('(max-width: 800px)').matches && !chipMaximized) {
             maximizeChiptunes();
@@ -11456,6 +11490,8 @@
           // Unpause existing track
           player.togglePause(); isPlaying = true;
           btn.innerHTML = SVG_PAUSE; btn.classList.add('playing'); btn.classList.remove('idle-pulse');
+          // Resume the visualizer loop (it stops itself while paused).
+          if (window.kdVisualizer && window.kdVisualizer.wake) window.kdVisualizer.wake();
         } else {
           // No track loaded (after close/stop) — start fresh
           loadAndPlay();
