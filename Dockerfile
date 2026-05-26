@@ -5,7 +5,7 @@ RUN apk add --no-cache gcc musl-dev sqlite-dev
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
-COPY main.go ./
+COPY *.go ./
 RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o server .
 
 FROM alpine:3.20

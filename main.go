@@ -133,6 +133,23 @@ func initVisitDB(dataDir string) {
 		}
 	}
 
+	// Daily probe rollup table. One row per (UTC date, archive_id). Updated
+	// via UPSERT from the status probe; aggregates total/ok probe counts
+	// and latency stats so the 90-day uptime ribbon can be rendered from
+	// ~630 rows max. Pruned to a 90-day window on each probe tick.
+	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS probe_daily (
+		date        TEXT NOT NULL,
+		archive_id  TEXT NOT NULL,
+		ok_count    INTEGER NOT NULL DEFAULT 0,
+		total_count INTEGER NOT NULL DEFAULT 0,
+		lat_sum_ms  INTEGER NOT NULL DEFAULT 0,
+		lat_max_ms  INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (date, archive_id)
+	)`)
+	if err != nil {
+		log.Printf("[PROBE] failed to create probe_daily: %v", err)
+	}
+
 	// Hydrate the in-memory cache from disk.
 	rows, err := visitDB.Query(`SELECT id, n FROM archive_click_count`)
 	if err != nil {
@@ -572,10 +589,16 @@ func main() {
 	staticCache = cache
 	log.Printf("[STATIC] cached %d files", len(cache))
 
+	// Background probe for /api/status.json. Primes the cache before
+	// the server starts taking traffic, then refreshes every 30 s.
+	startStatusProbe()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/visit", visitHandler)
 	mux.HandleFunc("/api/archive-clicks", archiveClicksHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
+	mux.HandleFunc("/api/status.json", statusJSONHandler)
+	mux.HandleFunc("/api/status/history.json", statusHistoryHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
 	srv := &http.Server{

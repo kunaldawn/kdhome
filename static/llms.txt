@@ -18,8 +18,8 @@ journals, and manuals for chips that stopped being made decades ago. Useless to 
 to the few who go looking.
 
 The project spans seven sub-archives totalling over 12 TB of curated content, served from
-a home-grown archive in a home drawing about 30 watts off-grid. No ads, no tracking, no
-telemetry, no SLA, no monetization, no users — free for all, free forever.
+a home-grown archive in a home drawing about 30 watts off-grid. No ads, basic analytics
+only, no user accounts, no uptime guarantee, no monetization — free for all, free forever.
 
 ## Sub-Archives
 
@@ -115,7 +115,7 @@ Other:
 
 ### CD/DVD Archive (iso.kunaldawn.com)
 ~27 GB of vintage CD and DVD disc images:
-- Warez and abandonware — commercial releases that no longer ship anywhere
+- Abandonware and commercial releases that no longer ship anywhere
 - Magazine cover discs, demo compilations, shareware collections
 - Original install media for software lost to bit rot and dead publishers
 - Preserved before the polycarbonate degrades and the keys are forgotten
@@ -148,13 +148,13 @@ follows the same tradition as public libraries, the Internet Archive, and commun
 around the world: information belongs to everyone, and it deserves to outlive the servers that
 first hosted it.
 
-Ethos is stark and deliberate: no ads, no tracking, no telemetry, no SLA, no monetization,
-no users. Free for all, free forever. Preservation doesn't require a data centre — just
-determination, a shelf, and enough panels to cover the draw.
+Ethos is stark and deliberate: no ads, basic analytics only, no user accounts,
+no uptime guarantee, no monetization. Free for all, free forever. Preservation doesn't
+require a data centre — just determination, a shelf, and enough panels to cover the draw.
 
 All content is sourced from publicly accessible locations including open repositories, academic
-databases, digital libraries, and shadow libraries. No paywalls bypassed, no access controls
-circumvented.
+databases, digital libraries, and shadow libraries. No active paywalls bypassed, no current access
+controls circumvented.
 
 ## Technical Details
 
@@ -167,7 +167,7 @@ Infrastructure is a small home-grown archive in a home, not a single box:
 - Hot storage: 4x 2 TB HDDs + 2x 2 TB SSDs (working set)
 - Cold backup: 1x 12 TB external HDD, kept offline
 - Total draw: ~30 W — deliberately engineered to run off-grid on a modest solar rig
-- No cloud, no CDN, no SLA; when the battery dies, the site goes with it
+- No cloud, no CDN, no uptime guarantee; when the battery dies, the site goes with it
 - Served via a custom Go HTTP server with SQLite visit tracking
 - Hardened with security headers, CSP, rate limiting, non-root container
 

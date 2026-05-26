@@ -201,7 +201,7 @@
           "@type": "WebSite",
           "name": "CD/DVD Archive",
           "url": "https://iso.kunaldawn.com/",
-          "description": "Vintage CD and DVD disc images — warez, abandonware, and commercial software releases that time forgot, preserved before the discs rot."
+          "description": "Vintage CD and DVD disc images — abandonware and commercial software releases that time forgot, preserved before the discs rot."
         },
         {
           "@type": "WebSite",
@@ -294,6 +294,11 @@
     .vault {
       width: 100%;
       max-width: 1200px;
+      /* Cap to viewport minus body padding (32 top + 76 bottom) so the
+         vault scrolls internally instead of pushing the desktop. */
+      max-height: calc(100vh - 108px);
+      display: flex;
+      flex-direction: column;
       background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
       backdrop-filter: blur(12px) saturate(1.3);
       -webkit-backdrop-filter: blur(12px) saturate(1.3);
@@ -310,6 +315,8 @@
       border: 1px solid rgba(0, 255, 150, 0.15);
       min-height: 40px;
     }
+
+    .vault > .vault-titlebar { flex-shrink: 0; }
 
     .vault-titlebar {
       display: flex;
@@ -343,6 +350,8 @@
     .vault-content {
       padding: 28px;
       overflow-y: auto;
+      flex: 1;
+      min-height: 0;
     }
 
     /* Themed scrollbar for vault content */
@@ -2385,6 +2394,167 @@
       min-height: 0;
     }
 
+    /* ═══ Status window — shares chrome/animations with .demo-window ═══ */
+    .status-window {
+      position: fixed;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(560px, 94vw);
+      z-index: 999;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 255, 150, 0.15);
+      background: linear-gradient(180deg, rgba(7, 24, 35, 0.38), rgba(3, 16, 24, 0.48) 140%);
+      backdrop-filter: blur(12px) saturate(1.3);
+      -webkit-backdrop-filter: blur(12px) saturate(1.3);
+      box-shadow:
+        0 10px 40px rgba(0, 0, 0, 0.7),
+        inset 0 1px 0 rgba(255, 255, 255, 0.02),
+        0 0 60px rgba(0, 255, 150, 0.05);
+      display: flex;
+      flex-direction: column;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .status-window.hidden { display: none; }
+    .status-window.dragged { transform: none; margin: 0; }
+    .status-window.maximized {
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 44px !important;
+      width: 100% !important;
+      height: calc(100vh - 44px) !important;
+      transform: none !important;
+      border-radius: 0;
+      margin: 0 !important;
+    }
+    .status-window.minimizing { animation: minimizeToTaskbarCentered 0.45s cubic-bezier(0.4, 0, 1, 1) both; }
+    .status-window.restoring  { animation: restoreFromTaskbarCentered 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+    .status-window.dragged.minimizing,
+    .status-window.maximized.minimizing { animation: minimizeToTaskbar 0.45s cubic-bezier(0.4, 0, 1, 1) both; }
+    .status-window.dragged.restoring,
+    .status-window.maximized.restoring  { animation: restoreFromTaskbar 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+    .status-content {
+      padding: 14px 16px 16px;
+      overflow: auto;
+      background: rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-height: calc(100vh - 160px);
+      font-size: 12px;
+      color: #cfeee0;
+    }
+    .status-window.maximized .status-content { flex: 1; max-height: none; }
+
+    .status-section {
+      border: 1px solid rgba(0, 255, 153, 0.18);
+      padding: 10px 12px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+    .status-section h3 {
+      margin: 0 0 8px;
+      font: 11px/1 'Share Tech Mono', monospace;
+      color: var(--neon);
+      letter-spacing: 1.5px;
+      text-transform: lowercase;
+    }
+
+    .status-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .status-table th, .status-table td {
+      padding: 5px 6px;
+      text-align: left;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+      font-variant-numeric: tabular-nums;
+    }
+    .status-table th {
+      color: #6b8478;
+      font-weight: normal;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .status-table tr:last-child td { border-bottom: 0; }
+    .status-table .right { text-align: right; }
+    .status-table .muted { color: #6b8478; }
+    .status-table a { color: var(--neon); text-decoration: none; }
+    .status-table a:hover { text-decoration: underline; }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      margin-right: 7px;
+      vertical-align: middle;
+    }
+    .status-dot.ok   { background: var(--neon); box-shadow: 0 0 5px var(--neon); }
+    .status-dot.bad  { background: #ff5f56;     box-shadow: 0 0 5px #ff5f56; }
+    .status-dot.warn { background: #ffbd2e; }
+
+    /* ─── 90-day uptime ribbon ─── */
+    .ribbon-row {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 0;
+      font-size: 11px;
+      color: #cfeee0;
+    }
+    .ribbon-row + .ribbon-row { border-top: 1px dashed rgba(255, 255, 255, 0.05); }
+    .ribbon-label { font-family: 'Share Tech Mono', monospace; color: #cfeee0; }
+    .ribbon-bars {
+      display: flex;
+      gap: 1px;
+      height: 18px;
+      overflow: hidden;
+    }
+    .ribbon-bar {
+      flex: 1 1 0;
+      min-width: 2px;
+      background: rgba(107, 132, 120, 0.35); /* "no data" grey */
+      transition: filter 0.15s ease;
+    }
+    .ribbon-bar:hover { filter: brightness(1.35); cursor: help; }
+    .ribbon-bar.up   { background: var(--neon); }
+    .ribbon-bar.warn { background: #ffbd2e; }
+    .ribbon-bar.bad  { background: #ff5f56; }
+
+    .ribbon-pct {
+      font-family: 'Share Tech Mono', monospace;
+      font-variant-numeric: tabular-nums;
+      color: #6b8478;
+      font-size: 10.5px;
+      min-width: 48px;
+      text-align: right;
+    }
+    .ribbon-scale {
+      display: grid;
+      grid-template-columns: 70px 1fr auto;
+      gap: 10px;
+      color: #6b8478;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      padding-top: 6px;
+      margin-top: 4px;
+      border-top: 1px solid rgba(0, 255, 153, 0.12);
+    }
+    .ribbon-scale-axis {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .status-footer {
+      font-size: 10.5px;
+      color: #6b8478;
+      text-align: center;
+      padding-top: 2px;
+    }
+    .status-footer a { color: #6b8478; }
+
     /* Responsive */
     @media (max-width: 800px) {
       .music-window {
@@ -2406,6 +2576,12 @@
       .demo-window .fx-ticker-wrap {
         height: calc(11px * 1.45 * 10);
       }
+
+      .status-window {
+        top: 8px;
+        width: calc(100vw - 12px);
+      }
+      .status-content { max-height: calc(100vh - 100px); }
 
       .browser-toolbar {
         padding: 6px 8px;
@@ -3753,6 +3929,7 @@
     body.no-transparency .music-window,
     body.no-transparency .browser-window,
     body.no-transparency .demo-window,
+    body.no-transparency .status-window,
     body.no-transparency .lock-content,
     body.no-transparency .entry-gate,
     body.no-transparency .entry-gate-glass,
@@ -3763,7 +3940,8 @@
     body.no-transparency .vault,
     body.no-transparency .music-window,
     body.no-transparency .browser-window,
-    body.no-transparency .demo-window {
+    body.no-transparency .demo-window,
+    body.no-transparency .status-window {
       background: linear-gradient(180deg, rgba(7, 24, 35, 0.92), rgba(3, 16, 24, 0.95) 140%) !important;
     }
     body.no-transparency .start-menu {
@@ -3933,7 +4111,7 @@
        gate element is later removed from the DOM by its own IIFE. */
     (function () {
       try {
-        if (localStorage.getItem('kd:prefs:agreed-18plus') === 'yes') {
+        if (localStorage.getItem('kd:prefs:terms-accepted') === 'yes') {
           document.body.classList.remove('entry-gate-locked');
           document.body.classList.add('entry-gate-accepted');
         }
@@ -3989,13 +4167,14 @@
         <label class="entry-check">
           <input type="checkbox" id="entry-age-check">
           <span class="entry-check-box" aria-hidden="true"></span>
-          <span class="entry-check-label">I agree I am <b>18+</b> years old</span>
+          <span class="entry-check-label">I accept the following terms</span>
         </label>
         <ul class="entry-rules">
-          <li><span class="bul">&raquo;</span> no SLA</li>
           <li><span class="bul">&raquo;</span> no ads</li>
-          <li><span class="bul">&raquo;</span> no users and data collection</li>
-          <li><span class="bul">&raquo;</span> no monetization &amp; donations</li>
+          <li><span class="bul">&raquo;</span> basic analytics</li>
+          <li><span class="bul">&raquo;</span> no user accounts</li>
+          <li><span class="bul">&raquo;</span> no uptime guarantee</li>
+          <li><span class="bul">&raquo;</span> no monetization</li>
         </ul>
       </div>
 
@@ -4011,7 +4190,7 @@
       if (!gate || !btn) return;
       // Already accepted in a prior visit — drop the gate from the DOM.
       var alreadyAgreed = false;
-      try { alreadyAgreed = localStorage.getItem('kd:prefs:agreed-18plus') === 'yes'; } catch(e) {}
+      try { alreadyAgreed = localStorage.getItem('kd:prefs:terms-accepted') === 'yes'; } catch(e) {}
       if (alreadyAgreed) {
         document.body.classList.remove('entry-gate-locked');
         if (gate.parentNode) gate.parentNode.removeChild(gate);
@@ -4020,7 +4199,7 @@
       function syncBtn() { btn.disabled = !(ageCheck && ageCheck.checked); }
       if (ageCheck) ageCheck.addEventListener('change', syncBtn);
       syncBtn();
-      // Whole terms box toggles the 18+ checkbox (the native <label> around the
+      // Whole terms box toggles the acceptance checkbox (the native <label> around the
       // checkbox would double-fire, so skip clicks that originate inside the label).
       if (termsBox && ageCheck) {
         termsBox.addEventListener('click', function(e) {
@@ -4032,7 +4211,7 @@
       function enter() {
         if (btn.disabled) return;
         btn.removeEventListener('click', enter);
-        try { localStorage.setItem('kd:prefs:agreed-18plus', 'yes'); } catch(e) {}
+        try { localStorage.setItem('kd:prefs:terms-accepted', 'yes'); } catch(e) {}
         gate.classList.add('dismissing');
         document.body.classList.remove('entry-gate-locked');
         setTimeout(function() {
@@ -4340,10 +4519,10 @@
         // ─── ETHOS ──────────────────────────────────────
         section('E T H O S');
         add('tk-hot', center('no  ads'));
-        add('tk-hot', center('no  tracking'));
-        add('tk-hot', center('no  SLA'));
-        add('tk-hot', center('no  users  and  data  collection'));
-        add('tk-hot', center('no  monetization  &  donations'));
+        add('tk-hot', center('basic  analytics'));
+        add('tk-hot', center('no  user  accounts'));
+        add('tk-hot', center('no  uptime  guarantee'));
+        add('tk-hot', center('no  monetization'));
 
         // ─── GREETZ ─────────────────────────────────────
         section('G R E E T Z');
@@ -6792,6 +6971,10 @@
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
             <span>Demo</span>
           </div>
+          <div class="menu-item" onclick="openStatusWindow()">
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></span>
+            <span>Status</span>
+          </div>
           <div class="menu-item" onclick="openSettings()">
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             <span>Settings</span>
@@ -6990,6 +7173,54 @@
       </div>
     </div>
 
+    <!-- Status window — populated by JS from /api/status.json -->
+    <div class="status-window hidden" id="status-window">
+      <div class="vault-titlebar" id="status-titlebar">
+        <div class="vault-titlebar-controls">
+          <div class="window-btn close" onclick="closeStatusWindow()" title="Close"></div>
+          <div class="window-btn minimize" onclick="minimizeStatusWindow()" title="Minimize"></div>
+          <div class="window-btn maximize" onclick="maximizeStatusWindow()" title="Maximize"></div>
+        </div>
+        <span class="vault-titlebar-title">status@kd:~</span>
+      </div>
+      <div class="status-content">
+        <div class="status-section">
+          <h3>// archives</h3>
+          <table class="status-table">
+            <thead>
+              <tr><th>archive</th><th>state</th><th class="right">latency</th><th class="right">code</th></tr>
+            </thead>
+            <tbody id="status-archives-body">
+              <tr><td colspan="4" class="muted">probing…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="status-section">
+          <h3>// 90-day uptime</h3>
+          <div id="status-ribbon-body">
+            <div class="muted" style="font-size: 11px;">loading…</div>
+          </div>
+        </div>
+
+        <div class="status-section">
+          <h3>// host</h3>
+          <table class="status-table">
+            <tbody id="status-host-body">
+              <tr><th>process uptime</th><td class="right">—</td></tr>
+              <tr><th>snapshot taken</th><td class="right">—</td></tr>
+              <tr><th>refresh cadence</th><td class="right">10m server · 10m client</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="status-footer">
+          no uptime guarantee &middot; last cached probe, not real-time &middot;
+          <a href="/api/status.json" target="_blank" rel="noopener">json</a>
+        </div>
+      </div>
+    </div>
+
     <!-- Windows-style Taskbar -->
     <div class="taskbar">
       <button class="start-button" onclick="toggleStartMenu()">
@@ -7010,6 +7241,10 @@
         <div class="taskbar-item" id="demo-taskbar" onclick="toggleDemoWindow()" style="display:none">
           <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M6 20h12"/><path d="M12 18v2"/><circle cx="8" cy="11" r="1.2" fill="currentColor"/><circle cx="16" cy="11" r="1.2" fill="currentColor"/><path d="M9.5 14c.7.6 1.6.9 2.5.9s1.8-.3 2.5-.9"/></svg></span>
           <span>Demo</span>
+        </div>
+        <div class="taskbar-item" id="status-taskbar" onclick="toggleStatusWindow()" style="display:none">
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></span>
+          <span>Status</span>
         </div>
       </div>
 
@@ -7108,7 +7343,7 @@
 
               <a class="card" href="https://iso.kunaldawn.com" rel="noopener" target="_blank" onclick="event.preventDefault(); openFeaturedArchive('iso');">
                 <h4><span class="card-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></span><span class="card-title">CD/DVD Archive</span><span class="card-count" data-archive-id="iso">—</span></h4>
-                <div class="muted">Vintage CD and DVD disc images — warez, abandonware, and commercial software releases that time forgot, preserved before the discs rot and the install keys are lost.</div>
+                <div class="muted">Vintage CD and DVD disc images — abandonware and commercial software releases that time forgot, preserved before the discs rot and the install keys are lost.</div>
               </a>
 
               <a class="card" href="https://chiptune.kunaldawn.com" rel="noopener" target="_blank" onclick="event.preventDefault(); openFeaturedArchive('chiptune');">
@@ -7148,7 +7383,7 @@
 
                   I hoard far more than what you see here. A handful of archives get published publicly
                   as a fallback: if the original source ever goes dark, a copy is still reachable
-                  here. No promises, no SLA, no uptime guarantees — just a shelf that happens to be
+                  here. No promises, no uptime guarantee — just a shelf that happens to be
                   online, for as long as it stays online. I homebrew everything — beer, electronics,
                   software, ideas, and apparently, archives — and I plan to keep this one up for as
                   long as I'm around to run it.<br><br>
@@ -7160,9 +7395,9 @@
                   Preservation scales through a lot of people doing a little of it; that's the whole
                   point of homebrew.<br><br>
 
-                  No ads. No tracking. No telemetry. No SLA. No monetization. No users. Free for all, free
-                  forever. <em style="color:#a8d8c4;">Information wants to be free — but it also wants to be
-                  preserved.</em>
+                  No ads. Basic analytics only. No user accounts. No uptime guarantee. No monetization.
+                  Free for all, free forever. <em style="color:#a8d8c4;">Information wants to be free — but
+                  it also wants to be preserved.</em>
                 </small>
               </div>
             </div>
@@ -7181,9 +7416,12 @@
                   <strong>4&#215;2 TB HDDs + 2&#215;2 TB SSDs</strong> for the hot working set, with a
                   <strong>12 TB external HDD</strong> kept offline for cold backups. The stack pulls about
                   <strong>30 W</strong> total — deliberately engineered to run off-grid on a modest solar
-                  rig. No cloud, no CDN, no SLA; when the battery dies the site goes with it. Preservation
+                  rig. No cloud, no CDN, no uptime guarantee; when the battery dies the site goes with it. Preservation
                   doesn't require a data centre — just determination, a shelf, and enough panels to cover
-                  the draw.
+                  the draw.<br><br>
+
+                  Live host state in the <a href="#" onclick="event.preventDefault(); openStatusWindow();" style="color: var(--neon); cursor: pointer;">status window</a>
+                  — subdomain reachability and process uptime, refreshed every 10 min.
                 </small>
                 <!--
                   Animated WebP (1.47 MB, 318 frames) re-encoded to H.264 mp4
@@ -7203,14 +7441,14 @@
               </div>
               <div class="info-body">
                 <small class="muted" style="font-size: 11px; opacity: 0.8; line-height: 1.6;">
-                  All materials hosted across this archive have been collected from publicly accessible
-                  sources on the internet, including open repositories, academic databases, public FTP servers,
-                  digital libraries, shadow libraries, and other freely available sources. No paywalls have
-                  been bypassed and no access controls have been circumvented. The operator does not claim
-                  authorship or ownership of any archived content and makes no representations or warranties
-                  regarding the copyright status, accuracy, or completeness of individual files. All content
-                  is provided as-is for the purpose of preventing digital loss. If any material is found to
-                  be improperly included, it will be promptly addressed upon notification.
+                  Material is collected from publicly accessible sources on the internet, including open
+                  repositories, academic databases, public FTP servers, digital libraries, shadow libraries,
+                  and other freely available sources. No active paywalls are bypassed and no current access
+                  controls are circumvented. The operator does not claim authorship or ownership of any
+                  archived content and makes no representations or warranties regarding the copyright
+                  status, accuracy, or completeness of individual files. All content is provided as-is for
+                  the purpose of preventing digital loss. If any material is found to be improperly
+                  included, it will be promptly addressed upon notification.
                 </small>
               </div>
             </div>
@@ -8385,7 +8623,7 @@
           // taskbar strip when an archive is open.
           getAllAvoidRects() {
             const rects = [];
-            const fixed = ['music-window', 'demo-window'];
+            const fixed = ['music-window', 'demo-window', 'status-window'];
             for (const id of fixed) {
               const r = this.rectFor(document.getElementById(id), 12);
               if (r) rects.push(r);
@@ -8403,7 +8641,7 @@
           // strip just above the taskbar — anywhere else would obstruct
           // whatever the user is reading in the maximized window.
           hasMaximizedWindow() {
-            const fixed = ['demo-window', 'music-window'];
+            const fixed = ['demo-window', 'music-window', 'status-window'];
             for (const id of fixed) {
               const w = document.getElementById(id);
               if (!w) continue;
@@ -8548,7 +8786,7 @@
           // into one check at rest. Polling-free; no per-frame reads.
           startMusicAvoidWatcher() {
             if (this._winWatcher) return;
-            const fixed = ['music-window', 'demo-window'];
+            const fixed = ['music-window', 'demo-window', 'status-window'];
             const fixedTargets = fixed.map(id => document.getElementById(id)).filter(Boolean);
 
             const recheck = () => {
@@ -9318,7 +9556,7 @@
         // Shared focus / z-stack helper. Uses a monotonically-increasing
         // counter so each focus puts the window strictly above the previous
         // top, giving real stacking history instead of a binary front/default.
-        const WINDOW_SELECTOR = '.vault, .music-window, .browser-window, .demo-window';
+        const WINDOW_SELECTOR = '.vault, .music-window, .browser-window, .demo-window, .status-window';
         window.__focusedWindow = null;
         let __nextWindowZ = 1005;
         window.bringToFront = function(el) {
@@ -9429,7 +9667,7 @@
 
         // On resize, clamp all positioned windows back into view
         window.addEventListener('resize', () => {
-          document.querySelectorAll('.vault, .music-window, .browser-window, .demo-window').forEach(clampWindowBounds);
+          document.querySelectorAll('.vault, .music-window, .browser-window, .demo-window, .status-window').forEach(clampWindowBounds);
         });
 
         // Make vault draggable
@@ -10320,6 +10558,253 @@
         titlebar.addEventListener('dblclick', function(e) {
           if (e.target.closest('.window-btn')) return;
           maximizeDemoWindow();
+        });
+      })();
+    </script>
+
+    <!-- Status window controls + JSON renderer -->
+    <script>
+      (function() {
+        var win = document.getElementById('status-window');
+        var titlebar = document.getElementById('status-titlebar');
+        var taskbar = document.getElementById('status-taskbar');
+        if (!win || !titlebar || !taskbar) return;
+
+        var isMax = false;
+        var prevStyles = {};
+        var refreshTimer = null;
+        var inflight = null;
+
+        if (window.makeDraggable) window.makeDraggable(win, titlebar);
+
+        function recenter() {
+          win.style.left = '';
+          win.style.top = '';
+          win.style.right = '';
+          win.style.bottom = '';
+          win.style.width = '';
+          win.style.height = '';
+          win.style.position = '';
+          win.style.margin = '';
+          win.style.transform = '';
+        }
+
+        function humanUptime(s) {
+          if (s == null) return '—';
+          var d = Math.floor(s / 86400);
+          var h = Math.floor((s % 86400) / 3600);
+          var m = Math.floor((s % 3600) / 60);
+          if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+          if (h > 0) return h + 'h ' + m + 'm';
+          return m + 'm';
+        }
+
+        function escapeHtml(s) {
+          return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function render(data) {
+          // ─── archives table ───
+          var tbody = document.getElementById('status-archives-body');
+          if (tbody && data.archives) {
+            var rows = data.archives.map(function(a) {
+              var dotCls = a.ok ? 'ok' : 'bad';
+              var state  = a.ok ? 'online' : 'offline';
+              var errMarkup = a.err ? ' <span class="muted" title="' + escapeHtml(a.err) + '">· err</span>' : '';
+              var code = a.status ? String(a.status) : '—';
+              return '<tr>' +
+                '<td><a href="' + escapeHtml(a.url) + '" target="_blank" rel="noopener">' + escapeHtml(a.id) + '</a></td>' +
+                '<td><span class="status-dot ' + dotCls + '"></span>' + state + errMarkup + '</td>' +
+                '<td class="right">' + (a.latency_ms != null ? a.latency_ms + ' ms' : '—') + '</td>' +
+                '<td class="right">' + escapeHtml(code) + '</td>' +
+                '</tr>';
+            }).join('');
+            tbody.innerHTML = rows || '<tr><td colspan="4" class="muted">no archives configured</td></tr>';
+          }
+
+          // ─── host ───
+          var hostBody = document.getElementById('status-host-body');
+          if (hostBody) {
+            hostBody.innerHTML =
+              '<tr><th>process uptime</th><td class="right">' + humanUptime(data.uptime_sec) + '</td></tr>' +
+              '<tr><th>snapshot taken</th><td class="right">' + escapeHtml(data.generated_at || '—') + '</td></tr>' +
+              '<tr><th>refresh cadence</th><td class="right">10m server · 10m client</td></tr>';
+          }
+        }
+
+        function renderRibbon(data) {
+          var body = document.getElementById('status-ribbon-body');
+          if (!body) return;
+          if (!data || !data.archives) {
+            body.innerHTML = '<div class="muted" style="font-size:11px;">no history yet</div>';
+            return;
+          }
+          var ids = Object.keys(data.archives);
+          if (!ids.length) {
+            body.innerHTML = '<div class="muted" style="font-size:11px;">no history yet</div>';
+            return;
+          }
+          var html = '';
+          ids.forEach(function(id) {
+            var series = data.archives[id] || [];
+            var bars = '';
+            var totalChecks = 0, okChecks = 0;
+            series.forEach(function(d) {
+              if (!d) {
+                bars += '<div class="ribbon-bar" title="' + escapeHtml(id) + ' · no data"></div>';
+                return;
+              }
+              totalChecks += d.total;
+              okChecks   += d.ok;
+              var cls = 'ribbon-bar ';
+              if (d.up_pct >= 99) cls += 'up';
+              else if (d.up_pct >= 75) cls += 'warn';
+              else cls += 'bad';
+              var tip = id + ' · ' + d.date + ' · ' + d.up_pct.toFixed(1) + '% up · ' +
+                        d.lat_avg_ms + 'ms avg · ' + d.total + ' checks';
+              bars += '<div class="' + cls + '" title="' + escapeHtml(tip) + '"></div>';
+            });
+            var pct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(1) + '%' : '—';
+            html +=
+              '<div class="ribbon-row">' +
+                '<div class="ribbon-label">' + escapeHtml(id) + '</div>' +
+                '<div class="ribbon-bars">' + bars + '</div>' +
+                '<div class="ribbon-pct">' + pct + '</div>' +
+              '</div>';
+          });
+          html +=
+            '<div class="ribbon-scale">' +
+              '<div></div>' +
+              '<div class="ribbon-scale-axis"><span>90d ago</span><span>today</span></div>' +
+              '<div></div>' +
+            '</div>';
+          body.innerHTML = html;
+        }
+
+        function fetchAndRender() {
+          if (inflight) return;
+          inflight = Promise.all([
+            fetch('/api/status.json', { credentials: 'same-origin' })
+              .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+              .then(render),
+            fetch('/api/status/history.json', { credentials: 'same-origin' })
+              .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+              .then(renderRibbon)
+              .catch(function(err) {
+                var b = document.getElementById('status-ribbon-body');
+                if (b) b.innerHTML = '<div class="muted" style="font-size:11px;">history fetch failed: ' + escapeHtml(err.message) + '</div>';
+              })
+          ])
+            .catch(function(err) {
+              var t = document.getElementById('status-archives-body');
+              if (t) t.innerHTML = '<tr><td colspan="4" class="muted">status fetch failed: ' + escapeHtml(err.message) + '</td></tr>';
+            })
+            .then(function() { inflight = null; });
+        }
+
+        function startAutoRefresh() {
+          stopAutoRefresh();
+          fetchAndRender();
+          refreshTimer = setInterval(fetchAndRender, 600000);
+        }
+        function stopAutoRefresh() {
+          if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        }
+
+        window.openStatusWindow = function() {
+          if (isMax) { win.classList.remove('maximized'); isMax = false; }
+          recenter();
+          win.classList.remove('hidden');
+          win.style.display = '';
+          win.classList.add('restoring');
+          taskbar.style.display = '';
+          taskbar.classList.remove('minimized');
+          taskbar.classList.add('active');
+          setTimeout(function() { win.classList.remove('restoring'); }, 500);
+          if (window.bringToFront) window.bringToFront(win);
+          var menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show') && typeof toggleStartMenu === 'function') toggleStartMenu();
+          startAutoRefresh();
+          if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+            maximizeStatusWindow();
+          }
+        };
+
+        window.closeStatusWindow = function() {
+          win.classList.add('closing');
+          setTimeout(function() {
+            win.classList.remove('closing');
+            win.classList.add('hidden');
+            win.style.display = 'none';
+            taskbar.style.display = 'none';
+            taskbar.classList.remove('active', 'minimized');
+            if (isMax) { win.classList.remove('maximized'); isMax = false; }
+            stopAutoRefresh();
+          }, 300);
+        };
+
+        window.minimizeStatusWindow = function() {
+          win.classList.add('minimizing');
+          taskbar.classList.add('minimized');
+          taskbar.classList.remove('active');
+          setTimeout(function() {
+            win.style.display = 'none';
+            win.classList.remove('minimizing');
+          }, 500);
+        };
+
+        window.toggleStatusWindow = function() {
+          if (win.classList.contains('hidden')) return;
+          if (win.style.display === 'none' || taskbar.classList.contains('minimized')) {
+            win.style.display = '';
+            win.classList.add('restoring');
+            taskbar.classList.remove('minimized');
+            taskbar.classList.add('active');
+            setTimeout(function() { win.classList.remove('restoring'); }, 500);
+            if (window.bringToFront) window.bringToFront(win);
+            if (window.matchMedia('(max-width: 800px)').matches && !isMax) {
+              maximizeStatusWindow();
+            }
+          } else if (taskbar.classList.contains('active')) {
+            if (window.__focusedWindow !== win) {
+              window.bringToFront(win);
+            } else {
+              minimizeStatusWindow();
+            }
+          }
+        };
+
+        window.maximizeStatusWindow = function() {
+          if (!isMax) {
+            prevStyles = {
+              left: win.style.left, top: win.style.top,
+              right: win.style.right, bottom: win.style.bottom,
+              width: win.style.width, height: win.style.height,
+              position: win.style.position,
+              margin: win.style.margin, transform: win.style.transform
+            };
+            win.classList.add('maximized');
+            isMax = true;
+          } else {
+            win.classList.remove('maximized');
+            win.style.left = prevStyles.left || '';
+            win.style.top = prevStyles.top || '';
+            win.style.right = prevStyles.right || '';
+            win.style.bottom = prevStyles.bottom || '';
+            win.style.width = prevStyles.width || '';
+            win.style.height = prevStyles.height || '';
+            win.style.position = prevStyles.position || '';
+            win.style.margin = prevStyles.margin || '';
+            win.style.transform = prevStyles.transform || '';
+            isMax = false;
+          }
+        };
+
+        titlebar.addEventListener('dblclick', function(e) {
+          if (e.target.closest('.window-btn')) return;
+          maximizeStatusWindow();
         });
       })();
     </script>
