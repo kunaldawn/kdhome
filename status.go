@@ -11,10 +11,20 @@ import (
 
 // ─── Status probe ───
 //
-// Probes each archive subdomain with HEAD on a 30 s ticker, plus a local
-// disk-usage check against the data mount. Everything is cached so the
+// Probes each archive subdomain with HEAD on a 1 min ticker. Reachability is
+// debounced Kubernetes-style: an archive is only reported down after
+// failureThreshold consecutive failed probes, and recovers on the first
+// success (successThreshold = 1). Everything is cached so the
 // /api/status.json handler does no I/O on the request path. Consumed by
 // the in-page status window in static/index.html.
+
+const (
+	// probeInterval is the gap between probe sweeps (the "1 min gap").
+	probeInterval = 1 * time.Minute
+	// failureThreshold is how many consecutive failed probes mark an archive
+	// down — like a Kubernetes livenessProbe failureThreshold.
+	failureThreshold = 5
+)
 
 type probeResult struct {
 	ID        string
@@ -37,6 +47,44 @@ var (
 	statusSnap  statusSnapshot
 	statusStart = time.Now()
 )
+
+// probeState holds the per-archive debounce counters. effectiveOK is the
+// reported (debounced) status; consecFails counts failures since the last
+// success. State is in-memory and resets on restart, with archives assumed
+// up until proven down.
+type probeState struct {
+	consecFails int
+	effectiveOK bool
+}
+
+var (
+	probeStateMu sync.Mutex
+	probeStates  = map[string]*probeState{}
+)
+
+// debounceProbe folds a single raw probe result into the archive's running
+// state and returns the effective status. A success resets the failure count
+// and reports up immediately; failures only flip the archive down once
+// failureThreshold consecutive failures accumulate.
+func debounceProbe(id string, rawOK bool) bool {
+	probeStateMu.Lock()
+	defer probeStateMu.Unlock()
+	st := probeStates[id]
+	if st == nil {
+		st = &probeState{effectiveOK: true} // optimistic until proven down
+		probeStates[id] = st
+	}
+	if rawOK {
+		st.consecFails = 0
+		st.effectiveOK = true
+	} else {
+		st.consecFails++
+		if st.consecFails >= failureThreshold {
+			st.effectiveOK = false
+		}
+	}
+	return st.effectiveOK
+}
 
 func startStatusProbe() {
 	refresh := func() {
@@ -74,7 +122,7 @@ func startStatusProbe() {
 
 	refresh()
 	go func() {
-		t := time.NewTicker(10 * time.Minute)
+		t := time.NewTicker(probeInterval)
 		defer t.Stop()
 		for range t.C {
 			refresh()
@@ -86,7 +134,7 @@ func probeOne(client *http.Client, id, url string) probeResult {
 	start := time.Now()
 	req, err := http.NewRequest(http.MethodHead, url, nil)
 	if err != nil {
-		r := probeResult{ID: id, URL: url, CheckedAt: time.Now().UTC(), Err: err.Error()}
+		r := probeResult{ID: id, URL: url, OK: debounceProbe(id, false), CheckedAt: time.Now().UTC(), Err: err.Error()}
 		recordProbeSample(id, r.OK, r.LatencyMS)
 		return r
 	}
@@ -96,14 +144,16 @@ func probeOne(client *http.Client, id, url string) probeResult {
 	r := probeResult{ID: id, URL: url, LatencyMS: latency, CheckedAt: time.Now().UTC()}
 	if err != nil {
 		r.Err = err.Error()
-		recordProbeSample(id, false, latency)
+		r.OK = debounceProbe(id, false)
+		recordProbeSample(id, r.OK, latency)
 		return r
 	}
 	resp.Body.Close()
 	r.Status = resp.StatusCode
 	// Subdomains behind a reverse proxy may answer 200, 301/302, or 401/403
-	// on HEAD without the service being down. Treat any < 500 as reachable.
-	r.OK = resp.StatusCode < 500
+	// on HEAD without the service being down. Treat any < 500 as reachable,
+	// then debounce so a single blip doesn't flip the reported status.
+	r.OK = debounceProbe(id, resp.StatusCode < 500)
 	recordProbeSample(id, r.OK, latency)
 	return r
 }
