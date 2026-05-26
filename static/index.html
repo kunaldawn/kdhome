@@ -7244,7 +7244,7 @@
       </div>
 
       <div class="system-tray">
-        <span id="visit-count" style="color: #7fd1b3; font-family: 'Share Tech Mono', monospace; font-size: 11px;" title="Total site visits">-- visits</span>
+        <span id="visit-count" style="color: #7fd1b3; font-family: 'Share Tech Mono', monospace; font-size: 11px;" title="Humans · filtered bots">-- · --</span>
         <span style="color: rgba(0,255,150,0.2);">|</span>
         <span id="clock" style="color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 12px;">00:00:00</span>
       </div>
@@ -7743,13 +7743,24 @@
         // transient failure just means "no counter shown this load".
         (function () {
           const el = document.getElementById('visit-count');
+          // Compact form for the cramped tray slot: 248 → "248", 1203 → "1.2k".
+          const abbrev = (n) => {
+            if (n < 1000) return n.toLocaleString();
+            // < 999500, not 1e6: above it toFixed(1) rounds up to a bogus "1000k".
+            if (n < 999500) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k';
+            return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+          };
           fetch('/api/visit')
             .then(r => r.ok ? r.json() : null)
             .then(data => {
-              if (el && data && data.count != null) {
-                el.textContent = data.count.toLocaleString() + ' visits';
-                // Let the cat react to milestone crossings.
-                window.dispatchEvent(new CustomEvent('kd-visit-count', { detail: { count: data.count } }));
+              if (el && data && data.humans != null && data.bots != null) {
+                el.textContent = abbrev(data.humans) + ' human · ' + abbrev(data.bots) + ' bot';
+                el.title = data.humans.toLocaleString() + ' humans · ' +
+                           data.bots.toLocaleString() + ' bots filtered';
+                // Let the cat react to milestone crossings (human count only).
+                window.dispatchEvent(new CustomEvent('kd-visit-count', {
+                  detail: { humans: data.humans, bots: data.bots }
+                }));
               }
             })
             .catch(() => { /* silent: no counter is fine */ });
@@ -8038,7 +8049,7 @@
             this.cat.addEventListener('transitionstart', () => this.leavePawPrints());
             this.applyPalette();
             this.installKeystrokeTriggers();
-            window.addEventListener('kd-visit-count', (e) => this.onVisitCount(e.detail.count));
+            window.addEventListener('kd-visit-count', (e) => this.onVisitCount(e.detail.humans));
           }
 
           // ─── Mood Helpers ───
@@ -9227,12 +9238,12 @@
             this.isMoving = false;
             this.setState('celebrate');
             const labels = {
-              100:    '100 visits! Mrow!',
-              500:    '500 visits!',
-              1000:   '1k visits! \u{1F389}',
-              5000:   '5k visits!',
-              10000:  '10k visits!',
-              100000: '100k visits! \u{1F389}',
+              100:    '100 visitors! Mrow!',
+              500:    '500 visitors!',
+              1000:   '1k visitors! \u{1F389}',
+              5000:   '5k visitors!',
+              10000:  '10k visitors!',
+              100000: '100k visitors! \u{1F389}',
             };
             this.showMessage(labels[crossed]);
             this.animateFrames(300, 5000);
