@@ -24,6 +24,8 @@
     var presetIdx = 0;
     var connectedSrc = null;
     var rafId = null;
+    var idleTimer = null;       // low-freq resume poll while the render loop is idle
+    var IDLE_POLL_MS = 500;     // safety-net re-check cadence; resume paths also call wake() directly
     var menuHideTimer = null;
 
     // auto-cycle. Default: ON, every 15s. Users can toggle off via the
@@ -190,14 +192,45 @@
         }
     }
 
+    // True only when there is something worth drawing: viz ready, music
+    // window on screen, audio actually playing, and the tab in the foreground.
+    function shouldRender() {
+        return !!viz
+            && !!window.kdMusic
+            && window.kdMusic.isWindowVisible()
+            && window.kdMusic.isPlaying()
+            && document.visibilityState === 'visible';
+    }
+
+    // The 60fps render loop. While it should render it re-arms via rAF every
+    // frame (unchanged behaviour). The moment the gates close — paused, window
+    // hidden/minimised, or tab backgrounded — it STOPS re-arming instead of
+    // spinning rAF at 60fps doing nothing, and hands off to a cheap low-freq
+    // poll. Resume is driven by explicit wake() hooks (play/unpause, window
+    // restore, tab visible) for zero latency; the poll is just a safety net so
+    // the loop can never get permanently stuck stopped.
     function renderLoop() {
+        if (!shouldRender()) { rafId = null; scheduleIdlePoll(); return; }
         rafId = requestAnimationFrame(renderLoop);
-        if (!viz) return;
-        if (!window.kdMusic) return;
-        if (!window.kdMusic.isWindowVisible()) return;
-        if (!window.kdMusic.isPlaying()) return;
-        if (document.visibilityState !== 'visible') return;
         try { viz.render(); } catch (e) {}
+    }
+
+    function scheduleIdlePoll() {
+        if (idleTimer) return;
+        idleTimer = setTimeout(function () { idleTimer = null; wake(); }, IDLE_POLL_MS);
+    }
+
+    // Idempotent single entry point for (re)starting rendering. Starts the rAF
+    // loop if conditions are met; otherwise keeps the idle poll armed so we
+    // retry. Safe to call from anywhere, any number of times.
+    function wake() {
+        if (rafId !== null) return;       // already running
+        if (shouldRender()) {
+            if (idleTimer) { clearTimeout(idleTimer); idleTimer = null; }
+            rafId = requestAnimationFrame(renderLoop);
+        } else {
+            scheduleIdlePoll();
+        }
     }
 
     // ---- preset stepping ----
@@ -395,13 +428,14 @@
         }
         if (depsLoaded && viz) {
             connectAudioSource(src);
+            wake(); // a track change may have happened while the loop was idle
             return;
         }
         setStatus('loading viz…');
         loadDeps().then(function () {
             if (!ensureViz()) return; // setStatus already called by ensureViz on failure
             connectAudioSource(src);
-            if (rafId === null) renderLoop();
+            wake();
         }).catch(function (e) {
             console.warn('kdVisualizer load failed:', e && e.message || e);
             setStatus('viz unavailable');
@@ -467,6 +501,13 @@
         resizeT = setTimeout(resizeCanvas, 120);
     });
 
+    // Resume the render loop the instant the tab returns to the foreground (the
+    // loop stops itself while backgrounded). Harmless when nothing's playing —
+    // wake() just re-checks and keeps the idle poll armed.
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') wake();
+    });
+
     window.kdVisualizer = {
         onAudioChanged: onAudioChanged,
         openMenu: openMenu,
@@ -479,6 +520,7 @@
         setInterval: setIntervalSec,
         toggleFullscreen: toggleFullscreen,
         onResize: onResize,
+        wake: wake,
     };
 
     function bindKeyboard() {
