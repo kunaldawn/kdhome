@@ -545,7 +545,29 @@ func main() {
 	mux.HandleFunc("/api/status/history.json", statusHistoryHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
-	var handler http.Handler = securityHeaders(mux)
+	// Auth (env-gated). When enabled, register the OAuth routes and gate the
+	// whole site; when AUTH_ENABLED is on but secrets are missing, refuse to
+	// start rather than silently serving an ungated site.
+	authCfg := loadAuthConfig()
+	if authCfg.Enabled {
+		if !authCfg.valid() {
+			log.Fatal("[AUTH] AUTH_ENABLED is set but GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or AUTH_SECRET is missing")
+		}
+		mux.HandleFunc("/login", authCfg.handleLogin)
+		mux.HandleFunc("/auth/google/start", authCfg.handleGoogleStart)
+		mux.HandleFunc("/auth/google/callback", authCfg.handleGoogleCallback)
+		mux.HandleFunc("/logout", authCfg.handleLogout)
+		log.Printf("[AUTH] Google auth ENABLED (cookie domain %s)", authCfg.CookieDomain)
+	}
+
+	// Order: maintenance( securityHeaders( authGate( mux ) ) ). securityHeaders
+	// stays outermost (after maintenance) so the login page AND the gate's
+	// redirect responses both carry the security headers.
+	var handler http.Handler = mux
+	if authCfg.Enabled {
+		handler = authCfg.middleware(handler)
+	}
+	handler = securityHeaders(handler)
 
 	// Maintenance mode (env-gated). When enabled, the middleware wraps the
 	// whole chain and serves a themed 503 for every request; when disabled
