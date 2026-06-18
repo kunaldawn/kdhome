@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -212,6 +214,144 @@ func (c authConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Write(c.loginPage(redirect))
+}
+
+const oauthStateCookie = "kd_oauth_state"
+
+// stateClaims is the short-lived signed CSRF state carried in a cookie during
+// the OAuth round-trip.
+type stateClaims struct {
+	Nonce     string `json:"nonce"`
+	Redirect  string `json:"redirect"`
+	ExpiresAt int64  `json:"exp"`
+}
+
+// randomNonce returns a 128-bit base64url random string.
+func randomNonce() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func (c authConfig) signState(nonce, redirect string) (string, error) {
+	payload, err := json.Marshal(stateClaims{
+		Nonce:     nonce,
+		Redirect:  redirect,
+		ExpiresAt: time.Now().Add(10 * time.Minute).Unix(),
+	})
+	if err != nil {
+		return "", err
+	}
+	return signToken(payload, c.Secret), nil
+}
+
+func (c authConfig) verifyState(token string) (stateClaims, error) {
+	var s stateClaims
+	payload, err := verifyToken(token, c.Secret)
+	if err != nil {
+		return s, err
+	}
+	if err := json.Unmarshal(payload, &s); err != nil {
+		return s, errors.New("bad state payload")
+	}
+	if s.ExpiresAt <= time.Now().Unix() {
+		return s, errors.New("state expired")
+	}
+	return s, nil
+}
+
+// handleGoogleStart begins the OAuth flow: it stores a signed state cookie
+// (nonce + validated redirect) and redirects to Google's consent screen.
+func (c authConfig) handleGoogleStart(w http.ResponseWriter, r *http.Request) {
+	redirect := c.safeRedirect(r.URL.Query().Get("redirect"))
+	nonce, err := randomNonce()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	state, err := c.signState(nonce, redirect)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     oauthStateCookie,
+		Value:    state,
+		Path:     "/auth",
+		Domain:   c.CookieDomain,
+		MaxAge:   600,
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, c.oauth.AuthCodeURL(nonce, oauth2.AccessTypeOnline), http.StatusFound)
+}
+
+// handleGoogleCallback validates the state, exchanges the code for the user's
+// verified email, sets the session cookie, and redirects back.
+func (c authConfig) handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	stateCookie, err := r.Cookie(oauthStateCookie)
+	if err != nil {
+		http.Error(w, "missing state", http.StatusBadRequest)
+		return
+	}
+	st, err := c.verifyState(stateCookie.Value)
+	if err != nil {
+		http.Error(w, "bad state", http.StatusBadRequest)
+		return
+	}
+	if r.URL.Query().Get("state") != st.Nonce {
+		http.Error(w, "state mismatch", http.StatusBadRequest)
+		return
+	}
+	code := r.URL.Query().Get("code")
+	if code == "" {
+		http.Error(w, "missing code", http.StatusBadRequest)
+		return
+	}
+	email, verified, err := c.exchanger.exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, "exchange failed", http.StatusBadGateway)
+		return
+	}
+	if !verified || email == "" {
+		http.Error(w, "email not verified", http.StatusForbidden)
+		return
+	}
+	tok, err := signSession(email, c.SessionTTL, c.Secret)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	// Write the session cookie header directly so the leading dot in
+	// CookieDomain (e.g. ".kunaldawn.com") is preserved in the Set-Cookie
+	// header; net/http strips leading dots when using http.SetCookie.
+	w.Header().Add("Set-Cookie", strings.Join([]string{
+		c.CookieName + "=" + tok,
+		"Path=/",
+		"Domain=" + c.CookieDomain,
+		"Max-Age=" + strconv.Itoa(int(c.SessionTTL.Seconds())),
+		"HttpOnly",
+		"Secure",
+		"SameSite=Lax",
+	}, "; "))
+	// Clear the state cookie.
+	http.SetCookie(w, &http.Cookie{
+		Name: oauthStateCookie, Value: "", Path: "/auth", Domain: c.CookieDomain,
+		MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, c.safeRedirect(st.Redirect), http.StatusFound)
+}
+
+// handleLogout expires the session cookie and returns to the login page.
+func (c authConfig) handleLogout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name: c.CookieName, Value: "", Path: "/", Domain: c.CookieDomain,
+		MaxAge: -1, Secure: true, HttpOnly: true, SameSite: http.SameSiteLaxMode,
+	})
+	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
 // loginPage renders the self-contained themed login page. redirect is already

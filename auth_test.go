@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -169,5 +170,92 @@ func TestLoginPageEmbedsRedirect(t *testing.T) {
 	want := "/auth/google/start?redirect=" + url.QueryEscape("https://wiki.kunaldawn.com/x")
 	if !strings.Contains(page, want) {
 		t.Fatalf("login page should link to %q", want)
+	}
+}
+
+type fakeExchanger struct {
+	email    string
+	verified bool
+	err      error
+}
+
+func (f fakeExchanger) exchange(ctx context.Context, code string) (string, bool, error) {
+	return f.email, f.verified, f.err
+}
+
+func TestCallbackSuccessSetsCookieAndRedirects(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{email: "a@b.com", verified: true}
+	nonce := "nonce123"
+	state, _ := c.signState(nonce, "https://wiki.kunaldawn.com/x")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state="+nonce, nil)
+	req.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: state})
+	c.handleGoogleCallback(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("code = %d body = %s", rec.Code, rec.Body.String())
+	}
+	if loc := rec.Header().Get("Location"); loc != "https://wiki.kunaldawn.com/x" {
+		t.Fatalf("location = %q", loc)
+	}
+	var session *http.Cookie
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == "kd_session" {
+			session = ck
+		}
+	}
+	if session == nil || session.Value == "" {
+		t.Fatal("session cookie not set")
+	}
+	if !session.HttpOnly || session.Domain != ".kunaldawn.com" {
+		t.Fatalf("session cookie attrs: %+v", session)
+	}
+	if _, err := verifySession(session.Value, c.Secret); err != nil {
+		t.Fatalf("session cookie does not verify: %v", err)
+	}
+}
+
+func TestCallbackStateMismatch(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{email: "a@b.com", verified: true}
+	state, _ := c.signState("realnonce", "https://kunaldawn.com/")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state=WRONG", nil)
+	req.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: state})
+	c.handleGoogleCallback(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("want 400, got %d", rec.Code)
+	}
+}
+
+func TestCallbackUnverifiedEmail(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{email: "a@b.com", verified: false}
+	state, _ := c.signState("n", "https://kunaldawn.com/")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: state})
+	c.handleGoogleCallback(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("want 403, got %d", rec.Code)
+	}
+}
+
+func TestLogoutClearsCookie(t *testing.T) {
+	c := testAuthConfig()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
+	c.handleLogout(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("want 302, got %d", rec.Code)
+	}
+	var session *http.Cookie
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == "kd_session" {
+			session = ck
+		}
+	}
+	if session == nil || session.MaxAge >= 0 {
+		t.Fatalf("logout should expire the session cookie, got %+v", session)
 	}
 }
