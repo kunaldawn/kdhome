@@ -9,6 +9,45 @@ services:
       - ./data:/app/data
     networks:
       - web
+    # All supported env vars. Values use ${VAR:-default} interpolation, so you
+    # can override any of them from the shell or a `.env` file in this directory
+    # (do NOT commit real secrets — keep AUTH_SECRET / GOOGLE_* in `.env`).
+    environment:
+      # ─── Server ───
+      # Port the app listens on INSIDE the container. Keep it 8080 to match the
+      # right-hand side of the `ports` mapping above (host 8888 -> container 8080).
+      - PORT=${PORT:-8080}
+      # Directory for the SQLite DB and probe history; matches the mounted volume.
+      - DATA_DIR=${DATA_DIR:-/app/data}
+
+      # ─── Maintenance mode (optional, off by default) ───
+      # Truthy (1/true/on/yes) serves a themed 503 "under maintenance" page for
+      # every request (takes precedence over auth).
+      - MAINTENANCE_MODE=${MAINTENANCE_MODE:-off}
+      # RFC3339 end time driving the countdown, e.g. 2026-07-01T15:00:00Z. Empty = no countdown.
+      - MAINTENANCE_END=${MAINTENANCE_END:-}
+      # Custom message shown under the heading. Empty = "We'll be back soon."
+      - MAINTENANCE_MESSAGE=${MAINTENANCE_MESSAGE:-}
+
+      # ─── Google auth (optional, off by default) ───
+      # Truthy enables Google sign-in and gates the whole site (except crawler/PWA
+      # files). When on, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and AUTH_SECRET are
+      # REQUIRED or the server refuses to start (fail-closed).
+      - AUTH_ENABLED=${AUTH_ENABLED:-off}
+      # Google OAuth Web client credentials.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      # HMAC secret for the session cookie. Use a long random value and the SAME
+      # value on every subdomain that verifies the cookie locally.
+      - AUTH_SECRET=${AUTH_SECRET:-}
+      # Public base URL; builds the OAuth callback {BASE}/auth/google/callback.
+      - AUTH_BASE_URL=${AUTH_BASE_URL:-https://kunaldawn.com}
+      # Session cookie domain (leading dot OK); sent to the apex + all subdomains.
+      - AUTH_COOKIE_DOMAIN=${AUTH_COOKIE_DOMAIN:-.kunaldawn.com}
+      # Session cookie name.
+      - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-kd_session}
+      # Session lifetime as a Go duration (e.g. 720h, 168h, 24h).
+      - AUTH_SESSION_TTL=${AUTH_SESSION_TTL:-720h}
 
 networks:
   web:
