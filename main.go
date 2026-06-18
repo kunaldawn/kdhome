@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"mime"
@@ -18,7 +17,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -48,16 +46,6 @@ var archives = []struct {
 	{"audio", "https://audio.kunaldawn.com"},
 }
 
-// archiveID lets archiveClicksHandler validate POST {"id": ...} bodies
-// against the known set without touching the DB.
-var archiveID = map[string]bool{}
-
-// archiveClicks holds the in-memory aggregate, mirrored to SQLite. Keyed by
-// archive ID. Guarded by archiveClicksMu.
-var (
-	archiveClicksMu sync.RWMutex
-	archiveClicks   = map[string]int64{}
-)
 
 func initVisitDB(dataDir string) {
 	os.MkdirAll(dataDir, 0755)
@@ -121,30 +109,6 @@ func initVisitDB(dataDir string) {
 	atomic.StoreInt64(&humanCount, human)
 	atomic.StoreInt64(&botCount, bot)
 
-	// ─── Archive click counts ───
-	for _, a := range archives {
-		archiveID[a.ID] = true
-	}
-
-	_, err = visitDB.Exec(`CREATE TABLE IF NOT EXISTS archive_click_count (
-		id TEXT PRIMARY KEY,
-		n  INTEGER NOT NULL DEFAULT 0
-	)`)
-	if err != nil {
-		log.Printf("[CLICKS] failed to create archive_click_count: %v", err)
-		return
-	}
-
-	// Seed the seven known IDs so /api/archive-clicks always returns a full
-	// shape and never misses a row.
-	for _, a := range archives {
-		if _, err := visitDB.Exec(
-			`INSERT OR IGNORE INTO archive_click_count (id, n) VALUES (?, 0)`, a.ID,
-		); err != nil {
-			log.Printf("[CLICKS] failed to seed %s: %v", a.ID, err)
-		}
-	}
-
 	// Daily probe rollup table. One row per (UTC date, archive_id). Updated
 	// via UPSERT from the status probe; aggregates total/ok probe counts
 	// and latency stats so the 90-day uptime ribbon can be rendered from
@@ -160,27 +124,6 @@ func initVisitDB(dataDir string) {
 	)`)
 	if err != nil {
 		log.Printf("[PROBE] failed to create probe_daily: %v", err)
-	}
-
-	// Hydrate the in-memory cache from disk.
-	rows, err := visitDB.Query(`SELECT id, n FROM archive_click_count`)
-	if err != nil {
-		log.Printf("[CLICKS] failed to hydrate cache: %v", err)
-	} else {
-		defer rows.Close()
-		archiveClicksMu.Lock()
-		for rows.Next() {
-			var id string
-			var n int64
-			if err := rows.Scan(&id, &n); err == nil {
-				archiveClicks[id] = n
-			}
-		}
-		archiveClicksMu.Unlock()
-		if err := rows.Err(); err != nil {
-			log.Printf("[CLICKS] hydrate iteration error: %v", err)
-		}
-		log.Printf("[CLICKS] hydrated %d archive(s)", len(archiveClicks))
 	}
 
 	log.Printf("[VISITS] initialized — humans: %d, bots: %d", human, bot)
@@ -241,62 +184,6 @@ func recordVisit(bot bool) {
 		}
 		atomic.AddInt64(ctr, 1)
 	}()
-}
-
-// ─── Archive Click Counter ───
-
-func recordArchiveClick(id string) {
-	if visitDB == nil {
-		return
-	}
-	go func() {
-		_, err := visitDB.Exec(`UPDATE archive_click_count SET n = n + 1 WHERE id = ?`, id)
-		if err != nil {
-			log.Printf("[CLICKS] update error for %s: %v", id, err)
-			return
-		}
-		archiveClicksMu.Lock()
-		archiveClicks[id]++
-		archiveClicksMu.Unlock()
-	}()
-}
-
-// archiveClicksHandler serves both reads and writes:
-//   - GET / HEAD → {"counts": {id: n, ...}} for all known archive IDs.
-//   - POST {"id":"<id>"} → increments that archive's counter, returns 204.
-//
-// POST is fire-and-forget from the client (sendBeacon-style); on unknown
-// id it 404s so typos surface in dev. The body is intentionally tiny so a
-// 1 KiB read cap is plenty.
-func archiveClicksHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet, http.MethodHead:
-		archiveClicksMu.RLock()
-		counts := make(map[string]int64, len(archiveClicks))
-		for id, n := range archiveClicks {
-			counts[id] = n
-		}
-		archiveClicksMu.RUnlock()
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		json.NewEncoder(w).Encode(map[string]any{"counts": counts})
-	case http.MethodPost:
-		var body struct {
-			ID string `json:"id"`
-		}
-		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<10)).Decode(&body); err != nil {
-			http.Error(w, "bad json", http.StatusBadRequest)
-			return
-		}
-		if !archiveID[body.ID] {
-			http.NotFound(w, r)
-			return
-		}
-		recordArchiveClick(body.ID)
-		w.WriteHeader(http.StatusNoContent)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
 }
 
 func visitHandler(w http.ResponseWriter, r *http.Request) {
@@ -653,15 +540,24 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/visit", visitHandler)
-	mux.HandleFunc("/api/archive-clicks", archiveClicksHandler)
 	mux.HandleFunc("/api/playlist", playlistHandler(staticDir))
 	mux.HandleFunc("/api/status.json", statusJSONHandler)
 	mux.HandleFunc("/api/status/history.json", statusHistoryHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
+	var handler http.Handler = securityHeaders(mux)
+
+	// Maintenance mode (env-gated). When enabled, the middleware wraps the
+	// whole chain and serves a themed 503 for every request; when disabled
+	// it's never installed, so there's zero request-path overhead.
+	if mcfg := loadMaintenanceConfig(); mcfg.Enabled {
+		handler = maintenanceMiddleware(buildMaintenancePage(mcfg), mcfg)(handler)
+		log.Printf("[MAINT] maintenance mode ENABLED (end set: %t)", mcfg.HasEnd)
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           securityHeaders(mux),
+		Handler:           handler,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      30 * time.Second,

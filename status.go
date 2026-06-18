@@ -24,6 +24,12 @@ const (
 	// failureThreshold is how many consecutive failed probes mark an archive
 	// down — like a Kubernetes livenessProbe failureThreshold.
 	failureThreshold = 5
+	// hideThreshold is how long an archive must stay (debounced) down before
+	// it's dropped from the featured tiles / Start menu.
+	hideThreshold = 1 * time.Hour
+	// recoverWindow is how long a hidden archive must stay up before it's
+	// shown again — guards against flapping.
+	recoverWindow = 1 * time.Minute
 )
 
 type probeResult struct {
@@ -34,6 +40,7 @@ type probeResult struct {
 	LatencyMS int64
 	CheckedAt time.Time
 	Err       string
+	Hidden    bool
 }
 
 type statusSnapshot struct {
@@ -56,6 +63,9 @@ type probeState struct {
 	consecFails int
 	effectiveOK bool
 	seenSuccess bool
+	downSince   time.Time // when effectiveOK last became false (zero when up)
+	upSince     time.Time // when effectiveOK last became true (zero when down)
+	hidden      bool      // current featured-visibility decision
 }
 
 var (
@@ -88,7 +98,40 @@ func debounceProbe(id string, rawOK bool) bool {
 			st.effectiveOK = false
 		}
 	}
+	updateVisibility(st, time.Now())
 	return st.effectiveOK
+}
+
+// updateVisibility folds the current (debounced) effectiveOK into the
+// hide/restore state machine, using an explicit `now` so it's unit-testable.
+// Down for >= hideThreshold hides the archive; once hidden, it's shown again
+// only after staying up for >= recoverWindow. Caller holds probeStateMu.
+func updateVisibility(st *probeState, now time.Time) {
+	if st.effectiveOK {
+		if st.upSince.IsZero() {
+			st.upSince = now
+		}
+		st.downSince = time.Time{}
+		if st.hidden && now.Sub(st.upSince) >= recoverWindow {
+			st.hidden = false
+		}
+	} else {
+		if st.downSince.IsZero() {
+			st.downSince = now
+		}
+		st.upSince = time.Time{}
+		if now.Sub(st.downSince) >= hideThreshold {
+			st.hidden = true
+		}
+	}
+}
+
+// isHidden reports the current featured-visibility decision for an archive.
+func isHidden(id string) bool {
+	probeStateMu.Lock()
+	defer probeStateMu.Unlock()
+	st := probeStates[id]
+	return st != nil && st.hidden
 }
 
 func startStatusProbe() {
@@ -141,6 +184,7 @@ func probeOne(client *http.Client, id, url string) probeResult {
 	if err != nil {
 		r := probeResult{ID: id, URL: url, OK: debounceProbe(id, false), CheckedAt: time.Now().UTC(), Err: err.Error()}
 		recordProbeSample(id, r.OK, r.LatencyMS)
+		r.Hidden = isHidden(id)
 		return r
 	}
 	req.Header.Set("User-Agent", "kdhome-status/1 (+https://kunaldawn.com)")
@@ -151,6 +195,7 @@ func probeOne(client *http.Client, id, url string) probeResult {
 		r.Err = err.Error()
 		r.OK = debounceProbe(id, false)
 		recordProbeSample(id, r.OK, latency)
+		r.Hidden = isHidden(id)
 		return r
 	}
 	resp.Body.Close()
@@ -160,6 +205,7 @@ func probeOne(client *http.Client, id, url string) probeResult {
 	// then debounce so a single blip doesn't flip the reported status.
 	r.OK = debounceProbe(id, resp.StatusCode < 500)
 	recordProbeSample(id, r.OK, latency)
+	r.Hidden = isHidden(id)
 	return r
 }
 
@@ -321,8 +367,8 @@ func statusJSONHandler(w http.ResponseWriter, r *http.Request) {
 		if i > 0 {
 			fmt.Fprint(w, ",")
 		}
-		fmt.Fprintf(w, `{"id":%q,"url":%q,"ok":%t,"status":%d,"latency_ms":%d,"checked_at":%q`,
-			p.ID, p.URL, p.OK, p.Status, p.LatencyMS, p.CheckedAt.Format(time.RFC3339))
+		fmt.Fprintf(w, `{"id":%q,"url":%q,"ok":%t,"hidden":%t,"status":%d,"latency_ms":%d,"checked_at":%q`,
+			p.ID, p.URL, p.OK, p.Hidden, p.Status, p.LatencyMS, p.CheckedAt.Format(time.RFC3339))
 		if p.Err != "" {
 			fmt.Fprintf(w, `,"err":%q`, p.Err)
 		}
