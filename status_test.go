@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // resetProbeStates clears the in-memory debounce map so subtests start clean.
 func resetProbeStates() {
@@ -79,6 +82,68 @@ func TestDebounceProbe(t *testing.T) {
 			if !debounceProbe(id, ok) {
 				t.Fatalf("step %d (raw ok=%v): should remain up, never 5 consecutive failures", i, ok)
 			}
+		}
+	})
+}
+
+func TestUpdateVisibility(t *testing.T) {
+	base := time.Date(2026, 6, 18, 12, 0, 0, 0, time.UTC)
+
+	t.Run("down under an hour stays visible", func(t *testing.T) {
+		st := &probeState{effectiveOK: false}
+		updateVisibility(st, base) // first down probe
+		updateVisibility(st, base.Add(59*time.Minute))
+		if st.hidden {
+			t.Fatal("should not be hidden before 1h")
+		}
+	})
+
+	t.Run("down for over an hour hides", func(t *testing.T) {
+		st := &probeState{effectiveOK: false}
+		updateVisibility(st, base)
+		updateVisibility(st, base.Add(time.Hour))
+		if !st.hidden {
+			t.Fatal("should be hidden at 1h")
+		}
+	})
+
+	t.Run("hidden then up under a minute stays hidden", func(t *testing.T) {
+		st := &probeState{effectiveOK: false}
+		updateVisibility(st, base)
+		updateVisibility(st, base.Add(time.Hour)) // hidden
+		st.effectiveOK = true
+		updateVisibility(st, base.Add(time.Hour)) // up at T+1h
+		updateVisibility(st, base.Add(time.Hour+30*time.Second))
+		if !st.hidden {
+			t.Fatal("should remain hidden until up >= 1m")
+		}
+	})
+
+	t.Run("hidden then up for a minute restores", func(t *testing.T) {
+		st := &probeState{effectiveOK: false}
+		updateVisibility(st, base)
+		updateVisibility(st, base.Add(time.Hour)) // hidden
+		st.effectiveOK = true
+		updateVisibility(st, base.Add(time.Hour)) // up clock starts
+		updateVisibility(st, base.Add(time.Hour+time.Minute))
+		if st.hidden {
+			t.Fatal("should be visible after up >= 1m")
+		}
+	})
+
+	t.Run("brief up then down again resets the down clock", func(t *testing.T) {
+		st := &probeState{effectiveOK: false}
+		updateVisibility(st, base)
+		updateVisibility(st, base.Add(50*time.Minute)) // still visible
+		// brief recovery
+		st.effectiveOK = true
+		updateVisibility(st, base.Add(51*time.Minute))
+		// down again — down clock must restart from here, not the original base
+		st.effectiveOK = false
+		updateVisibility(st, base.Add(52*time.Minute))
+		updateVisibility(st, base.Add(52*time.Minute+59*time.Minute)) // ~1h59m after base, but only 59m down
+		if st.hidden {
+			t.Fatal("down clock should have reset on the brief recovery")
 		}
 	})
 }
