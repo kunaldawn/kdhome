@@ -207,7 +207,7 @@ func TestCallbackSuccessSetsCookieAndRedirects(t *testing.T) {
 	if session == nil || session.Value == "" {
 		t.Fatal("session cookie not set")
 	}
-	if !session.HttpOnly || session.Domain != ".kunaldawn.com" {
+	if !session.HttpOnly || session.Domain != "kunaldawn.com" {
 		t.Fatalf("session cookie attrs: %+v", session)
 	}
 	if _, err := verifySession(session.Value, c.Secret); err != nil {

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -325,18 +324,16 @@ func (c authConfig) handleGoogleCallback(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
-	// Write the session cookie header directly so the leading dot in
-	// CookieDomain (e.g. ".kunaldawn.com") is preserved in the Set-Cookie
-	// header; net/http strips leading dots when using http.SetCookie.
-	w.Header().Add("Set-Cookie", strings.Join([]string{
-		c.CookieName + "=" + tok,
-		"Path=/",
-		"Domain=" + c.CookieDomain,
-		"Max-Age=" + strconv.Itoa(int(c.SessionTTL.Seconds())),
-		"HttpOnly",
-		"Secure",
-		"SameSite=Lax",
-	}, "; "))
+	http.SetCookie(w, &http.Cookie{
+		Name:     c.CookieName,
+		Value:    tok,
+		Path:     "/",
+		Domain:   c.CookieDomain,
+		MaxAge:   int(c.SessionTTL.Seconds()),
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	// Clear the state cookie.
 	http.SetCookie(w, &http.Cookie{
 		Name: oauthStateCookie, Value: "", Path: "/auth", Domain: c.CookieDomain,
