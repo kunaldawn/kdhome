@@ -659,9 +659,19 @@ func main() {
 	mux.HandleFunc("/api/status/history.json", statusHistoryHandler)
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
+	var handler http.Handler = securityHeaders(mux)
+
+	// Maintenance mode (env-gated). When enabled, the middleware wraps the
+	// whole chain and serves a themed 503 for every request; when disabled
+	// it's never installed, so there's zero request-path overhead.
+	if mcfg := loadMaintenanceConfig(); mcfg.Enabled {
+		handler = maintenanceMiddleware(buildMaintenancePage(mcfg), mcfg)(handler)
+		log.Printf("[MAINT] maintenance mode ENABLED (end set: %t)", mcfg.HasEnd)
+	}
+
 	srv := &http.Server{
 		Addr:              ":" + port,
-		Handler:           securityHeaders(mux),
+		Handler:           handler,
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		WriteTimeout:      30 * time.Second,
