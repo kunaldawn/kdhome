@@ -10547,10 +10547,8 @@
           }
           var existing = instances.get(id);
           if (existing) {
-            // Restore if minimized; bring to front either way. No badge
-            // bump — re-focusing an already-open window isn't a click;
-            // bumping here would inflate the badge against server truth
-            // and undo on next reload.
+            // Restore if minimized; bring to front either way. Re-focusing an
+            // already-open window isn't a fresh open.
             if (existing.isMin || existing.el.style.display === 'none') {
               toggleInstanceFromTaskbar(existing);
             } else {
