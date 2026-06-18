@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"html"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -160,4 +162,107 @@ func emailFromIDToken(idToken string) (string, bool, error) {
 		verified = v == "true"
 	}
 	return claims.Email, verified, nil
+}
+
+// publicPaths bypass the auth gate: the auth routes themselves plus
+// crawler/PWA files that must stay reachable without login.
+var publicPaths = map[string]bool{
+	"/login":                      true,
+	"/auth/google/start":          true,
+	"/auth/google/callback":       true,
+	"/logout":                     true,
+	"/robots.txt":                 true,
+	"/sitemap.xml":                true,
+	"/llms.txt":                   true,
+	"/og-image.png":               true,
+	"/site.webmanifest":           true,
+	"/favicon.ico":                true,
+	"/favicon-16x16.png":          true,
+	"/favicon-32x32.png":          true,
+	"/favicon-48x48.png":          true,
+	"/apple-touch-icon.png":       true,
+	"/android-chrome-192x192.png": true,
+	"/android-chrome-512x512.png": true,
+}
+
+// middleware gates every request behind a valid session cookie, except
+// publicPaths. Unauthenticated requests get 302 -> /login with the original
+// absolute URL as the redirect-back target.
+func (c authConfig) middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if publicPaths[r.URL.Path] {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if ck, err := r.Cookie(c.CookieName); err == nil {
+			if _, verr := verifySession(ck.Value, c.Secret); verr == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+		current := "https://" + r.Host + r.URL.RequestURI()
+		http.Redirect(w, r, "/login?redirect="+url.QueryEscape(c.safeRedirect(current)), http.StatusFound)
+	})
+}
+
+// handleLogin serves the themed sign-in page, carrying the validated
+// redirect-back target through to the Google start endpoint.
+func (c authConfig) handleLogin(w http.ResponseWriter, r *http.Request) {
+	redirect := c.safeRedirect(r.URL.Query().Get("redirect"))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Write(c.loginPage(redirect))
+}
+
+// loginPage renders the self-contained themed login page. redirect is already
+// validated by the caller; it is URL-encoded into the sign-in link and
+// HTML-escaped for the attribute context.
+func (c authConfig) loginPage(redirect string) []byte {
+	startHref := html.EscapeString("/auth/google/start?redirect=" + url.QueryEscape(redirect))
+	return []byte(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — kunaldawn.com</title>
+<meta property="og:title" content="KD's Homebrew Digital Archive">
+<meta property="og:description" content="A home-grown mirror of the public internet. Sign in to continue.">
+<meta property="og:image" content="/og-image.png">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: #05110d; color: #cfeee0;
+    font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 24px;
+    background-image: radial-gradient(circle at 50% 0%, rgba(127,209,179,0.08), transparent 60%);
+  }
+  .box {
+    width: 100%; max-width: 460px; text-align: center;
+    border: 1px solid rgba(127,209,179,0.35); border-radius: 10px;
+    padding: 40px 28px; background: rgba(10,28,22,0.6);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+  h1 { font-size: 20px; margin: 0 0 6px; color: #7fd1b3; letter-spacing: 1px; }
+  .tag { font-size: 12px; opacity: 0.7; margin-bottom: 26px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 12px 22px; border-radius: 6px; text-decoration: none;
+    background: #7fd1b3; color: #05110d; font-weight: bold;
+  }
+  .btn:hover { background: #a8d8c4; }
+  .footer { margin-top: 28px; font-size: 11px; opacity: 0.5; }
+</style>
+</head>
+<body>
+  <div class="box">
+    <h1>// SIGN IN</h1>
+    <div class="tag">KD's Homebrew Digital Archive</div>
+    <a class="btn" href="` + startHref + `">Sign in with Google</a>
+    <div class="footer">free for all, free forever</div>
+  </div>
+</body>
+</html>`)
 }

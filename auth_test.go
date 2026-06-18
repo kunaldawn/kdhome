@@ -1,7 +1,11 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -93,5 +97,77 @@ func TestEmailFromIDToken(t *testing.T) {
 	email2, v2, _ := emailFromIDToken("h." + payload2 + ".s")
 	if email2 != "c@d.com" || !v2 {
 		t.Fatalf("string form: got %q %v", email2, v2)
+	}
+}
+
+func TestMiddlewarePublicBypass(t *testing.T) {
+	c := testAuthConfig()
+	var called bool
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	for _, p := range []string{"/login", "/robots.txt", "/auth/google/start", "/og-image.png", "/favicon.ico"} {
+		called = false
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if !called {
+			t.Fatalf("%s should bypass the gate", p)
+		}
+	}
+}
+
+func TestMiddlewareRedirectsWhenNoCookie(t *testing.T) {
+	c := testAuthConfig()
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "https://kunaldawn.com/secret?x=1", nil)
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("code = %d, want 302", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.HasPrefix(loc, "/login?redirect=") {
+		t.Fatalf("location = %q", loc)
+	}
+	if !strings.Contains(loc, url.QueryEscape("https://kunaldawn.com/secret?x=1")) {
+		t.Fatalf("redirect param missing original URL: %q", loc)
+	}
+}
+
+func TestMiddlewareAllowsValidCookie(t *testing.T) {
+	c := testAuthConfig()
+	tok, _ := signSession("a@b.com", time.Hour, c.Secret)
+	var called bool
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { called = true }))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/secret", nil)
+	req.AddCookie(&http.Cookie{Name: "kd_session", Value: tok})
+	h.ServeHTTP(rec, req)
+	if !called {
+		t.Fatal("valid cookie should pass through")
+	}
+}
+
+func TestMiddlewareRejectsBadCookie(t *testing.T) {
+	c := testAuthConfig()
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) }))
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/secret", nil)
+	req.AddCookie(&http.Cookie{Name: "kd_session", Value: "garbage"})
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("bad cookie should redirect, got %d", rec.Code)
+	}
+}
+
+func TestLoginPageEmbedsRedirect(t *testing.T) {
+	c := testAuthConfig()
+	page := string(c.loginPage("https://wiki.kunaldawn.com/x"))
+	want := "/auth/google/start?redirect=" + url.QueryEscape("https://wiki.kunaldawn.com/x")
+	if !strings.Contains(page, want) {
+		t.Fatalf("login page should link to %q", want)
 	}
 }
