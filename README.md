@@ -58,7 +58,7 @@ go test ./...
 
 ## Stack
 
-`Go 1.22` · `net/http` · `mattn/go-sqlite3` · vanilla JS · `libopenmpt` · Butterchurn · Docker (multi-stage, non-root)
+`Go 1.23` · `net/http` · `mattn/go-sqlite3` · vanilla JS · `libopenmpt` · Butterchurn · Docker (multi-stage, non-root)
 
 ---
 

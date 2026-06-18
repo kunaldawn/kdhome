@@ -534,6 +534,13 @@ func main() {
 	staticCache = cache
 	log.Printf("[STATIC] cached %d files", len(cache))
 
+	// Auth config is loaded early so a misconfigured fail-closed startup aborts
+	// before probe goroutines are spawned.
+	authCfg := loadAuthConfig()
+	if authCfg.Enabled && !authCfg.valid() {
+		log.Fatal("[AUTH] AUTH_ENABLED is set but GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or AUTH_SECRET is missing")
+	}
+
 	// Background probe for /api/status.json. Primes the cache before
 	// the server starts taking traffic, then refreshes every 30 s.
 	startStatusProbe()
@@ -546,13 +553,9 @@ func main() {
 	mux.Handle("/", staticHandler(http.FileServer(noDirFS{http.Dir(staticDir)})))
 
 	// Auth (env-gated). When enabled, register the OAuth routes and gate the
-	// whole site; when AUTH_ENABLED is on but secrets are missing, refuse to
-	// start rather than silently serving an ungated site.
-	authCfg := loadAuthConfig()
+	// whole site. Validity was already checked above, so if we reach here with
+	// Enabled=true the secrets are present.
 	if authCfg.Enabled {
-		if !authCfg.valid() {
-			log.Fatal("[AUTH] AUTH_ENABLED is set but GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, or AUTH_SECRET is missing")
-		}
 		mux.HandleFunc("/login", authCfg.handleLogin)
 		mux.HandleFunc("/auth/google/start", authCfg.handleGoogleStart)
 		mux.HandleFunc("/auth/google/callback", authCfg.handleGoogleCallback)

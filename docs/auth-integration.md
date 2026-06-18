@@ -28,6 +28,14 @@ func verify(token string, secret []byte) (string, bool) {
 	if len(parts) != 3 {
 		return "", false
 	}
+	hdr, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return "", false
+	}
+	var h struct{ Alg string `json:"alg"` }
+	if json.Unmarshal(hdr, &h) != nil || h.Alg != "HS256" {
+		return "", false
+	}
 	mac := hmac.New(sha256.New, secret)
 	mac.Write([]byte(parts[0] + "." + parts[1]))
 	want := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
@@ -49,8 +57,7 @@ func verify(token string, secret []byte) (string, bool) {
 }
 ```
 
-(For full parity with the issuer, also reject any header whose `alg` is not
-`HS256`.)
+The snippet rejects any non-HS256 `alg`, matching the issuer.
 
 ## Subdomain gate behavior
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -257,5 +258,48 @@ func TestLogoutClearsCookie(t *testing.T) {
 	}
 	if session == nil || session.MaxAge >= 0 {
 		t.Fatalf("logout should expire the session cookie, got %+v", session)
+	}
+}
+
+func TestCallbackExchangeError(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{err: errors.New("boom")}
+	state, _ := c.signState("n", "https://kunaldawn.com/")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: state})
+	c.handleGoogleCallback(rec, req)
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("want 502, got %d", rec.Code)
+	}
+}
+
+func TestCallbackMissingStateCookie(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{email: "a@b.com", verified: true}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state=n", nil)
+	c.handleGoogleCallback(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("want 400, got %d", rec.Code)
+	}
+}
+
+func TestCallbackClearsStateCookieOnSuccess(t *testing.T) {
+	c := testAuthConfig()
+	c.exchanger = fakeExchanger{email: "a@b.com", verified: true}
+	state, _ := c.signState("n", "https://kunaldawn.com/")
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state=n", nil)
+	req.AddCookie(&http.Cookie{Name: oauthStateCookie, Value: state})
+	c.handleGoogleCallback(rec, req)
+	var cleared bool
+	for _, ck := range rec.Result().Cookies() {
+		if ck.Name == oauthStateCookie && ck.MaxAge < 0 {
+			cleared = true
+		}
+	}
+	if !cleared {
+		t.Fatal("state cookie should be cleared (MaxAge<0) on success")
 	}
 }

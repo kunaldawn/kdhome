@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"html"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -67,6 +68,8 @@ func loadAuthConfig() authConfig {
 	if v := strings.TrimSpace(os.Getenv("AUTH_SESSION_TTL")); v != "" {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			c.SessionTTL = d
+		} else {
+			log.Printf("[AUTH] invalid AUTH_SESSION_TTL %q, using default %s", v, c.SessionTTL)
 		}
 	}
 	c.oauth = &oauth2.Config{
