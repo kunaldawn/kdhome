@@ -33,7 +33,7 @@ A single statically-linked Go binary ([`main.go`](main.go), [`status.go`](status
 - **Visit counter** that splits **human vs bot** by User-Agent server-side, so the number means something — `→ /api/visit`.
 - **Archive health monitor** — periodic status probing with historical uptime tracking — `→ /api/status.json`, `/api/status/history.json`.
 - **Playlist + click tracking** for the music and the sub-archive tiles — `→ /api/playlist`, `/api/archive-clicks`.
-- **SQLite** (WAL mode, single writer) for the handful of counters worth keeping. No accounts, no third-party analytics.
+- **SQLite** (WAL mode, single writer) for the handful of counters worth keeping. No third-party analytics.
 
 ## The rig
 
@@ -58,12 +58,12 @@ go test ./...
 
 ## Stack
 
-`Go 1.22` · `net/http` · `mattn/go-sqlite3` · vanilla JS · `libopenmpt` · Butterchurn · Docker (multi-stage, non-root)
+`Go 1.23` · `net/http` · `mattn/go-sqlite3` · vanilla JS · `libopenmpt` · Butterchurn · Docker (multi-stage, non-root)
 
 ---
 
 ```
-  no ads · no accounts · no monetization · free for all, free forever
+  no ads · no monetization · free for all, free forever
               preservation doesn't require a data centre —
                  just determination, a shelf, and enough panels to cover the draw.
 ```

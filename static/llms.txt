@@ -19,7 +19,7 @@ to the few who go looking.
 
 The project spans seven sub-archives totalling over 12 TB of curated content, served from
 a home-grown archive in a home drawing about 30 watts off-grid. No ads, basic analytics
-only, no user accounts, no uptime guarantee, no monetization — free for all, free forever.
+only, no uptime guarantee, no monetization — free for all, free forever.
 
 ## Sub-Archives
 
@@ -148,7 +148,7 @@ follows the same tradition as public libraries, the Internet Archive, and commun
 around the world: information belongs to everyone, and it deserves to outlive the servers that
 first hosted it.
 
-Ethos is stark and deliberate: no ads, basic analytics only, no user accounts,
+Ethos is stark and deliberate: no ads, basic analytics only,
 no uptime guarantee, no monetization. Free for all, free forever. Preservation doesn't
 require a data centre — just determination, a shelf, and enough panels to cover the draw.
 
