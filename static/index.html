@@ -3434,78 +3434,6 @@
       }
     }
 
-    /* ═══ Entry gate (glass welcome overlay) ═══ */
-    .entry-gate {
-      position: fixed;
-      inset: 0;
-      z-index: 99999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      background: radial-gradient(circle at 50% 40%, rgba(0, 30, 22, 0.55), rgba(0, 0, 0, 0.85));
-      backdrop-filter: blur(18px) saturate(130%);
-      -webkit-backdrop-filter: blur(18px) saturate(130%);
-      opacity: 1;
-      transition: opacity 1.4s ease, backdrop-filter 1.4s ease, -webkit-backdrop-filter 1.4s ease;
-    }
-    .entry-gate.dismissing {
-      opacity: 0;
-      pointer-events: none;
-      backdrop-filter: blur(0) saturate(100%);
-      -webkit-backdrop-filter: blur(0) saturate(100%);
-    }
-    .entry-gate-glass {
-      max-width: 520px;
-      width: 100%;
-      max-height: calc(100dvh - 48px);
-      overflow-y: auto;
-      padding: 26px 26px 18px;
-      border-radius: 14px;
-      text-align: center;
-      position: relative;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 255, 150, 0.02));
-      border: 1px solid rgba(0, 255, 150, 0.28);
-      box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.65),
-        inset 0 1px 0 rgba(255, 255, 255, 0.08),
-        0 0 80px rgba(0, 255, 150, 0.15);
-      backdrop-filter: blur(22px) saturate(140%);
-      -webkit-backdrop-filter: blur(22px) saturate(140%);
-      transform: translateY(0) scale(1);
-      opacity: 1;
-      transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 1.1s ease;
-    }
-    .entry-gate.dismissing .entry-gate-glass {
-      transform: translateY(12px) scale(0.96);
-      opacity: 0;
-    }
-    .entry-gate-glass::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: 14px;
-      pointer-events: none;
-      background: linear-gradient(120deg, rgba(0, 255, 150, 0.08) 0%, transparent 40%, transparent 60%, rgba(0, 255, 150, 0.06) 100%);
-    }
-    .entry-gate-title {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 20px;
-      letter-spacing: 5px;
-      color: #d5ffe8;
-      margin: 0 0 14px;
-      text-transform: uppercase;
-      text-shadow:
-        -1px 0 0 rgba(255, 0, 128, 0.45),
-         1px 0 0 rgba(0, 200, 255, 0.45),
-         0 0 14px rgba(0, 255, 150, 0.45);
-      animation: entry-rgb 4s ease-in-out infinite;
-    }
-    @keyframes entry-rgb {
-      0%, 100% { text-shadow: -1px 0 0 rgba(255, 0, 128, 0.45), 1px 0 0 rgba(0, 200, 255, 0.45), 0 0 14px rgba(0, 255, 150, 0.45); }
-      50%      { text-shadow:  1px 0 0 rgba(255, 0, 128, 0.5),  -1px 0 0 rgba(0, 200, 255, 0.5),  0 0 22px rgba(0, 255, 150, 0.55); }
-    }
-
     /* ─── Demoscene intro (ASCII FX canvas) ─── */
     .sr-only {
       position: absolute !important;
@@ -3792,162 +3720,6 @@
       .fx-canvas { text-shadow: 0 0 4px rgba(0,255,150,0.4); color: #00ff99; transition: none; }
     }
 
-    .entry-terms {
-      text-align: left;
-      margin: 14px 0 18px;
-      padding: 12px 14px 10px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 14.5px;
-      color: #b9e8d2;
-      background: rgba(0, 255, 150, 0.03);
-      border: 1px dashed rgba(0, 255, 150, 0.28);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease;
-    }
-    .entry-terms:hover {
-      background: rgba(0, 255, 150, 0.06);
-      border-color: rgba(0, 255, 150, 0.45);
-    }
-    .entry-terms-head {
-      display: block;
-      margin: 0 auto 14px;
-      padding: 0;
-      text-align: center;
-      /* Explicitly pick a font that carries the box-drawing glyphs used in the
-         "ANSI Shadow" art. Share Tech Mono does not, so characters would fall
-         back to the browser default and break the grid. */
-      font-family: ui-monospace, 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
-      font-size: 11px;
-      line-height: 1;
-      letter-spacing: 0;
-      white-space: pre;
-      color: #00ff99;
-      opacity: 0.95;
-      text-shadow: 0 0 10px rgba(0, 255, 150, 0.45);
-      overflow: visible;
-    }
-    .entry-check {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      padding: 4px 0 10px;
-      border-bottom: 1px dashed rgba(0, 255, 150, 0.18);
-      margin-bottom: 10px;
-      user-select: none;
-    }
-    .entry-check input {
-      position: absolute;
-      opacity: 0;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      cursor: pointer;
-    }
-    .entry-check-box {
-      flex: 0 0 auto;
-      width: 16px;
-      height: 16px;
-      border: 1px solid rgba(0, 255, 150, 0.6);
-      background: rgba(0, 255, 150, 0.06);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      line-height: 1;
-      color: #00ff99;
-      transition: background 0.15s, box-shadow 0.15s;
-    }
-    .entry-check input:checked ~ .entry-check-box {
-      background: rgba(0, 255, 150, 0.22);
-      box-shadow: 0 0 10px rgba(0, 255, 150, 0.4);
-    }
-    .entry-check input:checked ~ .entry-check-box::after {
-      content: '\2713';
-      text-shadow: 0 0 6px rgba(0, 255, 150, 0.7);
-    }
-    .entry-check input:focus-visible ~ .entry-check-box {
-      outline: 1px solid #00ff99;
-      outline-offset: 2px;
-    }
-    .entry-check-label b { color: #00ff99; font-weight: 700; }
-
-    .entry-rules {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px 14px;
-    }
-    .entry-rules li {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
-      color: #b9e8d2;
-      line-height: 1.6;
-    }
-    .entry-rules .bul {
-      color: #ff48a0;
-      text-shadow: 0 0 6px rgba(255, 72, 160, 0.55);
-      font-weight: 700;
-    }
-
-    .entry-gate-btn {
-      position: relative;
-      display: inline-block;
-      padding: 12px 40px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 13px;
-      letter-spacing: 4px;
-      color: #00ff99;
-      background: rgba(0, 255, 150, 0.08);
-      border: 1px solid rgba(0, 255, 150, 0.5);
-      border-radius: 6px;
-      cursor: pointer;
-      text-align: center;
-      text-transform: uppercase;
-      transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease, color 0.2s ease, opacity 0.2s ease;
-    }
-    .entry-gate-btn:hover:not([disabled]) {
-      background: rgba(0, 255, 150, 0.18);
-      color: #d5ffe8;
-      box-shadow: 0 0 26px rgba(0, 255, 150, 0.4);
-    }
-    .entry-gate-btn:active:not([disabled]) { transform: scale(0.97); }
-    .entry-gate-btn[disabled] {
-      opacity: 0.35;
-      cursor: not-allowed;
-      color: #7fd1b3;
-      border-color: rgba(0, 255, 150, 0.2);
-      box-shadow: none;
-    }
-    .entry-cursor {
-      position: absolute;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      animation: entry-blink 1s steps(2, end) infinite;
-    }
-    @keyframes entry-blink { 50% { opacity: 0; } }
-
-    @media (max-width: 520px) {
-      .entry-gate { padding: 16px; }
-      .entry-gate-glass { padding: 20px 18px 14px; }
-      .entry-gate-title { font-size: 16px; letter-spacing: 3px; }
-      .entry-terms { font-size: 13.5px; padding: 10px 12px; }
-      .entry-terms-head { font-size: 7.5px; }
-      .entry-rules { grid-template-columns: 1fr; gap: 2px; }
-      .entry-gate-btn { padding: 11px 30px; font-size: 12px; letter-spacing: 3px; }
-    }
-
-    body.entry-gate-locked { overflow: hidden; }
-    body.entry-gate-accepted .entry-gate { display: none !important; }
-
     /* ═══ Glass-off mode (simple transparency) ═══
        Default on mobile. Kills backdrop-filter blur (the expensive part —
        it forces the GPU to re-render the matrix/grid behind every frame)
@@ -3962,8 +3734,6 @@
     body.no-transparency .demo-window,
     body.no-transparency .status-window,
     body.no-transparency .lock-content,
-    body.no-transparency .entry-gate,
-    body.no-transparency .entry-gate-glass,
     body.no-transparency .browser-content.loading {
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
@@ -3983,12 +3753,6 @@
     }
     body.no-transparency .lock-content {
       background: rgba(0, 5, 3, 0.94) !important;
-    }
-    body.no-transparency .entry-gate {
-      background: radial-gradient(circle at 50% 40%, rgba(0, 30, 22, 0.92), rgba(0, 0, 0, 0.97)) !important;
-    }
-    body.no-transparency .entry-gate-glass {
-      background: linear-gradient(180deg, rgba(7, 24, 35, 0.95), rgba(0, 30, 20, 0.97)) !important;
     }
     body.no-transparency .browser-content.loading {
       filter: none !important;
@@ -4115,7 +3879,7 @@
   </style>
 </head>
 
-<body class="entry-gate-locked">
+<body>
   <script>
     /* Apply glass-effect preference before any paint — saved by Settings.
        Defaults to ON; the blur is only killed when the user explicitly turns
@@ -4127,17 +3891,6 @@
         var pref = localStorage.getItem('kd:prefs:transparency');
         // On by default: only the explicit 'off' opt-out disables the blur.
         if (pref === 'off') document.body.classList.add('no-transparency');
-      } catch (e) {}
-    })();
-    /* If the user already accepted the entry-gate terms in a previous
-       visit, hide the gate before first paint and unlock the body. The
-       gate element is later removed from the DOM by its own IIFE. */
-    (function () {
-      try {
-        if (localStorage.getItem('kd:prefs:terms-accepted') === 'yes') {
-          document.body.classList.remove('entry-gate-locked');
-          document.body.classList.add('entry-gate-accepted');
-        }
       } catch (e) {}
     })();
   </script>
@@ -4164,86 +3917,6 @@
       </filter>
     </defs>
   </svg>
-  <!-- Entry gate: user gesture unlocks audio playback -->
-  <div class="entry-gate" id="entry-gate" role="dialog" aria-modal="true" aria-labelledby="entry-gate-title">
-    <div class="entry-gate-glass">
-      <div class="fx-wrap" aria-hidden="true">
-        <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">KD.FX</span></span></div>
-        <pre class="fx-canvas fx-kdfx" id="fx-canvas"></pre>
-        <div class="fx-ticker-wrap">
-          <pre class="fx-ticker" id="fx-ticker"></pre>
-        </div>
-        <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
-      </div>
-      <p class="entry-inventory sr-only">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix & Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 13 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
-      <h2 class="entry-gate-title" id="entry-gate-title">KD's Homebrew Digital Archive</h2>
-
-      <div class="entry-terms" role="group" aria-label="Terms">
-        <pre class="entry-terms-head" aria-label="Terms">
-████████╗███████╗██████╗ ███╗   ███╗███████╗
-╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝
-   ██║   █████╗  ██████╔╝██╔████╔██║███████╗
-   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║╚════██║
-   ██║   ███████╗██║  ██║██║ ╚═╝ ██║███████║
-   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
-</pre>
-        <label class="entry-check">
-          <input type="checkbox" id="entry-age-check">
-          <span class="entry-check-box" aria-hidden="true"></span>
-          <span class="entry-check-label">I accept the following terms</span>
-        </label>
-        <ul class="entry-rules">
-          <li><span class="bul">&raquo;</span> no ads</li>
-          <li><span class="bul">&raquo;</span> basic analytics</li>
-          <li><span class="bul">&raquo;</span> google login</li>
-          <li><span class="bul">&raquo;</span> no uptime guarantee</li>
-          <li><span class="bul">&raquo;</span> no monetization</li>
-        </ul>
-      </div>
-
-      <button type="button" class="entry-gate-btn" id="entry-gate-btn" disabled>[ ENTER ]<span class="entry-cursor" aria-hidden="true">_</span></button>
-    </div>
-  </div>
-  <script>
-    (function() {
-      var gate = document.getElementById('entry-gate');
-      var btn = document.getElementById('entry-gate-btn');
-      var ageCheck = document.getElementById('entry-age-check');
-      var termsBox = document.querySelector('.entry-terms');
-      if (!gate || !btn) return;
-      // Already accepted in a prior visit — drop the gate from the DOM.
-      var alreadyAgreed = false;
-      try { alreadyAgreed = localStorage.getItem('kd:prefs:terms-accepted') === 'yes'; } catch(e) {}
-      if (alreadyAgreed) {
-        document.body.classList.remove('entry-gate-locked');
-        if (gate.parentNode) gate.parentNode.removeChild(gate);
-        return;
-      }
-      function syncBtn() { btn.disabled = !(ageCheck && ageCheck.checked); }
-      if (ageCheck) ageCheck.addEventListener('change', syncBtn);
-      syncBtn();
-      // Whole terms box toggles the acceptance checkbox (the native <label> around the
-      // checkbox would double-fire, so skip clicks that originate inside the label).
-      if (termsBox && ageCheck) {
-        termsBox.addEventListener('click', function(e) {
-          if (e.target.closest('.entry-check')) return;
-          ageCheck.checked = !ageCheck.checked;
-          ageCheck.dispatchEvent(new Event('change'));
-        });
-      }
-      function enter() {
-        if (btn.disabled) return;
-        btn.removeEventListener('click', enter);
-        try { localStorage.setItem('kd:prefs:terms-accepted', 'yes'); } catch(e) {}
-        gate.classList.add('dismissing');
-        document.body.classList.remove('entry-gate-locked');
-        setTimeout(function() {
-          if (gate && gate.parentNode) gate.parentNode.removeChild(gate);
-        }, 1600);
-      }
-      btn.addEventListener('click', enter);
-    })();
-  </script>
   <script src="/fx.js"></script>
 
   <!-- Advanced Desktop Cat -->
