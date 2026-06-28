@@ -24,7 +24,6 @@ var loginHTML string
 
 var loginTmpl = template.Must(template.New("login").Parse(loginHTML))
 
-
 // googleEndpoint is hardcoded to avoid importing golang.org/x/oauth2/google
 // (and its transitive deps). These URLs are stable.
 var googleEndpoint = oauth2.Endpoint{
