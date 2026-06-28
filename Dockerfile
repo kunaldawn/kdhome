@@ -6,6 +6,7 @@ WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
 COPY *.go ./
+COPY login.html ./
 RUN CGO_ENABLED=1 go build -ldflags="-s -w" -o server .
 
 FROM alpine:3.20
