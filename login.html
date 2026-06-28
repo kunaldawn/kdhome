@@ -11,9 +11,14 @@
 <style>
   :root { color-scheme: dark; }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  html, body { margin: 0; }
   body {
     display: flex; align-items: center; justify-content: center;
+    /* min-height (not height:100%) so when the content is taller than the
+       viewport — common on phones, where the card runs ~1000px — the body
+       grows and the page scrolls instead of flex-centering clipping the top
+       of the card out of reach. 100dvh tracks the mobile dynamic viewport. */
+    min-height: 100vh; min-height: 100dvh;
     background: #05110d; color: #cfeee0;
     font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     padding: 24px;
