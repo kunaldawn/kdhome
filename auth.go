@@ -187,6 +187,7 @@ var publicPaths = map[string]bool{
 	"/apple-touch-icon.png":       true,
 	"/android-chrome-192x192.png": true,
 	"/android-chrome-512x512.png": true,
+	"/fx.js":                      true,
 }
 
 // middleware gates every request behind a valid session cookie, except

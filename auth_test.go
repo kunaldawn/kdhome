@@ -109,7 +109,7 @@ func TestMiddlewarePublicBypass(t *testing.T) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))
-	for _, p := range []string{"/login", "/robots.txt", "/auth/google/start", "/og-image.png", "/favicon.ico"} {
+	for _, p := range []string{"/login", "/fx.js", "/robots.txt", "/auth/google/start", "/og-image.png", "/favicon.ico"} {
 		called = false
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
