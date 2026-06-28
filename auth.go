@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"html"
+	"html/template"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,6 +18,11 @@ import (
 
 	"golang.org/x/oauth2"
 )
+
+//go:embed login.html
+var loginHTML string
+
+var loginTmpl = template.Must(template.New("login").Parse(loginHTML))
 
 // googleEndpoint is hardcoded to avoid importing golang.org/x/oauth2/google
 // (and its transitive deps). These URLs are stable.
@@ -187,6 +194,7 @@ var publicPaths = map[string]bool{
 	"/apple-touch-icon.png":       true,
 	"/android-chrome-192x192.png": true,
 	"/android-chrome-512x512.png": true,
+	"/fx.js":                      true,
 }
 
 // middleware gates every request behind a valid session cookie, except
@@ -354,55 +362,15 @@ func (c authConfig) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusFound)
 }
 
-// loginPage renders the self-contained themed login page. redirect is already
-// validated by the caller; it is URL-encoded into the sign-in link and
-// HTML-escaped for the attribute context.
+// loginPage renders the self-contained themed demoscene sign-in page. redirect
+// is already validated by the caller; it is URL-encoded into the Google start
+// link, and html/template auto-escapes it for the attribute context.
 func (c authConfig) loginPage(redirect string) []byte {
-	startHref := html.EscapeString("/auth/google/start?redirect=" + url.QueryEscape(redirect))
-	return []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in — kunaldawn.com</title>
-<meta property="og:title" content="KD's Homebrew Digital Archive">
-<meta property="og:description" content="A home-grown mirror of the public internet. Sign in to continue.">
-<meta property="og:image" content="/og-image.png">
-<style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    display: flex; align-items: center; justify-content: center;
-    background: #05110d; color: #cfeee0;
-    font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    padding: 24px;
-    background-image: radial-gradient(circle at 50% 0%, rgba(127,209,179,0.08), transparent 60%);
-  }
-  .box {
-    width: 100%; max-width: 460px; text-align: center;
-    border: 1px solid rgba(127,209,179,0.35); border-radius: 10px;
-    padding: 40px 28px; background: rgba(10,28,22,0.6);
-    box-shadow: 0 0 40px rgba(0,0,0,0.5);
-  }
-  h1 { font-size: 20px; margin: 0 0 6px; color: #7fd1b3; letter-spacing: 1px; }
-  .tag { font-size: 12px; opacity: 0.7; margin-bottom: 26px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 12px 22px; border-radius: 6px; text-decoration: none;
-    background: #7fd1b3; color: #05110d; font-weight: bold;
-  }
-  .btn:hover { background: #a8d8c4; }
-  .footer { margin-top: 28px; font-size: 11px; opacity: 0.5; }
-</style>
-</head>
-<body>
-  <div class="box">
-    <h1>// SIGN IN</h1>
-    <div class="tag">KD's Homebrew Digital Archive</div>
-    <a class="btn" href="` + startHref + `">Sign in with Google</a>
-    <div class="footer">free for all, free forever</div>
-  </div>
-</body>
-</html>`)
+	startHref := "/auth/google/start?redirect=" + url.QueryEscape(redirect)
+	var buf bytes.Buffer
+	if err := loginTmpl.Execute(&buf, struct{ StartHref string }{startHref}); err != nil {
+		// Template is compiled at init; an execution error is a programmer bug.
+		return []byte("sign-in temporarily unavailable")
+	}
+	return buf.Bytes()
 }
