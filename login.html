@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — kunaldawn.com</title>
+<meta property="og:title" content="KD's Homebrew Digital Archive">
+<meta property="og:description" content="A home-grown mirror of the public internet. Sign in to continue.">
+<meta property="og:image" content="/og-image.png">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    background: #05110d; color: #cfeee0;
+    font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 24px;
+    background-image: radial-gradient(circle at 50% 0%, rgba(127,209,179,0.08), transparent 60%);
+  }
+  .signin {
+    width: 100%; max-width: 520px;
+    border: 1px solid rgba(127,209,179,0.35); border-radius: 12px;
+    padding: 26px 22px 30px; background: rgba(10,28,22,0.6);
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; gap: 18px;
+  }
+  .signin-title {
+    text-align: center; font-size: 18px; margin: 4px 0 0;
+    color: #7fd1b3; letter-spacing: 2px;
+  }
+  .signin-inventory {
+    font-size: 11px; line-height: 1.5; opacity: 0.6;
+    max-height: 92px; overflow: auto; text-align: left;
+  }
+  .signin-btn {
+    align-self: center; display: inline-flex; align-items: center; gap: 10px;
+    padding: 13px 26px; border-radius: 6px; text-decoration: none;
+    background: #7fd1b3; color: #05110d; font-weight: bold; letter-spacing: 1px;
+  }
+  .signin-btn:hover { background: #a8d8c4; }
+  .signin-foot { text-align: center; font-size: 11px; opacity: 0.5; }
+
+    .fx-wrap {
+      margin: 0 0 14px;
+      padding: 6px 10px 4px;
+      border: 1px solid rgba(0, 255, 150, 0.22);
+      border-radius: 6px;
+      background:
+        linear-gradient(180deg, rgba(0, 255, 150, 0.05), rgba(0, 255, 150, 0.01)),
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px);
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      position: relative;
+      overflow: hidden;
+    }
+    .fx-wrap::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%);
+    }
+    .fx-header, .fx-footer {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      column-gap: 8px;
+      font-size: 9.5px;
+      letter-spacing: 1.5px;
+      color: #7fd1b3;
+      opacity: 0.75;
+      padding: 2px 4px;
+      text-transform: uppercase;
+    }
+    .fx-header .fx-tag, .fx-footer .fx-chan { justify-self: start; color: #00ff99; }
+    .fx-footer .fx-chan { color: #7fd1b3; opacity: 0.7; }
+    .fx-header .fx-mid { justify-self: center; opacity: 0.55; }
+    .fx-header .fx-fx, .fx-footer .fx-timer { justify-self: end; }
+    .fx-header .fx-fx .fx-scene { color: #ff48a0; margin-left: 4px; text-shadow: 0 0 4px rgba(255,72,160,0.5); }
+    .fx-footer .fx-timer { font-variant-numeric: tabular-nums; }
+    .fx-canvas {
+      margin: 3px 0 0;
+      padding: 0;
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      white-space: pre;
+      overflow: hidden;
+      text-align: center;
+      color: #00ff99;
+      font-variant-numeric: tabular-nums;
+      transition: color 0.6s ease, text-shadow 0.6s ease;
+      height: calc(11px * 1.2 * 22 + 2px);
+      box-sizing: content-box;
+    }
+    .fx-ticker-wrap {
+      position: relative;
+      margin-top: 6px;
+      padding-top: 4px;
+      height: calc(13px * 1.5 * 5);
+      overflow: hidden;
+      border-top: 1px dashed rgba(0, 255, 150, 0.22);
+      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+              mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+    }
+    .fx-ticker {
+      margin: 0 auto;
+      padding: 0 4px;
+      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      letter-spacing: 0.5px;
+      color: #7fd1b3;
+      white-space: pre;
+      text-align: left;
+      width: fit-content;
+      max-width: 100%;
+      will-change: transform;
+      text-shadow: 0 0 4px rgba(0, 255, 150, 0.25);
+    }
+    .fx-ticker .tk-ok  { color: #00ff99; }
+    .fx-ticker .tk-hot { color: #ff48a0; }
+    .fx-ticker .tk-warn{ color: #ffb648; }
+    .fx-ticker .tk-dim { color: #4a8f76; }
+    .fx-canvas.fx-plasma {
+      color: #00ff99;
+      text-shadow: -1px 0 rgba(255,0,128,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(0,255,150,0.5);
+    }
+    .fx-canvas.fx-fire {
+      color: #ffb648;
+      text-shadow: -1px 0 rgba(255,0,80,0.35), 1px 0 rgba(255,160,0,0.4), 0 0 8px rgba(255,120,0,0.45);
+    }
+    .fx-canvas.fx-starfield {
+      color: #d5ffe8;
+      text-shadow: 0 0 4px rgba(120,230,255,0.55), 0 0 10px rgba(120,230,255,0.25);
+    }
+    .fx-canvas.fx-tunnel {
+      color: #8affff;
+      text-shadow: -1px 0 rgba(255,60,200,0.35), 1px 0 rgba(0,255,200,0.4), 0 0 8px rgba(120,200,255,0.45);
+    }
+    .fx-canvas.fx-torus {
+      color: #00ff99;
+      text-shadow: 0 0 6px rgba(0,255,150,0.55), 0 0 14px rgba(0,255,150,0.2);
+    }
+    .fx-canvas.fx-matrix {
+      color: #3dff7d;
+      text-shadow: 0 0 3px rgba(0,255,120,0.5), 0 0 10px rgba(0,255,120,0.2);
+    }
+    .fx-canvas.fx-wave3d {
+      color: #7affc7;
+      text-shadow: -1px 0 rgba(0,200,255,0.35), 1px 0 rgba(180,0,255,0.25), 0 0 8px rgba(100,220,200,0.45);
+    }
+    .fx-canvas.fx-ripple {
+      color: #8affff;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(80,255,200,0.35), 0 0 8px rgba(120,230,255,0.5);
+    }
+    .fx-canvas.fx-life {
+      color: #c8ff72;
+      text-shadow: 0 0 4px rgba(180,255,80,0.45), 0 0 10px rgba(180,255,80,0.2);
+    }
+    .fx-canvas.fx-cube {
+      color: #ffd066;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
+    }
+    .fx-canvas.fx-kaleido {
+      color: #ff7ad1;
+      text-shadow: -1px 0 rgba(100,0,255,0.35), 1px 0 rgba(0,255,200,0.35), 0 0 8px rgba(255,120,200,0.5);
+    }
+    .fx-canvas.fx-meta {
+      color: #9cffd5;
+      text-shadow: -1px 0 rgba(0,180,255,0.35), 1px 0 rgba(150,0,255,0.3), 0 0 10px rgba(100,255,210,0.4);
+    }
+    .fx-canvas.fx-mandel {
+      color: #ffb648;
+      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,0,0.4), 0 0 8px rgba(255,140,0,0.45);
+    }
+    .fx-canvas.fx-copper {
+      color: #ff6bd2;
+      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,100,200,0.45);
+    }
+    .fx-canvas.fx-cellular {
+      color: #b5ff8a;
+      text-shadow: 0 0 3px rgba(140,255,120,0.45), 0 0 10px rgba(140,255,120,0.15);
+    }
+    .fx-canvas.fx-spiral {
+      color: #8ad5ff;
+      text-shadow: -1px 0 rgba(255,80,220,0.3), 1px 0 rgba(0,220,255,0.4), 0 0 8px rgba(120,200,255,0.45);
+    }
+    .fx-canvas.fx-voxel {
+      color: #a8ff7a;
+      text-shadow: -1px 0 rgba(180,120,0,0.35), 1px 0 rgba(0,200,120,0.35), 0 0 8px rgba(140,255,100,0.35);
+    }
+    .fx-canvas.fx-checker {
+      color: #ffd58a;
+      text-shadow: -1px 0 rgba(255,100,160,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(255,180,60,0.35);
+    }
+    .fx-canvas.fx-vectors {
+      color: #ff9edc;
+      text-shadow: -1px 0 rgba(80,0,200,0.45), 1px 0 rgba(0,255,255,0.4), 0 0 8px rgba(255,120,200,0.5);
+    }
+    .fx-canvas.fx-rotozoom {
+      color: #d8b0ff;
+      text-shadow: -1px 0 rgba(0,220,255,0.35), 1px 0 rgba(255,0,180,0.35), 0 0 8px rgba(200,160,255,0.45);
+    }
+    .fx-canvas.fx-sphere3d {
+      color: #aef0ff;
+      text-shadow: -1px 0 rgba(180,0,255,0.3), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(160,220,255,0.45);
+    }
+    .fx-canvas.fx-twister {
+      color: #ffca5a;
+      text-shadow: -1px 0 rgba(255,0,100,0.4), 1px 0 rgba(255,220,0,0.4), 0 0 8px rgba(255,180,60,0.5);
+    }
+    .fx-canvas.fx-warp {
+      color: #e0f5ff;
+      text-shadow: -1px 0 rgba(0,180,255,0.5), 1px 0 rgba(180,80,255,0.4), 0 0 8px rgba(200,220,255,0.55);
+    }
+    .fx-canvas.fx-moire {
+      color: #ff7aa2;
+      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,200,0,0.35), 0 0 8px rgba(255,120,160,0.5);
+    }
+    .fx-canvas.fx-landscape {
+      color: #88eaa6;
+      text-shadow: -1px 0 rgba(0,180,120,0.35), 1px 0 rgba(100,200,255,0.35), 0 0 8px rgba(120,240,160,0.4);
+    }
+    .fx-canvas.fx-ribbon {
+      color: #c6d5ff;
+      text-shadow: -1px 0 rgba(255,80,180,0.35), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(180,200,255,0.45);
+    }
+    .fx-canvas.fx-shadebobs {
+      color: #ff8ad5;
+      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,140,200,0.5);
+    }
+    .fx-canvas.fx-bobs {
+      color: #ffd066;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
+    }
+    .fx-canvas.fx-fountain {
+      color: #b0f0ff;
+      text-shadow: -1px 0 rgba(255,100,200,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(180,220,255,0.5);
+    }
+    .fx-canvas.fx-snake {
+      color: #b5ff8a;
+      text-shadow: -1px 0 rgba(0,200,120,0.35), 1px 0 rgba(180,255,80,0.45), 0 0 8px rgba(140,255,120,0.45);
+    }
+    .fx-canvas.fx-lightning {
+      color: #f0f0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.5), 1px 0 rgba(80,200,255,0.5), 0 0 12px rgba(220,220,255,0.7);
+    }
+    .fx-canvas.fx-rain {
+      color: #8acfff;
+      text-shadow: -1px 0 rgba(0,180,255,0.4), 1px 0 rgba(120,200,255,0.4), 0 0 8px rgba(140,200,255,0.45);
+    }
+    .fx-canvas.fx-clifford {
+      color: #d8a8ff;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,80,200,0.4), 0 0 8px rgba(200,160,255,0.5);
+    }
+    .fx-canvas.fx-lorenz {
+      color: #ffb678;
+      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,160,80,0.5);
+    }
+    .fx-canvas.fx-tree {
+      color: #c2ff8a;
+      text-shadow: -1px 0 rgba(120,80,40,0.45), 1px 0 rgba(160,255,100,0.45), 0 0 8px rgba(180,255,140,0.4);
+    }
+    .fx-canvas.fx-mbox {
+      color: #ffb0d5;
+      text-shadow: -1px 0 rgba(255,80,200,0.5), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,160,200,0.5);
+    }
+    .fx-canvas.fx-hilbert {
+      color: #b0d0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(160,200,255,0.45);
+    }
+    .fx-canvas.fx-julia {
+      color: #ffd28a;
+      text-shadow: -1px 0 rgba(255,40,180,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,180,80,0.5);
+    }
+    .fx-canvas.fx-rd {
+      color: #a8ffd0;
+      text-shadow: -1px 0 rgba(0,200,180,0.45), 1px 0 rgba(120,255,200,0.45), 0 0 8px rgba(140,255,200,0.5);
+    }
+    .fx-canvas.fx-voronoi {
+      color: #ffc8a0;
+      text-shadow: -1px 0 rgba(255,80,160,0.4), 1px 0 rgba(255,200,80,0.4), 0 0 8px rgba(255,180,120,0.5);
+    }
+    .fx-canvas.fx-hex {
+      color: #ff8aa6;
+      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,180,40,0.4), 0 0 8px rgba(255,140,160,0.5);
+    }
+    .fx-canvas.fx-highlife {
+      color: #f0e890;
+      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(180,255,80,0.35), 0 0 8px rgba(220,200,80,0.45);
+    }
+    .fx-canvas.fx-sdf {
+      color: #c8e0ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(200,220,255,0.55);
+    }
+    .fx-canvas.fx-dna {
+      color: #ff9eea;
+      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,80,180,0.45), 0 0 8px rgba(255,160,220,0.5);
+    }
+    .fx-canvas.fx-galaxy {
+      color: #d8c8ff;
+      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 10px rgba(200,180,255,0.55);
+    }
+    .fx-canvas.fx-kdfx {
+      color: #00ff99;
+      text-shadow: -2px 0 rgba(255,0,128,0.6), 2px 0 rgba(0,200,255,0.6), 0 0 6px rgba(0,255,150,0.5);
+    }
+    @media (max-width: 520px) {
+      .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
+      .fx-ticker { font-size: 11px; line-height: 1.45; }
+      .fx-ticker-wrap { height: calc(11px * 1.45 * 5); }
+      .fx-header, .fx-footer { font-size: 8.5px; letter-spacing: 1px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .fx-canvas { text-shadow: 0 0 4px rgba(0,255,150,0.4); color: #00ff99; transition: none; }
+    }
+    .entry-terms {
+      text-align: left;
+      margin: 14px 0 18px;
+      padding: 12px 14px 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 14.5px;
+      color: #b9e8d2;
+      background: rgba(0, 255, 150, 0.03);
+      border: 1px dashed rgba(0, 255, 150, 0.28);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .entry-terms:hover {
+      background: rgba(0, 255, 150, 0.06);
+      border-color: rgba(0, 255, 150, 0.45);
+    }
+    .entry-terms-head {
+      display: block;
+      margin: 0 auto 14px;
+      padding: 0;
+      text-align: center;
+      /* Explicitly pick a font that carries the box-drawing glyphs used in the
+         "ANSI Shadow" art. Share Tech Mono does not, so characters would fall
+         back to the browser default and break the grid. */
+      font-family: ui-monospace, 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
+      font-size: 11px;
+      line-height: 1;
+      letter-spacing: 0;
+      white-space: pre;
+      color: #00ff99;
+      opacity: 0.95;
+      text-shadow: 0 0 10px rgba(0, 255, 150, 0.45);
+      overflow: visible;
+    }
+    .entry-rules {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4px 14px;
+    }
+    .entry-rules li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #b9e8d2;
+      line-height: 1.6;
+    }
+    .entry-rules .bul {
+      color: #ff48a0;
+      text-shadow: 0 0 6px rgba(255, 72, 160, 0.55);
+      font-weight: 700;
+    }
+</style>
+</head>
+<body>
+  <main class="signin">
+    <div class="fx-wrap" aria-hidden="true">
+      <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">KD.FX</span></span></div>
+      <pre class="fx-canvas fx-kdfx" id="fx-canvas"></pre>
+      <div class="fx-ticker-wrap">
+        <pre class="fx-ticker" id="fx-ticker"></pre>
+      </div>
+      <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
+    </div>
+
+    <h1 class="signin-title">KD's Homebrew Digital Archive</h1>
+
+    <div class="entry-terms" role="group" aria-label="Terms">
+      <pre class="entry-terms-head" aria-label="Terms">
+████████╗███████╗██████╗ ███╗   ███╗███████╗
+╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝
+   ██║   █████╗  ██████╔╝██╔████╔██║███████╗
+   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║╚════██║
+   ██║   ███████╗██║  ██║██║ ╚═╝ ██║███████║
+   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
+</pre>
+      <ul class="entry-rules">
+        <li><span class="bul">&raquo;</span> no ads</li>
+        <li><span class="bul">&raquo;</span> basic analytics</li>
+        <li><span class="bul">&raquo;</span> google login</li>
+        <li><span class="bul">&raquo;</span> no uptime guarantee</li>
+        <li><span class="bul">&raquo;</span> no monetization</li>
+      </ul>
+    </div>
+
+    <p class="signin-inventory">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix &amp; Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 13 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
+
+    <a class="signin-btn" href="{{.StartHref}}">Sign in with Google</a>
+    <div class="signin-foot">free for all, free forever</div>
+  </main>
+
+  <script src="/fx.js"></script>
+  <script>
+    (function () {
+      if (typeof window.createFxInstance !== 'function') return;
+      if (!document.getElementById('fx-canvas')) return;
+      window.createFxInstance({
+        canvas: document.getElementById('fx-canvas'),
+        ticker: document.getElementById('fx-ticker'),
+        sceneLabel: document.querySelector('.fx-scene'),
+        timerLabel: document.getElementById('fx-timer')
+      });
+    })();
+  </script>
+</body>
+</html>

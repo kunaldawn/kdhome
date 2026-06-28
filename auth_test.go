@@ -172,6 +172,21 @@ func TestLoginPageEmbedsRedirect(t *testing.T) {
 	if !strings.Contains(page, want) {
 		t.Fatalf("login page should link to %q", want)
 	}
+	for _, frag := range []string{`id="fx-canvas"`, `src="/fx.js"`, "no ads", "Sign in with Google"} {
+		if !strings.Contains(page, frag) {
+			t.Fatalf("login page missing expected fragment %q", frag)
+		}
+	}
+}
+
+func TestLoginPageEscapesRedirect(t *testing.T) {
+	c := testAuthConfig()
+	// A hostile redirect is neutralized by safeRedirect at the handler, but the
+	// template must never emit a raw double-quote that breaks the href attribute.
+	page := string(c.loginPage(`x" onerror="alert(1)`))
+	if strings.Contains(page, `onerror="alert(1)"`) {
+		t.Fatalf("login page must not emit an unescaped attribute injection")
+	}
 }
 
 type fakeExchanger struct {
