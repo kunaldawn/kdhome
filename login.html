@@ -318,62 +318,9 @@
       .fx-ticker { font-size: 11px; line-height: 1.45; }
       .fx-ticker-wrap { height: calc(11px * 1.45 * 5); }
       .fx-header, .fx-footer { font-size: 8.5px; letter-spacing: 1px; }
-      .entry-terms { font-size: 13.5px; padding: 10px 12px; }
-      .entry-terms-head { font-size: 7.5px; }
-      .entry-rules { grid-template-columns: 1fr; gap: 2px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .fx-canvas { text-shadow: 0 0 4px rgba(0,255,150,0.4); color: #00ff99; transition: none; }
-    }
-    .entry-terms {
-      text-align: left;
-      margin: 14px 0 18px;
-      padding: 12px 14px 10px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 14.5px;
-      color: #b9e8d2;
-      background: rgba(0, 255, 150, 0.03);
-      border: 1px dashed rgba(0, 255, 150, 0.28);
-      border-radius: 6px;
-    }
-    .entry-terms-head {
-      display: block;
-      margin: 0 auto 14px;
-      padding: 0;
-      text-align: center;
-      /* Explicitly pick a font that carries the box-drawing glyphs used in the
-         "ANSI Shadow" art. Share Tech Mono does not, so characters would fall
-         back to the browser default and break the grid. */
-      font-family: ui-monospace, 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Liberation Mono', monospace;
-      font-size: 11px;
-      line-height: 1;
-      letter-spacing: 0;
-      white-space: pre;
-      color: #00ff99;
-      opacity: 0.95;
-      text-shadow: 0 0 10px rgba(0, 255, 150, 0.45);
-      overflow: visible;
-    }
-    .entry-rules {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px 14px;
-    }
-    .entry-rules li {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11.5px;
-      color: #b9e8d2;
-      line-height: 1.6;
-    }
-    .entry-rules .bul {
-      color: #ff48a0;
-      text-shadow: 0 0 6px rgba(255, 72, 160, 0.55);
-      font-weight: 700;
     }
 </style>
 </head>
@@ -389,24 +336,6 @@
     </div>
 
     <h1 class="signin-title">KD's Homebrew Digital Archive</h1>
-
-    <div class="entry-terms" role="group" aria-label="Terms">
-      <pre class="entry-terms-head" aria-label="Terms">
-████████╗███████╗██████╗ ███╗   ███╗███████╗
-╚══██╔══╝██╔════╝██╔══██╗████╗ ████║██╔════╝
-   ██║   █████╗  ██████╔╝██╔████╔██║███████╗
-   ██║   ██╔══╝  ██╔══██╗██║╚██╔╝██║╚════██║
-   ██║   ███████╗██║  ██║██║ ╚═╝ ██║███████║
-   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝
-</pre>
-      <ul class="entry-rules">
-        <li><span class="bul">&raquo;</span> no ads</li>
-        <li><span class="bul">&raquo;</span> basic analytics</li>
-        <li><span class="bul">&raquo;</span> google login</li>
-        <li><span class="bul">&raquo;</span> no uptime guarantee</li>
-        <li><span class="bul">&raquo;</span> no monetization</li>
-      </ul>
-    </div>
 
     <p class="signin-inventory">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix &amp; Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 13 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
 
