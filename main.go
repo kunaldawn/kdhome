@@ -126,6 +126,10 @@ func initVisitDB(dataDir string) {
 		log.Printf("[PROBE] failed to create probe_daily: %v", err)
 	}
 
+	// Per-user tracking table (first login / last visit / total visits),
+	// surfaced on the admin page.
+	ensureUsersTable()
+
 	log.Printf("[VISITS] initialized — humans: %d, bots: %d", human, bot)
 }
 
@@ -560,7 +564,12 @@ func main() {
 		mux.HandleFunc("/auth/google/start", authCfg.handleGoogleStart)
 		mux.HandleFunc("/auth/google/callback", authCfg.handleGoogleCallback)
 		mux.HandleFunc("/logout", authCfg.handleLogout)
+		mux.HandleFunc("/admin", authCfg.handleAdmin)
+		mux.HandleFunc("/api/me", authCfg.handleMe)
 		log.Printf("[AUTH] Google auth ENABLED (cookie domain %s)", authCfg.CookieDomain)
+		if authCfg.SuperAdmin != "" {
+			log.Printf("[AUTH] super admin: %s", authCfg.SuperAdmin)
+		}
 	}
 
 	// Order: maintenance( securityHeaders( authGate( mux ) ) ). securityHeaders

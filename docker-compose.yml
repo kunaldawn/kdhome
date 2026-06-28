@@ -48,6 +48,9 @@ services:
       - AUTH_COOKIE_NAME=${AUTH_COOKIE_NAME:-kd_session}
       # Session lifetime as a Go duration (e.g. 720h, 168h, 24h).
       - AUTH_SESSION_TTL=${AUTH_SESSION_TTL:-720h}
+      # Super admin email. When set (and auth enabled), this user sees the Admin
+      # entry in the start menu and can open /admin (user registry).
+      - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-}
 
 networks:
   web:

@@ -5,3 +5,5 @@ docs/superpowers/*
 docs/superpowers/!plans/
 docs/superpowers/!specs/
 data/*
+# compiled server binary (go build .)
+/kdhome

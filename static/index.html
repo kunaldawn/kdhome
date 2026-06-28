@@ -3968,6 +3968,10 @@
             <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             <span>Settings</span>
           </div>
+          <div class="menu-item" id="adminMenuItem" style="display:none" onclick="openAdmin()">
+            <span class="menu-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></span>
+            <span>Admin</span>
+          </div>
         </div>
         <div class="menu-column right">
           <div class="menu-section-title">Quick Access</div>
@@ -6870,16 +6874,80 @@
 
         // Power options
         window.showShutdownDialog = function () {
-          if (confirm('Are you sure you want to shutdown the vault?')) {
-            document.body.style.transition = 'opacity 1s';
-            document.body.style.opacity = '0';
-            setTimeout(() => {
-              document.body.innerHTML = '<div style="display:flex;height:100dvh;align-items:center;justify-content:center;font-family:monospace;color:#00ff99;font-size:20px;">SYSTEM HALTED</div>';
-              document.body.style.opacity = '1';
-            }, 1000);
+          if (!confirm('Are you sure you want to shutdown the vault?')) {
+            toggleStartMenu();
+            return;
           }
           toggleStartMenu();
+          runShutdownSequence();
         };
+
+        // Fades the desktop out, plays a power-down log + progress bar, then
+        // signs the user out via /logout (clears session, returns to /login).
+        function runShutdownSequence() {
+          var steps = [
+            'Closing windows',
+            'Stopping background services',
+            'Flushing archive cache',
+            'Unmounting volumes',
+            'Ending session'
+          ];
+          document.body.style.transition = 'opacity .8s';
+          document.body.style.opacity = '0';
+          setTimeout(function () {
+            var style = document.createElement('style');
+            style.textContent =
+              '#shutdown-screen{position:fixed;inset:0;z-index:99999;background:#05080a;' +
+              'display:flex;align-items:center;justify-content:center;' +
+              "font-family:'Share Tech Mono',ui-monospace,Menlo,Consolas,monospace;color:#b9e8d2}" +
+              '#shutdown-screen .sd-box{width:min(420px,82vw)}' +
+              '#shutdown-screen .sd-title{color:#00ff99;font-size:15px;letter-spacing:3px;' +
+              'margin-bottom:16px;text-shadow:0 0 12px rgba(0,255,150,.5)}' +
+              '#shutdown-screen .sd-log{min-height:120px;font-size:13px;line-height:1.9}' +
+              '#shutdown-screen .sd-line{opacity:0;animation:sdIn .25s forwards}' +
+              '#shutdown-screen .sd-line .ok{color:#00ff99;float:right}' +
+              '#shutdown-screen .sd-bar{height:6px;margin-top:14px;border:1px solid rgba(0,255,150,.3);' +
+              'border-radius:3px;overflow:hidden}' +
+              '#shutdown-screen .sd-bar span{display:block;height:100%;width:0;background:#00ff99;' +
+              'box-shadow:0 0 10px rgba(0,255,150,.6);transition:width .5s ease}' +
+              '#shutdown-screen .sd-halt{margin-top:18px;text-align:center;color:#00ff99;' +
+              'font-size:18px;letter-spacing:4px;min-height:22px;text-shadow:0 0 14px rgba(0,255,150,.6)}' +
+              '@keyframes sdIn{to{opacity:1}}';
+            document.head.appendChild(style);
+
+            var screen = document.createElement('div');
+            screen.id = 'shutdown-screen';
+            screen.innerHTML =
+              '<div class="sd-box">' +
+                '<div class="sd-title">KD &middot; VAULT &mdash; SHUTTING DOWN</div>' +
+                '<div class="sd-log" id="sd-log"></div>' +
+                '<div class="sd-bar"><span id="sd-bar-fill"></span></div>' +
+                '<div class="sd-halt" id="sd-halt"></div>' +
+              '</div>';
+
+            document.body.innerHTML = '';
+            document.body.appendChild(screen);
+            document.body.style.opacity = '1';
+
+            var log = document.getElementById('sd-log');
+            var fill = document.getElementById('sd-bar-fill');
+            var i = 0;
+            (function next() {
+              if (i < steps.length) {
+                var line = document.createElement('div');
+                line.className = 'sd-line';
+                line.innerHTML = '&gt; ' + steps[i] + '<span class="ok">[ ok ]</span>';
+                log.appendChild(line);
+                fill.style.width = Math.round(((i + 1) / steps.length) * 100) + '%';
+                i++;
+                setTimeout(next, 620);
+              } else {
+                document.getElementById('sd-halt').textContent = 'SYSTEM HALTED';
+                setTimeout(function () { window.location.href = '/logout'; }, 1200);
+              }
+            })();
+          }, 800);
+        }
 
         window.showRestartDialog = function () {
           if (confirm('Restart the vault system?')) {
@@ -6887,6 +6955,34 @@
           }
           toggleStartMenu();
         };
+
+        // Opens the admin user-registry page (super admin only). The entry is
+        // hidden unless /api/me reports the current user as admin.
+        window.openAdmin = function () {
+          window.open('/admin', '_blank', 'noopener');
+          var menu = document.getElementById('startMenu');
+          if (menu && menu.classList.contains('show')) toggleStartMenu();
+        };
+
+        // Identify the signed-in user: label the start menu and reveal the
+        // Admin entry when they're the configured super admin. Fails silently
+        // when auth is disabled (no /api/me route) or the fetch errors.
+        (function identifyUser() {
+          fetch('/api/me', { credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (me) {
+              if (!me) return;
+              if (me.email) {
+                var nameEl = document.querySelector('.start-menu-header .user-name');
+                if (nameEl) nameEl.textContent = me.email;
+              }
+              if (me.isAdmin) {
+                var item = document.getElementById('adminMenuItem');
+                if (item) item.style.display = '';
+              }
+            })
+            .catch(function () {});
+        })();
 
         // Settings dialog
         function syncTransparencySwitch() {

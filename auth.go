@@ -41,6 +41,7 @@ type authConfig struct {
 	CookieDomain string
 	CookieName   string
 	SessionTTL   time.Duration
+	SuperAdmin   string
 	oauth        *oauth2.Config
 	exchanger    tokenExchanger
 }
@@ -72,6 +73,7 @@ func loadAuthConfig() authConfig {
 	if v := strings.TrimSpace(os.Getenv("AUTH_COOKIE_NAME")); v != "" {
 		c.CookieName = v
 	}
+	c.SuperAdmin = strings.TrimSpace(os.Getenv("SUPER_ADMIN_EMAIL"))
 	if v := strings.TrimSpace(os.Getenv("AUTH_SESSION_TTL")); v != "" {
 		if d, err := time.ParseDuration(v); err == nil && d > 0 {
 			c.SessionTTL = d
@@ -207,7 +209,13 @@ func (c authConfig) middleware(next http.Handler) http.Handler {
 			return
 		}
 		if ck, err := r.Cookie(c.CookieName); err == nil {
-			if _, verr := verifySession(ck.Value, c.Secret); verr == nil {
+			if claims, verr := verifySession(ck.Value, c.Secret); verr == nil {
+				// Per-user visit tracking: count an authenticated load of the
+				// site root, mirroring the site-wide counter in staticHandler.
+				if r.Method == http.MethodGet &&
+					(r.URL.Path == "/" || r.URL.Path == "/index.html") {
+					recordUserVisit(claims.Email)
+				}
 				next.ServeHTTP(w, r)
 				return
 			}
