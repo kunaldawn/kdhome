@@ -49,6 +49,7 @@ type authConfig struct {
 	AnonPoWCeil  int
 	oauth        *oauth2.Config
 	exchanger    tokenExchanger
+	anonGuard    *anonGuard
 }
 
 // loadAuthConfig reads AUTH_* and GOOGLE_* env vars. AUTH_ENABLED is truthy on
@@ -118,6 +119,7 @@ func loadAuthConfig() authConfig {
 		Endpoint:     googleEndpoint,
 	}
 	c.exchanger = googleExchanger{cfg: c.oauth}
+	c.anonGuard = newAnonGuard()
 	return c
 }
 

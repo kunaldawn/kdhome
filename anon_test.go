@@ -127,3 +127,53 @@ func TestAnonChallengeRejectsExpired(t *testing.T) {
 		t.Error("expired challenge must be rejected")
 	}
 }
+
+func TestAnonGuardConsumeSingleUse(t *testing.T) {
+	g := newAnonGuard()
+	exp := time.Now().Add(time.Minute).Unix()
+	if !g.consume("nonce-1", exp) {
+		t.Error("first consume should succeed")
+	}
+	if g.consume("nonce-1", exp) {
+		t.Error("second consume of same nonce must fail (replay)")
+	}
+}
+
+func TestAnonGuardConsumeEvictsExpired(t *testing.T) {
+	g := newAnonGuard()
+	past := time.Now().Add(-time.Minute).Unix()
+	g.consume("old", past) // inserted but already expired
+	// A fresh consume triggers eviction; reusing "old" should be allowed again.
+	if !g.consume("old", time.Now().Add(time.Minute).Unix()) {
+		t.Error("expired nonce should have been evicted and reusable")
+	}
+}
+
+func TestAnonGuardBitsEscalate(t *testing.T) {
+	g := newAnonGuard()
+	base, ceil := 20, 24
+	if got := g.bitsFor("203.0.113.7", base, ceil); got != base {
+		t.Errorf("first request bits = %d, want %d", got, base)
+	}
+	for i := 0; i < 3; i++ {
+		g.recordMint("203.0.113.7")
+	}
+	if got := g.bitsFor("203.0.113.7", base, ceil); got != base+3 {
+		t.Errorf("after 3 mints bits = %d, want %d", got, base+3)
+	}
+	for i := 0; i < 20; i++ {
+		g.recordMint("203.0.113.7")
+	}
+	if got := g.bitsFor("203.0.113.7", base, ceil); got != ceil {
+		t.Errorf("bits should cap at ceil %d, got %d", ceil, got)
+	}
+}
+
+func TestAnonGuardBitsPerIP(t *testing.T) {
+	g := newAnonGuard()
+	g.recordMint("203.0.113.7")
+	g.recordMint("203.0.113.7")
+	if got := g.bitsFor("198.51.100.9", 20, 24); got != 20 {
+		t.Errorf("untouched IP should be base 20, got %d", got)
+	}
+}
