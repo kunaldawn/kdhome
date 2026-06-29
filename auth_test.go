@@ -318,3 +318,31 @@ func TestCallbackClearsStateCookieOnSuccess(t *testing.T) {
 		t.Fatal("state cookie should be cleared (MaxAge<0) on success")
 	}
 }
+
+func TestLoadAuthConfigAnonDefaults(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	c := loadAuthConfig()
+	if !c.AnonEnabled {
+		t.Fatal("AnonEnabled should be true")
+	}
+	if c.AnonTTL != 30*time.Minute {
+		t.Errorf("AnonTTL = %v, want 30m", c.AnonTTL)
+	}
+	if c.AnonPoWBits != 20 || c.AnonPoWCeil != 24 {
+		t.Errorf("bits/ceil = %d/%d, want 20/24", c.AnonPoWBits, c.AnonPoWCeil)
+	}
+}
+
+func TestLoadAuthConfigAnonOverrides(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "1")
+	t.Setenv("AUTH_ANON_TTL", "15m")
+	t.Setenv("AUTH_ANON_POW_BITS", "18")
+	t.Setenv("AUTH_ANON_POW_CEIL", "26")
+	c := loadAuthConfig()
+	if c.AnonTTL != 15*time.Minute {
+		t.Errorf("AnonTTL = %v, want 15m", c.AnonTTL)
+	}
+	if c.AnonPoWBits != 18 || c.AnonPoWCeil != 26 {
+		t.Errorf("bits/ceil = %d/%d, want 18/26", c.AnonPoWBits, c.AnonPoWCeil)
+	}
+}

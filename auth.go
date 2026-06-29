@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +43,10 @@ type authConfig struct {
 	CookieName   string
 	SessionTTL   time.Duration
 	SuperAdmin   string
+	AnonEnabled  bool
+	AnonTTL      time.Duration
+	AnonPoWBits  int
+	AnonPoWCeil  int
 	oauth        *oauth2.Config
 	exchanger    tokenExchanger
 }
@@ -54,6 +59,9 @@ func loadAuthConfig() authConfig {
 		CookieDomain: ".kunaldawn.com",
 		CookieName:   "kd_session",
 		SessionTTL:   720 * time.Hour,
+		AnonTTL:      30 * time.Minute,
+		AnonPoWBits:  20,
+		AnonPoWCeil:  24,
 	}
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_ENABLED"))) {
 	case "1", "true", "on", "yes":
@@ -79,6 +87,27 @@ func loadAuthConfig() authConfig {
 			c.SessionTTL = d
 		} else {
 			log.Printf("[AUTH] invalid AUTH_SESSION_TTL %q, using default %s", v, c.SessionTTL)
+		}
+	}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_ANON_ENABLED"))) {
+	case "1", "true", "on", "yes":
+		c.AnonEnabled = true
+	}
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_TTL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			c.AnonTTL = d
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_TTL %q, using default %s", v, c.AnonTTL)
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_BITS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
+			c.AnonPoWBits = n
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_CEIL")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= c.AnonPoWBits && n <= 32 {
+			c.AnonPoWCeil = n
 		}
 	}
 	c.oauth = &oauth2.Config{
