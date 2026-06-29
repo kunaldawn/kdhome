@@ -21,6 +21,7 @@ const sessionIssuer = "kunaldawn.com"
 type sessionClaims struct {
 	Subject   string `json:"sub"`
 	Email     string `json:"email"`
+	Anon      bool   `json:"anon,omitempty"`
 	IssuedAt  int64  `json:"iat"`
 	ExpiresAt int64  `json:"exp"`
 	Issuer    string `json:"iss"`
@@ -76,6 +77,32 @@ func signSession(email string, ttl time.Duration, secret []byte) (string, error)
 	payload, err := json.Marshal(sessionClaims{
 		Subject:   email,
 		Email:     email,
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(ttl).Unix(),
+		Issuer:    sessionIssuer,
+	})
+	if err != nil {
+		return "", err
+	}
+	return signToken(payload, secret), nil
+}
+
+// signAnonSession mints an anonymous session JWT with a random, non-persisted
+// subject, no email, and anon:true, valid for ttl from now. It identifies no
+// user — the subject maps to no record anywhere.
+func signAnonSession(ttl time.Duration, secret []byte) (string, error) {
+	if len(secret) == 0 {
+		return "", errors.New("empty signing secret")
+	}
+	sub, err := randomNonce()
+	if err != nil {
+		return "", err
+	}
+	now := time.Now()
+	payload, err := json.Marshal(sessionClaims{
+		Subject:   "anon:" + sub,
+		Email:     "",
+		Anon:      true,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: now.Add(ttl).Unix(),
 		Issuer:    sessionIssuer,
