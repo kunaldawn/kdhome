@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 )
 
 func TestClientIPPrefersCFHeader(t *testing.T) {
@@ -72,5 +74,56 @@ func TestPowSolvedRoundTrip(t *testing.T) {
 	}
 	if powSolved(challenge, "0", 12) && solution != "0" {
 		t.Error("solution '0' should almost never satisfy 12 bits")
+	}
+}
+
+func anonTestCfg() authConfig {
+	return authConfig{Secret: []byte("test-secret-test-secret"), AnonPoWBits: 20, AnonPoWCeil: 24}
+}
+
+func TestAnonChallengeRoundTrip(t *testing.T) {
+	c := anonTestCfg()
+	tok, err := c.signAnonChallenge("203.0.113.7", 20)
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+	ch, err := c.verifyAnonChallenge(tok, "203.0.113.7")
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+	if ch.Bits != 20 {
+		t.Errorf("Bits = %d, want 20", ch.Bits)
+	}
+	if ch.Nonce == "" {
+		t.Error("Nonce should be set")
+	}
+}
+
+func TestAnonChallengeRejectsWrongIP(t *testing.T) {
+	c := anonTestCfg()
+	tok, _ := c.signAnonChallenge("203.0.113.7", 20)
+	if _, err := c.verifyAnonChallenge(tok, "203.0.113.8"); err == nil {
+		t.Error("challenge bound to one IP must reject another IP")
+	}
+}
+
+func TestAnonChallengeRejectsTamper(t *testing.T) {
+	c := anonTestCfg()
+	tok, _ := c.signAnonChallenge("203.0.113.7", 20)
+	if _, err := c.verifyAnonChallenge(tok+"x", "203.0.113.7"); err == nil {
+		t.Error("tampered challenge must fail signature check")
+	}
+}
+
+func TestAnonChallengeRejectsExpired(t *testing.T) {
+	c := anonTestCfg()
+	payload, _ := json.Marshal(anonChallenge{
+		Nonce: "n", IPHash: ipHash(c.Secret, "203.0.113.7"), Bits: 20,
+		Purpose: "anon-pow", IssuedAt: time.Now().Add(-10 * time.Minute).Unix(),
+		ExpiresAt: time.Now().Add(-time.Minute).Unix(),
+	})
+	tok := signToken(payload, c.Secret)
+	if _, err := c.verifyAnonChallenge(tok, "203.0.113.7"); err == nil {
+		t.Error("expired challenge must be rejected")
 	}
 }
