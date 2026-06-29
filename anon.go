@@ -178,3 +178,73 @@ func (g *anonGuard) consume(nonce string, exp int64) bool {
 	g.used[nonce] = exp
 	return true
 }
+
+// handleAnonChallenge issues a fresh IP-bound PoW challenge at the adaptive
+// difficulty for the caller's IP.
+func (c authConfig) handleAnonChallenge(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	ip := clientIP(r)
+	difficulty := c.anonGuard.bitsFor(ip, c.AnonPoWBits, c.AnonPoWCeil)
+	tok, err := c.signAnonChallenge(ip, difficulty)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{"challenge": tok, "bits": difficulty})
+}
+
+// handleAnonRedeem validates a solved challenge (signature, IP-binding, PoW,
+// single-use) and, on success, mints an anonymous session cookie.
+func (c authConfig) handleAnonRedeem(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		Challenge string `json:"challenge"`
+		Solution  string `json:"solution"`
+		Redirect  string `json:"redirect"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	ip := clientIP(r)
+	ch, err := c.verifyAnonChallenge(body.Challenge, ip)
+	if err != nil {
+		http.Error(w, "bad challenge", http.StatusForbidden)
+		return
+	}
+	if !powSolved(body.Challenge, body.Solution, ch.Bits) {
+		http.Error(w, "bad solution", http.StatusForbidden)
+		return
+	}
+	if !c.anonGuard.consume(ch.Nonce, ch.ExpiresAt) {
+		http.Error(w, "challenge already used", http.StatusForbidden)
+		return
+	}
+	c.anonGuard.recordMint(ip)
+	tok, err := signAnonSession(c.AnonTTL, c.Secret)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     c.CookieName,
+		Value:    tok,
+		Path:     "/",
+		Domain:   c.CookieDomain,
+		MaxAge:   int(c.AnonTTL.Seconds()),
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	json.NewEncoder(w).Encode(map[string]string{"redirect": c.safeRedirect(body.Redirect)})
+}

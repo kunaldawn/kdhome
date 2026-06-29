@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -175,5 +176,125 @@ func TestAnonGuardBitsPerIP(t *testing.T) {
 	g.recordMint("203.0.113.7")
 	if got := g.bitsFor("198.51.100.9", 20, 24); got != 20 {
 		t.Errorf("untouched IP should be base 20, got %d", got)
+	}
+}
+
+func solveAnon(t *testing.T, challenge string, bits int) string {
+	t.Helper()
+	for i := 0; i < 1<<27; i++ {
+		s := strconv.Itoa(i)
+		if powSolved(challenge, s, bits) {
+			return s
+		}
+	}
+	t.Fatalf("no solution at %d bits", bits)
+	return ""
+}
+
+func TestHandleAnonChallengeReturnsToken(t *testing.T) {
+	c := anonTestCfg()
+	c.anonGuard = newAnonGuard()
+	r := httptest.NewRequest("POST", "/auth/anon/challenge", nil)
+	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	w := httptest.NewRecorder()
+	c.handleAnonChallenge(w, r)
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	var resp struct {
+		Challenge string `json:"challenge"`
+		Bits      int    `json:"bits"`
+	}
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Challenge == "" || resp.Bits != 20 {
+		t.Errorf("resp = %+v, want challenge set + bits 20", resp)
+	}
+}
+
+func TestHandleAnonRedeemHappyPath(t *testing.T) {
+	c := anonTestCfg()
+	c.anonGuard = newAnonGuard()
+	c.CookieName = "kd_session"
+	c.CookieDomain = ".kunaldawn.com"
+	c.AnonTTL = 30 * time.Minute
+	c.BaseURL = "https://kunaldawn.com"
+	// Mint a low-difficulty challenge directly for a fast test.
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
+	sol := solveAnon(t, chTok, 12)
+	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/wiki"}`
+	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	w := httptest.NewRecorder()
+	c.handleAnonRedeem(w, r)
+	if w.Code != 200 {
+		t.Fatalf("status = %d, want 200 (body %s)", w.Code, w.Body.String())
+	}
+	var set bool
+	for _, ck := range w.Result().Cookies() {
+		if ck.Name == "kd_session" {
+			set = true
+			if claims, err := verifySession(ck.Value, c.Secret); err != nil || !claims.Anon {
+				t.Errorf("cookie not a valid anon session: %v", err)
+			}
+		}
+	}
+	if !set {
+		t.Error("kd_session cookie not set")
+	}
+}
+
+func TestHandleAnonRedeemRejectsReplay(t *testing.T) {
+	c := anonTestCfg()
+	c.anonGuard = newAnonGuard()
+	c.CookieName = "kd_session"
+	c.AnonTTL = 30 * time.Minute
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
+	sol := solveAnon(t, chTok, 12)
+	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
+	mk := func() *httptest.ResponseRecorder {
+		r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+		r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+		w := httptest.NewRecorder()
+		c.handleAnonRedeem(w, r)
+		return w
+	}
+	if mk().Code != 200 {
+		t.Fatal("first redeem should succeed")
+	}
+	if mk().Code == 200 {
+		t.Error("replayed challenge must be rejected")
+	}
+}
+
+func TestHandleAnonRedeemRejectsWrongIP(t *testing.T) {
+	c := anonTestCfg()
+	c.anonGuard = newAnonGuard()
+	c.CookieName = "kd_session"
+	c.AnonTTL = 30 * time.Minute
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
+	sol := solveAnon(t, chTok, 12)
+	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
+	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.Header.Set("CF-Connecting-IP", "203.0.113.99") // different IP
+	w := httptest.NewRecorder()
+	c.handleAnonRedeem(w, r)
+	if w.Code == 200 {
+		t.Error("solution from a different IP must be rejected")
+	}
+}
+
+func TestHandleAnonRedeemRejectsBadSolution(t *testing.T) {
+	c := anonTestCfg()
+	c.anonGuard = newAnonGuard()
+	c.CookieName = "kd_session"
+	c.AnonTTL = 30 * time.Minute
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 20)
+	body := `{"challenge":"` + chTok + `","solution":"definitely-not-valid","redirect":"/"}`
+	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	w := httptest.NewRecorder()
+	c.handleAnonRedeem(w, r)
+	if w.Code == 200 {
+		t.Error("invalid PoW solution must be rejected")
 	}
 }
