@@ -398,3 +398,47 @@ func TestLoginPageHidesGuestButtonWhenAnonDisabled(t *testing.T) {
 		t.Error("guest button must not render when anon disabled")
 	}
 }
+
+func TestPowBitsForDuration(t *testing.T) {
+	cases := []struct {
+		hashrate float64
+		ms       int
+		want     int
+	}{
+		{50000, 5000, 18}, // 50k*5 = 250k hashes, log2 ≈ 17.93 -> 18
+		{50000, 1000, 16}, // 50k hashes, log2 ≈ 15.6 -> 16
+		{100000, 5000, 19}, // 500k hashes, log2 ≈ 18.93 -> 19
+		{50000, 1, 6},      // 50 hashes, log2 ≈ 5.6 -> 6
+		{1e15, 1000, 32},   // clamps to 32
+	}
+	for _, c := range cases {
+		if got := powBitsForDuration(c.hashrate, c.ms); got != c.want {
+			t.Errorf("powBitsForDuration(%.0f, %d) = %d, want %d", c.hashrate, c.ms, got, c.want)
+		}
+	}
+}
+
+func TestLoadAuthConfigAnonMsDerivesBits(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "") // ensure not set, so MS governs
+	t.Setenv("AUTH_ANON_POW_CEIL", "") // ensure not set, so headroom applies
+	t.Setenv("AUTH_ANON_POW_HASHRATE", "50000")
+	t.Setenv("AUTH_ANON_POW_MS", "5000")
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 18 {
+		t.Errorf("derived bits = %d, want 18 (5000ms @ 50000 H/s)", c.AnonPoWBits)
+	}
+	if c.AnonPoWCeil != c.AnonPoWBits+defaultAnonPoWHeadroom {
+		t.Errorf("ceil = %d, want base+%d (%d)", c.AnonPoWCeil, defaultAnonPoWHeadroom, c.AnonPoWBits+defaultAnonPoWHeadroom)
+	}
+}
+
+func TestLoadAuthConfigAnonBitsOverridesMs(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "21") // explicit BITS must win
+	t.Setenv("AUTH_ANON_POW_MS", "5000")
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 21 {
+		t.Errorf("bits = %d, want 21 (explicit BITS overrides MS)", c.AnonPoWBits)
+	}
+}

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -50,6 +51,38 @@ type authConfig struct {
 	oauth        *oauth2.Config
 	exchanger    tokenExchanger
 	anonGuard    *anonGuard
+}
+
+// Reference values for the AUTH_ANON_POW_MS time-target conversion.
+//   - defaultAnonPoWHashrate: assumed hashes/sec of a reference browser solving
+//     the PoW (one crypto.subtle SHA-256 digest per attempt in a Web Worker).
+//     This is deliberately conservative; the per-call WebCrypto overhead makes
+//     JS far slower than raw SHA-256. Tune AUTH_ANON_POW_HASHRATE to your
+//     audience after measuring — the startup log prints the derived bits.
+//   - defaultAnonPoWHeadroom: extra bits the adaptive per-IP ceiling sits above
+//     the base when AUTH_ANON_POW_CEIL isn't set (preserves escalation room).
+const (
+	defaultAnonPoWHashrate = 50000
+	defaultAnonPoWHeadroom = 4
+)
+
+// powBitsForDuration converts a target solve time (milliseconds) at an assumed
+// hashrate into a PoW difficulty in leading-zero bits: a b-bit puzzle needs
+// ~2^b hashes on average, so bits ≈ log2(hashrate * seconds). Result is clamped
+// to [1, 32].
+func powBitsForDuration(hashrate float64, ms int) int {
+	work := hashrate * float64(ms) / 1000.0
+	if work < 2 {
+		return 1
+	}
+	b := int(math.Round(math.Log2(work)))
+	if b < 1 {
+		b = 1
+	}
+	if b > 32 {
+		b = 32
+	}
+	return b
 }
 
 // loadAuthConfig reads AUTH_* and GOOGLE_* env vars. AUTH_ENABLED is truthy on
@@ -101,18 +134,60 @@ func loadAuthConfig() authConfig {
 			log.Printf("[AUTH] invalid AUTH_ANON_TTL %q, using default %s", v, c.AnonTTL)
 		}
 	}
+	// Base PoW difficulty can be set two ways:
+	//   1. AUTH_ANON_POW_BITS  — the difficulty in leading-zero bits, directly.
+	//   2. AUTH_ANON_POW_MS    — a TARGET solve time in milliseconds, which the
+	//      server converts to bits using AUTH_ANON_POW_HASHRATE (the assumed
+	//      hashes/sec of a reference browser's WebCrypto SHA-256 in a Worker).
+	// PoW is verified by amount-of-work (bits), never wall-clock, so a time
+	// target is only exact on the reference device and approximate elsewhere —
+	// tune AUTH_ANON_POW_HASHRATE after measuring on real hardware. Explicit
+	// BITS always wins over a MS target.
+	bitsSet := false
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_BITS")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
 			c.AnonPoWBits = n
+			bitsSet = true
 		} else {
 			log.Printf("[AUTH] invalid AUTH_ANON_POW_BITS %q, using default %d", v, c.AnonPoWBits)
 		}
 	}
+	hashrate := float64(defaultAnonPoWHashrate)
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_HASHRATE")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			hashrate = float64(n)
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_HASHRATE %q, using default %d", v, defaultAnonPoWHashrate)
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_MS")); v != "" {
+		if ms, err := strconv.Atoi(v); err == nil && ms > 0 {
+			derived := powBitsForDuration(hashrate, ms)
+			if bitsSet {
+				log.Printf("[AUTH] AUTH_ANON_POW_BITS is set (%d); ignoring AUTH_ANON_POW_MS=%d (would be ~%d bits)", c.AnonPoWBits, ms, derived)
+			} else {
+				c.AnonPoWBits = derived
+				log.Printf("[AUTH] AUTH_ANON_POW_MS=%d @ %.0f H/s -> base difficulty %d bits", ms, hashrate, derived)
+			}
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_MS %q, ignoring", v)
+		}
+	}
+	ceilSet := false
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_CEIL")); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= c.AnonPoWBits && n <= 32 {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
 			c.AnonPoWCeil = n
+			ceilSet = true
 		} else {
 			log.Printf("[AUTH] invalid AUTH_ANON_POW_CEIL %q, using default %d", v, c.AnonPoWCeil)
+		}
+	}
+	// When the ceil wasn't set explicitly, keep the default adaptive headroom
+	// above the (possibly derived) base so per-IP escalation still has room.
+	if !ceilSet {
+		c.AnonPoWCeil = c.AnonPoWBits + defaultAnonPoWHeadroom
+		if c.AnonPoWCeil > 32 {
+			c.AnonPoWCeil = 32
 		}
 	}
 	if c.AnonPoWCeil < c.AnonPoWBits {

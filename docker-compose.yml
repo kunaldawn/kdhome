@@ -59,10 +59,20 @@ services:
       - AUTH_ANON_ENABLED=${AUTH_ANON_ENABLED:-off}
       # Anonymous session lifetime (Go duration). Short by design.
       - AUTH_ANON_TTL=${AUTH_ANON_TTL:-30m}
-      # PoW difficulty in leading zero bits: base (clean IP) and adaptive ceiling.
-      # ~20 bits ≈ 1s on a typical phone; raises per-IP under repeated minting.
-      - AUTH_ANON_POW_BITS=${AUTH_ANON_POW_BITS:-20}
-      - AUTH_ANON_POW_CEIL=${AUTH_ANON_POW_CEIL:-24}
+      # PoW difficulty. Set it ONE of two ways (leave the others empty):
+      #  A) Directly, in leading-zero bits — base (clean IP) and adaptive ceiling.
+      #     Each +1 bit ≈ doubles the work. Empty -> code defaults (20 / base+4).
+      - AUTH_ANON_POW_BITS=${AUTH_ANON_POW_BITS:-}
+      - AUTH_ANON_POW_CEIL=${AUTH_ANON_POW_CEIL:-}
+      #  B) By TARGET solve time in milliseconds. The server converts it to bits
+      #     using AUTH_ANON_POW_HASHRATE (assumed hashes/sec of a reference
+      #     browser's WebCrypto SHA-256 in a Worker). PoW is verified by work,
+      #     not wall-clock, so this is exact only on the reference device —
+      #     measure and tune the hashrate (startup log prints the derived bits).
+      #     Explicit AUTH_ANON_POW_BITS wins over this. Example: ~5s target:
+      #       AUTH_ANON_POW_MS=5000   (with the default 50000 H/s -> ~18 bits)
+      - AUTH_ANON_POW_MS=${AUTH_ANON_POW_MS:-}
+      - AUTH_ANON_POW_HASHRATE=${AUTH_ANON_POW_HASHRATE:-50000}
 
 networks:
   web:
