@@ -8566,6 +8566,14 @@
          on touch. -->
     <style>
       html.kd-customcursor, html.kd-customcursor * { cursor: none !important; }
+      /* Slider thumbs/tracks are shadow-DOM pseudo-elements that `*` can't reach,
+         so the native cursor leaks through on range inputs. Force it off — each on
+         its own rule so an unrecognised pseudo doesn't drop the others. */
+      html.kd-customcursor input[type="range"] { cursor: none !important; }
+      html.kd-customcursor input[type="range"]::-webkit-slider-thumb { cursor: none !important; }
+      html.kd-customcursor input[type="range"]::-webkit-slider-runnable-track { cursor: none !important; }
+      html.kd-customcursor input[type="range"]::-moz-range-thumb { cursor: none !important; }
+      html.kd-customcursor input[type="range"]::-moz-range-track { cursor: none !important; }
       #kd-cursor {
         position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2147483647;
         pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
@@ -8589,7 +8597,7 @@
       document.body.appendChild(cur);
       root.classList.add('kd-customcursor');
       var sel = 'a,button,[role="button"],[onclick],summary,label,select,.clickable,' +
-        'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"]';
+        'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"],input[type="range"]';
       var uiScale = 1;
       function calc() { var m = Math.min(window.innerWidth, window.innerHeight) / 780; return m < 0.85 ? 0.85 : (m > 2.2 ? 2.2 : m); }
       calc(); uiScale = calc();
