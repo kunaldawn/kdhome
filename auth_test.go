@@ -172,7 +172,7 @@ func TestLoginPageEmbedsRedirect(t *testing.T) {
 	if !strings.Contains(page, want) {
 		t.Fatalf("login page should link to %q", want)
 	}
-	for _, frag := range []string{`id="fx-canvas"`, `src="/fx.js"`, "Sign in with Google"} {
+	for _, frag := range []string{`id="fx-canvas"`, `src="/fx.js`, "Sign in with Google"} {
 		if !strings.Contains(page, frag) {
 			t.Fatalf("login page missing expected fragment %q", frag)
 		}
@@ -316,5 +316,153 @@ func TestCallbackClearsStateCookieOnSuccess(t *testing.T) {
 	}
 	if !cleared {
 		t.Fatal("state cookie should be cleared (MaxAge<0) on success")
+	}
+}
+
+func TestLoadAuthConfigAnonDefaults(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	c := loadAuthConfig()
+	if !c.AnonEnabled {
+		t.Fatal("AnonEnabled should be true")
+	}
+	if c.AnonTTL != 30*time.Minute {
+		t.Errorf("AnonTTL = %v, want 30m", c.AnonTTL)
+	}
+	if c.AnonPoWBits != 20 || c.AnonPoWCeil != 24 {
+		t.Errorf("bits/ceil = %d/%d, want 20/24", c.AnonPoWBits, c.AnonPoWCeil)
+	}
+}
+
+func TestLoadAuthConfigAnonOverrides(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "1")
+	t.Setenv("AUTH_ANON_TTL", "15m")
+	t.Setenv("AUTH_ANON_POW_BITS", "18")
+	t.Setenv("AUTH_ANON_POW_CEIL", "26")
+	c := loadAuthConfig()
+	if c.AnonTTL != 15*time.Minute {
+		t.Errorf("AnonTTL = %v, want 15m", c.AnonTTL)
+	}
+	if c.AnonPoWBits != 18 || c.AnonPoWCeil != 26 {
+		t.Errorf("bits/ceil = %d/%d, want 18/26", c.AnonPoWBits, c.AnonPoWCeil)
+	}
+}
+
+func TestLoadAuthConfigAnonCeilFloor(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "26")
+	// AUTH_ANON_POW_CEIL left unset; default is 24, which is below bits=26.
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 26 {
+		t.Fatalf("AnonPoWBits = %d, want 26", c.AnonPoWBits)
+	}
+	if c.AnonPoWCeil < c.AnonPoWBits {
+		t.Fatalf("AnonPoWCeil (%d) < AnonPoWBits (%d); ceil should have been raised", c.AnonPoWCeil, c.AnonPoWBits)
+	}
+}
+
+func TestAnonPathsArePublic(t *testing.T) {
+	if !publicPaths["/auth/anon/challenge"] {
+		t.Error("/auth/anon/challenge must bypass the auth gate")
+	}
+	if !publicPaths["/auth/anon/redeem"] {
+		t.Error("/auth/anon/redeem must bypass the auth gate")
+	}
+}
+
+func TestMiddlewareAllowsAnonChallenge(t *testing.T) {
+	c := authConfig{Secret: []byte("test-secret-test-secret"), CookieName: "kd_session"}
+	reached := false
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = true
+	}))
+	r := httptest.NewRequest("POST", "/auth/anon/challenge", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if !reached {
+		t.Error("anon challenge path should pass through the gate without a session")
+	}
+}
+
+func TestLoginPageShowsGuestButtonWhenAnonEnabled(t *testing.T) {
+	c := authConfig{BaseURL: "https://kunaldawn.com", AnonEnabled: true}
+	page := string(c.loginPage("https://kunaldawn.com/wiki"))
+	if !strings.Contains(page, "anon-guest-btn") {
+		t.Error("guest button should render when AnonEnabled")
+	}
+}
+
+func TestLoginPageHidesGuestButtonWhenAnonDisabled(t *testing.T) {
+	c := authConfig{BaseURL: "https://kunaldawn.com", AnonEnabled: false}
+	page := string(c.loginPage("https://kunaldawn.com/wiki"))
+	if strings.Contains(page, "anon-guest-btn") {
+		t.Error("guest button must not render when anon disabled")
+	}
+}
+
+func TestPowBitsForDuration(t *testing.T) {
+	cases := []struct {
+		hashrate float64
+		ms       int
+		want     int
+	}{
+		{50000, 5000, 18},  // 50k*5 = 250k hashes, log2 ≈ 17.93 -> 18
+		{50000, 1000, 16},  // 50k hashes, log2 ≈ 15.6 -> 16
+		{100000, 5000, 19}, // 500k hashes, log2 ≈ 18.93 -> 19
+		{50000, 1, 6},      // 50 hashes, log2 ≈ 5.6 -> 6
+		{1e15, 1000, 32},   // clamps to 32
+	}
+	for _, c := range cases {
+		if got := powBitsForDuration(c.hashrate, c.ms); got != c.want {
+			t.Errorf("powBitsForDuration(%.0f, %d) = %d, want %d", c.hashrate, c.ms, got, c.want)
+		}
+	}
+}
+
+func TestHumanizeDuration(t *testing.T) {
+	cases := []struct {
+		d    time.Duration
+		want string
+	}{
+		{720 * time.Hour, "30 days"},
+		{24 * time.Hour, "1 day"},
+		{48 * time.Hour, "2 days"},
+		{30 * time.Minute, "30 minutes"},
+		{time.Hour, "1 hour"},
+		{12 * time.Hour, "12 hours"},
+		{90 * time.Minute, "90 minutes"},
+		{time.Minute, "1 minute"},
+		{45 * time.Second, "45 seconds"},
+		{time.Second, "1 second"},
+		{0, "0 seconds"},
+	}
+	for _, c := range cases {
+		if got := humanizeDuration(c.d); got != c.want {
+			t.Errorf("humanizeDuration(%s) = %q, want %q", c.d, got, c.want)
+		}
+	}
+}
+
+func TestLoadAuthConfigAnonMsDerivesBits(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "") // ensure not set, so MS governs
+	t.Setenv("AUTH_ANON_POW_CEIL", "") // ensure not set, so headroom applies
+	t.Setenv("AUTH_ANON_POW_HASHRATE", "50000")
+	t.Setenv("AUTH_ANON_POW_MS", "5000")
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 18 {
+		t.Errorf("derived bits = %d, want 18 (5000ms @ 50000 H/s)", c.AnonPoWBits)
+	}
+	if c.AnonPoWCeil != c.AnonPoWBits+defaultAnonPoWHeadroom {
+		t.Errorf("ceil = %d, want base+%d (%d)", c.AnonPoWCeil, defaultAnonPoWHeadroom, c.AnonPoWBits+defaultAnonPoWHeadroom)
+	}
+}
+
+func TestLoadAuthConfigAnonBitsOverridesMs(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "21") // explicit BITS must win
+	t.Setenv("AUTH_ANON_POW_MS", "5000")
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 21 {
+		t.Errorf("bits = %d, want 21 (explicit BITS overrides MS)", c.AnonPoWBits)
 	}
 }

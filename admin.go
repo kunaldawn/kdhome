@@ -85,6 +85,11 @@ func (c authConfig) isAdmin(email string) bool {
 
 // sessionEmail extracts the verified email from the request's session cookie.
 // ok is false when the cookie is missing or the session fails verification.
+//
+// WARNING: ok is true for ANONYMOUS sessions too (anon:true, empty email). It
+// answers "is there a valid session", NOT "is there a real user". To gate
+// anything that requires a Google-identified user, use realUserEmail instead —
+// never `email, ok := sessionEmail(r); if !ok { ... }; doPrivileged(email)`.
 func (c authConfig) sessionEmail(r *http.Request) (string, bool) {
 	ck, err := r.Cookie(c.CookieName)
 	if err != nil {
@@ -92,6 +97,21 @@ func (c authConfig) sessionEmail(r *http.Request) (string, bool) {
 	}
 	claims, err := verifySession(ck.Value, c.Secret)
 	if err != nil {
+		return "", false
+	}
+	return claims.Email, true
+}
+
+// realUserEmail returns the verified email ONLY for a real (Google-identified,
+// non-anonymous) session. Anonymous sessions and missing/invalid cookies all
+// yield ok=false. Use this to gate anything requiring a real identity.
+func (c authConfig) realUserEmail(r *http.Request) (string, bool) {
+	ck, err := r.Cookie(c.CookieName)
+	if err != nil {
+		return "", false
+	}
+	claims, err := verifySession(ck.Value, c.Secret)
+	if err != nil || claims.Anon || claims.Email == "" {
 		return "", false
 	}
 	return claims.Email, true

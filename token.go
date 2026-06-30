@@ -21,6 +21,7 @@ const sessionIssuer = "kunaldawn.com"
 type sessionClaims struct {
 	Subject   string `json:"sub"`
 	Email     string `json:"email"`
+	Anon      bool   `json:"anon,omitempty"`
 	IssuedAt  int64  `json:"iat"`
 	ExpiresAt int64  `json:"exp"`
 	Issuer    string `json:"iss"`
@@ -31,6 +32,18 @@ func sign(input string, secret []byte) string {
 	m := hmac.New(sha256.New, secret)
 	m.Write([]byte(input))
 	return b64.EncodeToString(m.Sum(nil))
+}
+
+// purposeKey derives a per-purpose signing subkey from the master secret so a
+// token minted for one purpose cannot be verified — and thus reused — as
+// another (e.g. a PoW challenge or OAuth-state token replayed as a session
+// cookie). The SESSION token is intentionally NOT derived: it stays signed with
+// the raw AUTH_SECRET so subdomains can verify it with a stock HS256 JWT
+// library. Every other token type MUST be signed/verified with a derived key.
+func purposeKey(secret []byte, purpose string) []byte {
+	m := hmac.New(sha256.New, secret)
+	m.Write([]byte("kdhome/tokenkey/v1/" + purpose))
+	return m.Sum(nil)
 }
 
 // signToken frames payload as an HS256 JWT and signs it.
@@ -86,6 +99,32 @@ func signSession(email string, ttl time.Duration, secret []byte) (string, error)
 	return signToken(payload, secret), nil
 }
 
+// signAnonSession mints an anonymous session JWT with a random, non-persisted
+// subject, no email, and anon:true, valid for ttl from now. It identifies no
+// user — the subject maps to no record anywhere.
+func signAnonSession(ttl time.Duration, secret []byte) (string, error) {
+	if len(secret) == 0 {
+		return "", errors.New("empty signing secret")
+	}
+	sub, err := randomNonce()
+	if err != nil {
+		return "", err
+	}
+	now := time.Now()
+	payload, err := json.Marshal(sessionClaims{
+		Subject:   "anon:" + sub,
+		Email:     "",
+		Anon:      true,
+		IssuedAt:  now.Unix(),
+		ExpiresAt: now.Add(ttl).Unix(),
+		Issuer:    sessionIssuer,
+	})
+	if err != nil {
+		return "", err
+	}
+	return signToken(payload, secret), nil
+}
+
 // verifySession validates a session JWT (signature, alg, expiry) and returns
 // its claims.
 func verifySession(token string, secret []byte) (sessionClaims, error) {
@@ -96,6 +135,12 @@ func verifySession(token string, secret []byte) (sessionClaims, error) {
 	}
 	if err := json.Unmarshal(payload, &c); err != nil {
 		return c, errors.New("bad payload json")
+	}
+	// Pin the token type: only tokens minted as sessions carry this issuer.
+	// Defence-in-depth against type confusion (challenge/state tokens are also
+	// signed with derived keys, so they already fail the signature check here).
+	if c.Issuer != sessionIssuer {
+		return c, errors.New("wrong issuer")
 	}
 	if c.ExpiresAt <= time.Now().Unix() {
 		return c, errors.New("token expired")

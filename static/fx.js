@@ -6,6 +6,10 @@
       const sceneLabel = cfg.sceneLabel || document.querySelector('.fx-scene');
       const timerLabel = cfg.timerLabel || document.getElementById('fx-timer');
       const gate = cfg.gate || null;
+      // Vertical position of the KD.FX bumper title, as a fraction of ROWS.
+      // Default 0.5 (center). Consumers that overlay a centered panel (e.g. the
+      // login card) can bias it toward the top so the title isn't hidden.
+      const bannerRowFrac = (typeof cfg.bannerRowFrac === 'number') ? cfg.bannerRowFrac : 0.5;
 
       const isMobile = window.matchMedia('(max-width: 520px)').matches;
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2282,7 +2286,7 @@
         const edge = Math.max(1 - p / 0.32, (p - 0.68) / 0.32, 0); // 1 at edges → 0 mid
         const corrupting = edge > 0.02;
         const recoveryT = edge * 1.5;
-        const textRow = (ROWS / 2) | 0;
+        const textRow = Math.max(0, Math.min(ROWS - 1, (ROWS * bannerRowFrac) | 0));
         const startX = Math.max(0, ((COLS - GLITCH_TEXT.length) / 2) | 0);
         for (let i = 0; i < GLITCH_TEXT.length; i++) {
           const x = startX + i;
@@ -2682,5 +2686,8 @@
       }
       document.addEventListener('visibilitychange', onVisibility);
 
-      return { stop: teardown };
+      // Expose the NFO ticker lines ([cls, txt] pairs) so a consumer can render
+      // them however it likes (e.g. a teletype stream) instead of the built-in
+      // scroller. Same content the scroller uses.
+      return { stop: teardown, tickerLines: TICKER_LINES };
     };

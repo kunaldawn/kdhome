@@ -68,3 +68,38 @@ func TestVerifyRejectsNonHS256(t *testing.T) {
 		t.Fatal("non-HS256 alg must be rejected")
 	}
 }
+
+func TestSignAnonSession(t *testing.T) {
+	secret := []byte("test-secret-test-secret")
+	tok, err := signAnonSession(30*time.Minute, secret)
+	if err != nil {
+		t.Fatalf("signAnonSession: %v", err)
+	}
+	claims, err := verifySession(tok, secret)
+	if err != nil {
+		t.Fatalf("verifySession: %v", err)
+	}
+	if !claims.Anon {
+		t.Error("Anon should be true")
+	}
+	if claims.Email != "" {
+		t.Errorf("Email = %q, want empty", claims.Email)
+	}
+	if !strings.HasPrefix(claims.Subject, "anon:") {
+		t.Errorf("Subject = %q, want anon: prefix", claims.Subject)
+	}
+	if claims.ExpiresAt <= time.Now().Unix() {
+		t.Error("token already expired")
+	}
+}
+
+func TestSignAnonSessionUniqueSubjects(t *testing.T) {
+	secret := []byte("test-secret-test-secret")
+	a, _ := signAnonSession(time.Minute, secret)
+	b, _ := signAnonSession(time.Minute, secret)
+	ca, _ := verifySession(a, secret)
+	cb, _ := verifySession(b, secret)
+	if ca.Subject == cb.Subject {
+		t.Error("two anon sessions share a subject; must be random")
+	}
+}

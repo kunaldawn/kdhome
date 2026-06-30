@@ -3,358 +3,1222 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign in — kunaldawn.com</title>
+<title>Kunal Dawn — KD's Homebrew Digital Archive</title>
 <link rel="icon" href="/favicon.ico">
-<meta property="og:title" content="KD's Homebrew Digital Archive">
-<meta property="og:description" content="A home-grown mirror of the public internet. Sign in to continue.">
-<meta property="og:image" content="/og-image.png">
+<!-- The apex (https://kunaldawn.com/) redirects here behind the auth gate, so
+     this page carries the full SEO + social-card metadata; canonical points back
+     to the apex so search engines attribute it to the homepage. -->
+<link rel="canonical" href="https://kunaldawn.com/">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta name="author" content="Kunal Dawn">
+<meta name="theme-color" content="#05110d">
+<meta name="description" content="KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge across 7 sub-archives, served from an archive in a home (2x Raspberry Pi 4 + N150 mini-PC) drawing ~30W off-grid solar. 119 offline wikis in ZIM (Wikipedia family, 20+ Stack Exchange sites, 30+ DevDocs developer references, 13 LibreTexts libraries, Khan Academy, iFixit, Project Gutenberg, ArchWiki, WikiCiv survival), 23,000+ vintage computing PDFs, plus OS images, vintage CD/DVDs, chiptune music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://kunaldawn.com/">
+<meta property="og:title" content="Kunal Dawn — KD's Homebrew Digital Archive">
+<meta property="og:description" content="Kunal Dawn's home-grown mirror of the public internet. 7 sub-archives: 119 offline wikis in ZIM (Wikipedia family, 20+ Stack Exchanges, 30+ DevDocs, 13 LibreTexts, Khan Academy, iFixit, Project Gutenberg), 23,000+ vintage computing PDFs, OS images, vintage CD/DVDs, chiptunes, curated YouTube mirrors, and audiobooks — 12 TB total, served from a 2x RPi4 + N150 cluster on ~30W off-grid solar. A shelf in a house, not a rack in a data centre. Fighting link rot, one wget at a time.">
+<meta property="og:site_name" content="KD's Homebrew Archive">
+<meta property="og:image" content="https://kunaldawn.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="KD's Homebrew Digital Archive by Kunal Dawn — Preserve, Share, Rebuild. 7 sub-archives, 119 wikis, 23K+ PDFs, 12 TB total.">
+<meta property="og:locale" content="en_US">
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="https://kunaldawn.com/">
+<meta name="twitter:title" content="Kunal Dawn — KD's Homebrew Digital Archive">
+<meta name="twitter:description" content="Kunal Dawn's home-grown mirror of the public internet — 7 sub-archives, 119 offline wikis (Wikipedia family, 20+ Stack Exchanges, 30+ DevDocs, 13 LibreTexts, Khan Academy, iFixit, Project Gutenberg), 23,000+ PDFs, OS images, CD/DVDs, chiptunes, YouTube mirrors, audiobooks — 12 TB on ~30W off-grid solar. A shelf in a house, not a rack in a data centre.">
+<meta name="twitter:image" content="https://kunaldawn.com/og-image.png">
+<meta name="twitter:image:alt" content="KD's Homebrew Digital Archive by Kunal Dawn — 7 sub-archives, 119 wikis, 23K+ PDFs, 12 TB preserved">
 <style>
-  :root { color-scheme: dark; }
+  :root {
+    color-scheme: dark;
+    --bg: #05110d;
+    --fg: #cfeee0;
+    --teal: #7fd1b3;
+    --lime: #00ff99;
+    --amber: #ffb648;
+    --pink: #ff48a0;
+    --line: rgba(127,209,179,0.30);
+    --mono: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body {
-    display: flex; align-items: center; justify-content: center;
-    /* min-height (not height:100%) so when the content is taller than the
-       viewport — common on phones, where the card runs ~1000px — the body
-       grows and the page scrolls instead of flex-centering clipping the top
-       of the card out of reach. 100dvh tracks the mobile dynamic viewport. */
     min-height: 100vh; min-height: 100dvh;
-    background: #05110d; color: #cfeee0;
-    font-family: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    padding: 24px;
-    background-image: radial-gradient(circle at 50% 0%, rgba(127,209,179,0.08), transparent 60%);
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); color: var(--fg);
+    font-family: var(--mono);
+    padding: clamp(14px, 2vw, 28px);
+    position: relative;
+    overflow-x: hidden;
   }
-  .signin {
-    width: 100%; max-width: 520px;
-    border: 1px solid rgba(127,209,179,0.35); border-radius: 12px;
-    padding: 26px 22px 30px; background: rgba(10,28,22,0.6);
-    box-shadow: 0 0 40px rgba(0,0,0,0.5);
-    display: flex; flex-direction: column; gap: 18px;
-  }
-  .signin-title {
-    text-align: center; font-size: 18px; margin: 4px 0 0;
-    color: #7fd1b3; letter-spacing: 2px;
-  }
-  .signin-inventory {
-    font-size: 11px; line-height: 1.5; opacity: 0.6;
-    max-height: 92px; overflow: auto; text-align: left;
-  }
-  .signin-btn {
-    align-self: center; display: inline-flex; align-items: center; gap: 10px;
-    padding: 13px 26px; border-radius: 6px; text-decoration: none;
-    background: #7fd1b3; color: #05110d; font-weight: bold; letter-spacing: 1px;
-  }
-  .signin-btn:hover { background: #a8d8c4; }
-  .signin-foot { text-align: center; font-size: 11px; opacity: 0.5; }
 
-    .fx-wrap {
-      margin: 0 0 14px;
-      padding: 6px 10px 4px;
-      border: 1px solid rgba(0, 255, 150, 0.22);
-      border-radius: 6px;
-      background:
-        linear-gradient(180deg, rgba(0, 255, 150, 0.05), rgba(0, 255, 150, 0.01)),
-        repeating-linear-gradient(0deg, rgba(0,0,0,0.18) 0 1px, transparent 1px 3px);
-      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
-      position: relative;
-      overflow: hidden;
+  /* ── Full-bleed procedural FX wallpaper ──
+     The fx.js engine renders a fixed 46x22 (34x17 mobile) ASCII grid into the
+     <pre>. We DON'T resize the engine (keeps per-frame cost tiny — Pi-safe);
+     instead we blow the fixed grid up with a vmax font-size so it overflows the
+     viewport in both axes, and clip with overflow:hidden. The engine still only
+     computes ~1000 cells/frame; the GPU does the scaling for free. */
+  .fx-bg {
+    position: fixed; inset: 0; z-index: 0;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, rgba(0,255,150,0.05), transparent 70%);
+    opacity: 0.92;
+    pointer-events: none;
+  }
+  .fx-bg .fx-canvas {
+    /* Fill the viewport so fx.js's ResizeObserver measures the FULL screen and
+       renders a dense grid (up to its 120x60 cap) at real glyph size — the
+       demoscene reads as a full composition, not a few huge zoomed glyphs.
+       A shrink-wrapped <pre> (the old centered+vmax approach) made the engine
+       measure a tiny box and render almost nothing. */
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    margin: 0; padding: 0;
+    font-family: var(--mono);
+    /* Auto-fill any aspect 320px→4K within the engine's 120x60 cap. The engine
+       derives COLS=floor(W/(fontPx*0.6)), ROWS=floor(H/(fontPx*1.2)); picking
+       fontPx = max(W,H)/72 (= vmax/72) is the smallest font that keeps BOTH axes
+       under the cap, so neither clips into a centered strip. */
+    font-size: clamp(12px, max(100vw / 72, 100vh / 72), 56px); line-height: 1.2; letter-spacing: 0;
+    white-space: pre; text-align: center; overflow: hidden;
+    color: var(--lime);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.6s ease, text-shadow 0.6s ease;
+    text-shadow: 0 0 6px rgba(0,255,150,0.45);
+  }
+  /* Light scanlines + a whisper of corner falloff. Deliberately NOT a strong
+     vignette: the card covers the center, so darkening the edges would hide the
+     only FX the viewer can actually see. */
+  .fx-veil {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 80%, rgba(0,0,0,0.28) 100%);
+  }
+
+  /* ── Per-scene wallpaper tints (engine toggles fx-<scene> on the canvas) ── */
+  .fx-canvas.fx-plasma   { color:#00ff99; text-shadow:-1px 0 rgba(255,0,128,0.35),1px 0 rgba(0,200,255,0.35),0 0 10px rgba(0,255,150,0.5); }
+  .fx-canvas.fx-fire     { color:#ffb648; text-shadow:-1px 0 rgba(255,0,80,0.35),1px 0 rgba(255,160,0,0.4),0 0 10px rgba(255,120,0,0.45); }
+  .fx-canvas.fx-starfield{ color:#d5ffe8; text-shadow:0 0 5px rgba(120,230,255,0.55),0 0 12px rgba(120,230,255,0.25); }
+  .fx-canvas.fx-tunnel   { color:#8affff; text-shadow:-1px 0 rgba(255,60,200,0.35),1px 0 rgba(0,255,200,0.4),0 0 10px rgba(120,200,255,0.45); }
+  .fx-canvas.fx-torus    { color:#00ff99; text-shadow:0 0 7px rgba(0,255,150,0.55),0 0 16px rgba(0,255,150,0.2); }
+  .fx-canvas.fx-matrix   { color:#3dff7d; text-shadow:0 0 4px rgba(0,255,120,0.5),0 0 12px rgba(0,255,120,0.2); }
+  .fx-canvas.fx-wave3d   { color:#7affc7; text-shadow:-1px 0 rgba(0,200,255,0.35),1px 0 rgba(180,0,255,0.25),0 0 10px rgba(100,220,200,0.45); }
+  .fx-canvas.fx-ripple   { color:#8affff; text-shadow:-1px 0 rgba(0,200,255,0.4),1px 0 rgba(80,255,200,0.35),0 0 10px rgba(120,230,255,0.5); }
+  .fx-canvas.fx-life     { color:#c8ff72; text-shadow:0 0 5px rgba(180,255,80,0.45),0 0 12px rgba(180,255,80,0.2); }
+  .fx-canvas.fx-cube     { color:#ffd066; text-shadow:-1px 0 rgba(255,80,160,0.35),1px 0 rgba(0,220,255,0.35),0 0 10px rgba(255,200,80,0.45); }
+  .fx-canvas.fx-kaleido  { color:#ff7ad1; text-shadow:-1px 0 rgba(100,0,255,0.35),1px 0 rgba(0,255,200,0.35),0 0 10px rgba(255,120,200,0.5); }
+  .fx-canvas.fx-meta     { color:#9cffd5; text-shadow:-1px 0 rgba(0,180,255,0.35),1px 0 rgba(150,0,255,0.3),0 0 12px rgba(100,255,210,0.4); }
+  .fx-canvas.fx-mandel   { color:#ffb648; text-shadow:-1px 0 rgba(255,40,120,0.4),1px 0 rgba(255,200,0,0.4),0 0 10px rgba(255,140,0,0.45); }
+  .fx-canvas.fx-copper   { color:#ff6bd2; text-shadow:-1px 0 rgba(255,200,0,0.4),1px 0 rgba(0,200,255,0.4),0 0 10px rgba(255,100,200,0.45); }
+  .fx-canvas.fx-spiral   { color:#8ad5ff; text-shadow:-1px 0 rgba(255,80,220,0.3),1px 0 rgba(0,220,255,0.4),0 0 10px rgba(120,200,255,0.45); }
+  .fx-canvas.fx-vectors  { color:#ff9edc; text-shadow:-1px 0 rgba(80,0,200,0.45),1px 0 rgba(0,255,255,0.4),0 0 10px rgba(255,120,200,0.5); }
+  .fx-canvas.fx-rotozoom { color:#d8b0ff; text-shadow:-1px 0 rgba(0,220,255,0.35),1px 0 rgba(255,0,180,0.35),0 0 10px rgba(200,160,255,0.45); }
+  .fx-canvas.fx-lorenz   { color:#ffb678; text-shadow:-1px 0 rgba(255,40,120,0.4),1px 0 rgba(255,200,40,0.4),0 0 10px rgba(255,160,80,0.5); }
+  .fx-canvas.fx-warp     { color:#e0f5ff; text-shadow:-1px 0 rgba(0,180,255,0.5),1px 0 rgba(180,80,255,0.4),0 0 10px rgba(200,220,255,0.55); }
+  .fx-canvas.fx-galaxy   { color:#d8c8ff; text-shadow:-1px 0 rgba(180,80,255,0.4),1px 0 rgba(0,200,255,0.4),0 0 12px rgba(200,180,255,0.55); }
+  .fx-canvas.fx-kdfx     { color:#00ff99; text-shadow:-2px 0 rgba(255,0,128,0.6),2px 0 rgba(0,200,255,0.6),0 0 8px rgba(0,255,150,0.5); }
+
+  /* ══════════════════ Glass CRT console card ══════════════════ */
+  .crt {
+    position: relative; z-index: 2;
+    width: 100%; max-width: 480px;
+    border: 1px solid var(--line); border-radius: 18px;
+    /* Low alpha so ~66% of the demoscene transmits; the 2.5px backdrop-blur
+       dissolves individual ASCII glyph cells into smooth color smudges so text
+       edges no longer collide with sharp character edges. Blur does the
+       legibility work that opacity used to — without hiding the FX. */
+    background: rgba(7,22,17,0.34);
+    -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 24px 60px rgba(0,0,0,0.42), 0 0 60px rgba(0,255,150,0.08), inset 0 1px 0 rgba(0,255,150,0.06);
+    display: flex; flex-direction: column;
+  }
+  /* Neon corner brackets. */
+  .crt::before, .crt::after {
+    content: ""; position: absolute; width: 18px; height: 18px; pointer-events: none;
+    border: 2px solid var(--lime); opacity: 0.7;
+  }
+  .crt::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 18px; }
+  .crt::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 18px; }
+
+  /* ── HUD strips (top scene/timer, bottom channel/ticker) ── */
+  .hud {
+    display: grid; align-items: center; column-gap: 8px;
+    font-size: 9.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--teal); opacity: 0.85; padding: 7px 12px;
+  }
+  .hud-top {
+    grid-template-columns: 1fr auto 1fr;
+    border-bottom: 1px solid var(--line);
+    border-radius: 17px 17px 0 0;
+    background:
+      linear-gradient(180deg, rgba(0,255,150,0.05), transparent),
+      linear-gradient(180deg, rgba(5,17,13,0.66) 0%, rgba(5,17,13,0.34) 100%);
+  }
+  .hud-top .h-tag  { justify-self: start; color: var(--lime); }
+  .hud-top .h-fx   { justify-self: center; opacity: 0.7; }
+  .hud-top .h-fx .fx-scene { color: var(--pink); margin-left: 4px; text-shadow: 0 0 5px rgba(255,72,160,0.5); }
+  .hud-top .h-timer{ justify-self: end; font-variant-numeric: tabular-nums; }
+  /* Full-width vertical stack: a thin caption line, then the full-width ticker. */
+  .hud-bot {
+    display: block; padding: 6px 0 7px;
+    border-top: 1px solid var(--line);
+    border-radius: 0 0 17px 17px;
+    background:
+      linear-gradient(0deg, rgba(0,255,150,0.05), transparent),
+      linear-gradient(0deg, rgba(5,17,13,0.66) 0%, rgba(5,17,13,0.34) 100%);
+    overflow: hidden;
+  }
+  .hud-bot .h-chan {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px 4px; color: var(--lime); opacity: 0.8; white-space: nowrap;
+  }
+  .hud-bot .h-chan .h-feed { color: var(--teal); opacity: 0.7; letter-spacing: 2px; }
+
+  /* Bottom-bar NFO ticker — full card width, 4 visible lines (engine animates
+     translateY; mask fades the ends). */
+  /* Streaming TTY live feed — lines type out char-by-char and scroll up like a
+     telnet/SSH session. Bottom-anchored so new lines push older ones up into the
+     top fade. Inside .crt, so it scales with the panel zoom. */
+  .tty-wrap {
+    position: relative; width: 100%;
+    height: calc(clamp(11px, 0.9vw, 13px) * 1.5 * 5); overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 100%);
+            mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 100%);
+  }
+  .tty-screen {
+    padding: 0 10px; font-family: var(--mono);
+    font-size: clamp(11px, 0.9vw, 13px); line-height: 1.5; letter-spacing: 0.5px;
+    color: var(--teal); text-shadow: 0 0 4px rgba(0,255,150,0.25);
+  }
+  .tty-ln { white-space: pre; overflow: hidden; }
+  .tty-ln.tk-ok   { color: #00ff99; }
+  .tty-ln.tk-warn { color: #ffb648; }
+  .tty-ln.tk-hot  { color: #ff48a0; text-shadow: 0 0 6px rgba(255,72,160,0.4); }
+  .tty-ln.tk-dim  { color: #4a8f76; }
+  .tty-cur {
+    display: inline-block; width: 0.58em; height: 1.05em; vertical-align: -0.18em;
+    margin-left: 1px; background: var(--lime); box-shadow: 0 0 6px rgba(0,255,150,0.7);
+    animation: tty-blink 1s steps(1) infinite;
+  }
+  .tty-cur.on { animation: none; opacity: 1; } /* solid while actively typing */
+  @keyframes tty-blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .tty-cur { animation: none; opacity: 0.8; } }
+
+  /* ── Card body ── */
+  /* flex:1 so the body fills a tall panel; content stays vertically centered and
+     the HUD strips pin to the panel's top/bottom edges. */
+  .body { padding: 20px 18px 18px; display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; justify-content: center; }
+  .title { text-align: center; margin: 0; }
+  .title .t-main {
+    display: block; font-size: 17px; letter-spacing: 2px; color: var(--teal);
+    text-shadow: 0 0 8px rgba(5,17,13,0.95), 0 1px 4px rgba(5,17,13,0.95), 0 0 20px rgba(5,17,13,0.70);
+  }
+  .title .t-sub  {
+    display: block; font-size: 10.5px; letter-spacing: 1px; opacity: 0.55; margin-top: 4px; text-transform: uppercase;
+    text-shadow: 0 1px 3px rgba(5,17,13,0.95), 0 0 8px rgba(5,17,13,0.78);
+  }
+  /* Dark-halo legibility for text floating over the now-visible FX. Tight ring
+     kills the glyph cell under each letter; wide ring soaks neighbour bleed. */
+  .auth .lead, .meta, .anon-status, .foot, .manifest > summary,
+  .hud-top .h-tag, .hud-top .h-fx, .hud-top .h-timer, .hud-bot .h-chan {
+    text-shadow: 0 1px 3px rgba(5,17,13,0.95), 0 0 7px rgba(5,17,13,0.80);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .chip {
+    font-size: 10.5px; letter-spacing: 0.5px; padding: 4px 8px;
+    border: 1px solid rgba(127,209,179,0.42); border-radius: 999px; color: var(--teal);
+    background: rgba(7,22,17,0.55); white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(5,17,13,0.85);
+  }
+  .chip b { color: var(--lime); font-weight: 700; }
+
+  .manifest { font-size: 11px; }
+  .manifest > summary {
+    cursor: pointer; list-style: none; text-align: center;
+    color: var(--teal); opacity: 0.75; letter-spacing: 0.5px; padding: 2px 0;
+  }
+  .manifest > summary::-webkit-details-marker { display: none; }
+  .manifest > summary::before { content: "▸ "; }
+  .manifest[open] > summary::before { content: "▾ "; }
+  .manifest .m-body {
+    margin-top: 8px; max-height: 132px; overflow: auto;
+    font-size: 10.5px; line-height: 1.55; opacity: 0.7; text-align: left;
+    border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px;
+    background: rgba(4,14,10,0.80);
+  }
+
+  /* ── Auth section ── */
+  .auth { display: flex; flex-direction: column; }
+  .auth .lead {
+    text-align: center; font-size: 11px; letter-spacing: 0.5px; opacity: 0.7;
+    margin: 2px 0 10px;
+  }
+  .opt { display: flex; flex-direction: column; gap: 6px; }
+  .opt + .opt { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+
+  .btn {
+    position: relative; width: 100%; overflow: hidden;
+    display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px 18px; border-radius: 8px; text-decoration: none;
+    font-family: var(--mono); font-size: 14px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; border: 1px solid transparent;
+    min-height: 50px; transition: background 0.15s ease, transform 0.12s ease, box-shadow 0.2s ease;
+  }
+  .btn > * { position: relative; z-index: 1; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(1px); }
+  .btn:focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
+  /* Animated sheen sweep — a glint travels across each button periodically. */
+  .btn::after {
+    content: ""; position: absolute; top: 0; left: -75%; width: 55%; height: 100%; z-index: 0;
+    transform: skewX(-20deg); pointer-events: none;
+    animation: btn-sheen 5.5s ease-in-out infinite;
+  }
+  /* Dark glint on the bright lime button (white was invisible on lime). */
+  .btn-primary::after { width: 42%; background: linear-gradient(100deg, transparent, rgba(5,17,13,0.34), transparent); }
+  .btn-ghost::after   { background: linear-gradient(100deg, transparent, rgba(127,209,179,0.22), transparent); animation-delay: 1.6s; }
+  @keyframes btn-sheen { 0% { left: -75%; } 22%, 100% { left: 135%; } }
+  .btn[disabled]::after, .btn-primary.solving::after { animation: none; opacity: 0; }
+
+  /* PRIMARY — guest */
+  .btn-primary {
+    background: var(--lime); color: #05110d; border-color: var(--lime);
+    box-shadow: 0 0 0 0 rgba(0,255,150,0.5);
+    animation: pulse 2.6s ease-in-out infinite;
+  }
+  .btn-primary:hover { background: #5effbb; }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 16px rgba(0,255,150,0.20); }
+    50%     { box-shadow: 0 0 26px rgba(0,255,150,0.45); }
+  }
+  .btn-primary[disabled] { animation: none; cursor: progress; opacity: 0.92; }
+
+  /* SECONDARY — google ghost */
+  .btn-ghost {
+    background: rgba(7,22,17,0.55); color: var(--teal); border-color: rgba(127,209,179,0.40);
+    text-shadow: 0 1px 2px rgba(5,17,13,0.70);
+  }
+  .btn-ghost:hover { background: rgba(7,22,17,0.68); border-color: var(--teal); }
+  /* Icon slots: fixed 18px box; font-size:0 silences any text fallback. */
+  .btn .g-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 18px; width: 18px; height: 18px; font-size: 0; line-height: 1;
+  }
+  .b-label { display: inline-flex; align-items: center; gap: 8px; }
+  .b-label .b-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 18px; width: 18px; height: 18px;
+  }
+
+  /* Button "forging" line — shown in place of the label while solving. */
+  .grind { display: none; font-variant-numeric: tabular-nums; letter-spacing: 0.5px; font-size: 13px; }
+  .btn-primary.solving .b-label { display: none; }
+  .btn-primary.solving .grind { display: inline-flex; gap: 9px; align-items: center; }
+  .spin { display: inline-block; color: inherit; }
+
+  /* ── Geeky proof-of-work console (live SHA-256 grind telemetry) ── */
+  .pow-console {
+    display: none; margin-top: 10px; padding: 9px 11px;
+    border: 1px solid rgba(0,255,150,0.30); border-radius: 7px;
+    background: rgba(2,10,7,0.84);
+    font-family: var(--mono); font-size: 10.5px; line-height: 1.55;
+    color: var(--teal); text-align: left; position: relative; overflow: hidden;
+    box-shadow: inset 0 0 18px rgba(0,255,150,0.06), 0 0 16px rgba(0,255,150,0.06);
+  }
+  .pow-console.live { display: block; animation: pc-in 0.25s ease-out; }
+  @keyframes pc-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  /* faint moving scanline over the console */
+  .pow-console::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
+  }
+  .pow-console > * { position: relative; }
+  .pc-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    color: var(--lime); letter-spacing: 1px; margin-bottom: 6px;
+    text-transform: uppercase; font-size: 9.5px;
+  }
+  .pc-head-r { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .pc-head .spin { color: var(--lime); text-shadow: 0 0 6px rgba(0,255,150,0.7); }
+  .pc-close {
+    border: 1px solid rgba(127,209,179,0.5); background: transparent; color: var(--teal);
+    width: 16px; height: 16px; border-radius: 4px; cursor: pointer; padding: 0;
+    font-size: 10px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pc-close:hover { background: rgba(255,72,120,0.18); color: #ff8aa6; border-color: rgba(255,72,120,0.55); }
+  /* Aligned key→value grid: labels right-aligned in a fixed gutter, values share
+     a left edge, all numerics tabular so nothing jitters as digits change. */
+  .pc-data { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; align-items: baseline; }
+  .pc-k { color: #4a8f76; font-size: 9px; letter-spacing: 0.5px; text-align: right; white-space: nowrap; }
+  .pc-hash, .pc-target, .pc-v { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; }
+  .pc-hash { color: #7fe9c0; overflow: hidden; text-overflow: ellipsis; }
+  .pc-hash .hz { color: var(--lime); font-weight: 700; text-shadow: 0 0 7px rgba(0,255,150,0.75); }
+  .pc-target { color: var(--amber); letter-spacing: 1px; }
+  .pc-target .tz { color: var(--lime); font-weight: 700; }
+  .pc-v { color: var(--teal); }
+  .pc-bar {
+    position: relative; height: 13px; border: 1px solid rgba(0,255,150,0.28); border-radius: 3px;
+    background: rgba(0,0,0,0.45); overflow: hidden; margin: 3px 0 7px;
+  }
+  .pc-fill {
+    display: block; height: 100%; width: 0%;
+    background: repeating-linear-gradient(135deg, #00ff99 0 9px, #00b870 9px 18px);
+    background-size: 26px 26px; box-shadow: 0 0 10px rgba(0,255,150,0.6);
+    transition: width 0.2s ease; animation: pc-stripe 0.55s linear infinite;
+  }
+  @keyframes pc-stripe { from { background-position: 0 0; } to { background-position: 26px 0; } }
+  .pc-bar-pct {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: #d8fff0; letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Fixed-width percent in the button so it doesn't jitter 1→2→3 digits. */
+  #grind-pct { display: inline-block; min-width: 2.7em; text-align: right; font-variant-numeric: tabular-nums; }
+  .pow-console.done { border-color: rgba(0,255,150,0.7); box-shadow: inset 0 0 22px rgba(0,255,150,0.12), 0 0 22px rgba(0,255,150,0.18); }
+  .pow-console.fail { border-color: rgba(255,72,120,0.6); }
+  .pow-console.fail .pc-head { color: #ff6b8a; }
+
+  /* Meta rows under each button. */
+  .meta {
+    display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+    gap: 6px; font-size: 10.5px; letter-spacing: 0.4px; opacity: 0.85;
+  }
+  .meta.anon   { color: var(--amber); }
+  .meta.google { color: var(--teal); }
+  .meta .ttl { font-weight: 700; }
+  .meta .dot { opacity: 0.45; }
+  .info-btn {
+    flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid currentColor; background: rgba(255,255,255,0.05); color: inherit;
+    font-size: 11px; font-weight: 700; font-family: var(--mono); cursor: pointer; padding: 0; line-height: 1;
+    position: relative; transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.2s ease;
+  }
+  .info-btn .i-glyph { transition: color 0.15s ease; }
+  /* Periodic attention ring so the "how it works" affordance is noticed. */
+  .info-btn::after {
+    content: ""; position: absolute; inset: -2px; border-radius: 50%;
+    border: 1px solid currentColor; opacity: 0; pointer-events: none;
+    animation: info-ring 3.2s ease-out infinite;
+  }
+  @keyframes info-ring { 0% { transform: scale(0.9); opacity: 0.55; } 70%, 100% { transform: scale(1.7); opacity: 0; } }
+  .info-btn:hover, .info-btn:focus-visible {
+    background: currentColor; transform: scale(1.18); box-shadow: 0 0 12px currentColor;
+  }
+  .info-btn:hover .i-glyph, .info-btn:focus-visible .i-glyph { color: #05110d; }
+  .info-btn:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+
+  .anon-status {
+    text-align: center; font-size: 10.5px; letter-spacing: 0.5px;
+    color: var(--lime); min-height: 14px; opacity: 0.9;
+  }
+
+  .foot { text-align: center; font-size: 10.5px; opacity: 0.5; padding: 4px 0 2px; }
+
+  /* ── Info popups (native <dialog>) ── */
+  /* Responsive: width + base font scale with the viewport (children use em so they
+     cascade); max-height clamps to the viewport with scroll so it never overflows. */
+  /* Font + width track the parent panel's zoom (--panel-scale, set by the fit
+     JS) so the popup doesn't look tiny next to the scaled panel on 4K. The box
+     stays viewport-bound (max-height + scroll); all inner sizing is em-based so
+     it scales with the root font. */
+  dialog.info {
+    --ds: var(--panel-scale, 1);
+    width: min(92vw, max(320px, calc(400px * var(--ds))));
+    max-height: min(88vh, 88dvh); overflow-y: auto; overscroll-behavior: contain;
+    font-size: clamp(12px, calc(12px * var(--ds)), 30px);
+    border: 1px solid var(--line); border-radius: 0.9em;
+    background: rgba(7,22,17,0.97); color: var(--fg); font-family: var(--mono);
+    padding: 0; box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 50px rgba(0,255,150,0.08);
+  }
+  dialog.info::backdrop { background: rgba(2,8,6,0.72); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  dialog.info .d-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.7em;
+    padding: 0.85em 1.1em; border-bottom: 1px solid var(--line);
+    font-size: 0.92em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--lime);
+  }
+  dialog.info .d-close {
+    border: 1px solid var(--line); background: transparent; color: var(--teal);
+    width: 1.9em; height: 1.9em; border-radius: 0.45em; cursor: pointer; font-size: 1em;
+    display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  dialog.info .d-close:hover { background: rgba(127,209,179,0.10); }
+  dialog.info .d-body { padding: 1.1em; font-size: 1em; line-height: 1.6; }
+  dialog.info .d-body p { margin: 0 0 0.7em; }
+  dialog.info .d-body ol, dialog.info .d-body ul { margin: 0 0 0.7em; padding-left: 1.3em; }
+  dialog.info .d-body li { margin: 0 0 0.35em; }
+  dialog.info .d-body b { color: var(--lime); }
+  dialog.info .d-body .amber { color: var(--amber); }
+  dialog.info .d-foot { padding: 0 1.1em 0.9em; font-size: 0.85em; opacity: 0.6; }
+  /* Nerdy deep-dive (collapsed by default). All em-based so it scales with --ds. */
+  dialog.info .d-deep { margin: 0.3em 0 0.9em; border: 1px solid var(--line); border-radius: 0.45em; background: rgba(0,0,0,0.25); }
+  dialog.info .d-deep > summary { cursor: pointer; list-style: none; padding: 0.6em 0.8em; color: var(--teal); font-size: 0.9em; letter-spacing: 0.5px; }
+  dialog.info .d-deep > summary::-webkit-details-marker { display: none; }
+  dialog.info .d-deep > summary::before { content: "▸ "; color: var(--lime); }
+  dialog.info .d-deep[open] > summary::before { content: "▾ "; }
+  dialog.info .d-deep .deep-body { padding: 0 1em 0.8em; }
+  dialog.info .d-deep h4 { margin: 0.9em 0 0.4em; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; color: var(--lime); }
+  dialog.info .d-deep code { color: var(--lime); }
+  dialog.info .d-code {
+    margin: 0.5em 0; padding: 0.6em 0.8em; border-left: 2px solid var(--lime);
+    background: rgba(0,255,150,0.06); border-radius: 0 0.3em 0.3em 0;
+    font-family: var(--mono); font-size: 0.86em; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; color: #9fe9c7;
+  }
+  dialog.info .d-code .c { color: #4a8f76; }
+
+  /* Desktop zoom is applied via transform:scale() in JS — a UNIFORM, aspect-ratio
+     preserving zoom (like browser zoom) that fits the panel's natural size to
+     ~70% of the viewport height. transform-origin:center + body centering keep it
+     centred, which lands the top ~15vh down, just below the background banner. */
+  .crt { transform-origin: center center; }
+
+  /* ══════════════════ Mobile ══════════════════ */
+  @media (max-width: 520px) {
+    body { padding: 14px; align-items: flex-start; }
+    /* No blur on mobile (low-end GPU cost); the higher alpha + the existing
+       fx-bg dim compensate, and at the 12px grid what bleeds through reads as
+       an ambient color wash rather than legible glyphs. */
+    .crt {
+      max-width: 100%; -webkit-backdrop-filter: none; backdrop-filter: none;
+      background: rgba(7,22,17,0.55);
+      min-height: 88vh; min-height: 88dvh;
+      /* Auto-margins center the card vertically (body is flex-start to stay
+         clip-safe); collapses to top-pinned only if the card exceeds the screen. */
+      margin-block: auto;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.40), 0 0 30px rgba(0,255,150,0.07);
     }
-    .fx-wrap::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%);
+    .fx-bg { opacity: 0.85; }
+    .body { padding: 16px 13px 14px; gap: 12px; }
+    .title .t-main { font-size: 15px; }
+    .hud { font-size: 8.5px; letter-spacing: 1px; }
+    .chip { font-size: 10px; background: rgba(7,22,17,0.70); }
+    .manifest .m-body { background: rgba(4,14,10,0.86); }
+    .btn-ghost { background: rgba(7,22,17,0.66); }
+    /* Auto-adjust button text: 14px at ~412px down to 11px at 320px. */
+    .btn {
+      font-size: clamp(11px, 3.4vw, 14px);
+      letter-spacing: clamp(0px, 0.5vw, 1px);
+      gap: 8px; padding: 13px 14px;
     }
-    .fx-header, .fx-footer {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      align-items: center;
-      column-gap: 8px;
-      font-size: 9.5px;
-      letter-spacing: 1.5px;
-      color: #7fd1b3;
-      opacity: 0.75;
-      padding: 2px 4px;
-      text-transform: uppercase;
-    }
-    .fx-header .fx-tag, .fx-footer .fx-chan { justify-self: start; color: #00ff99; }
-    .fx-footer .fx-chan { color: #7fd1b3; opacity: 0.7; }
-    .fx-header .fx-mid { justify-self: center; opacity: 0.55; }
-    .fx-header .fx-fx, .fx-footer .fx-timer { justify-self: end; }
-    .fx-header .fx-fx .fx-scene { color: #ff48a0; margin-left: 4px; text-shadow: 0 0 4px rgba(255,72,160,0.5); }
-    .fx-footer .fx-timer { font-variant-numeric: tabular-nums; }
-    .fx-canvas {
-      margin: 3px 0 0;
-      padding: 0;
-      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
-      font-size: 11px;
-      line-height: 1.2;
-      letter-spacing: 0;
-      white-space: pre;
-      overflow: hidden;
-      text-align: center;
-      color: #00ff99;
-      font-variant-numeric: tabular-nums;
-      transition: color 0.6s ease, text-shadow 0.6s ease;
-      height: calc(11px * 1.2 * 22 + 2px);
-      box-sizing: content-box;
-    }
-    .fx-ticker-wrap {
-      position: relative;
-      margin-top: 6px;
-      padding-top: 4px;
-      height: calc(13px * 1.5 * 5);
-      overflow: hidden;
-      border-top: 1px dashed rgba(0, 255, 150, 0.22);
-      -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
-              mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
-    }
-    .fx-ticker {
-      margin: 0 auto;
-      padding: 0 4px;
-      font-family: 'Share Tech Mono', ui-monospace, 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.5;
-      letter-spacing: 0.5px;
-      color: #7fd1b3;
-      white-space: pre;
-      text-align: left;
-      width: fit-content;
-      max-width: 100%;
-      will-change: transform;
-      text-shadow: 0 0 4px rgba(0, 255, 150, 0.25);
-    }
-    .fx-ticker .tk-ok  { color: #00ff99; }
-    .fx-ticker .tk-hot { color: #ff48a0; }
-    .fx-ticker .tk-warn{ color: #ffb648; }
-    .fx-ticker .tk-dim { color: #4a8f76; }
-    .fx-canvas.fx-plasma {
-      color: #00ff99;
-      text-shadow: -1px 0 rgba(255,0,128,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(0,255,150,0.5);
-    }
-    .fx-canvas.fx-fire {
-      color: #ffb648;
-      text-shadow: -1px 0 rgba(255,0,80,0.35), 1px 0 rgba(255,160,0,0.4), 0 0 8px rgba(255,120,0,0.45);
-    }
-    .fx-canvas.fx-starfield {
-      color: #d5ffe8;
-      text-shadow: 0 0 4px rgba(120,230,255,0.55), 0 0 10px rgba(120,230,255,0.25);
-    }
-    .fx-canvas.fx-tunnel {
-      color: #8affff;
-      text-shadow: -1px 0 rgba(255,60,200,0.35), 1px 0 rgba(0,255,200,0.4), 0 0 8px rgba(120,200,255,0.45);
-    }
-    .fx-canvas.fx-torus {
-      color: #00ff99;
-      text-shadow: 0 0 6px rgba(0,255,150,0.55), 0 0 14px rgba(0,255,150,0.2);
-    }
-    .fx-canvas.fx-matrix {
-      color: #3dff7d;
-      text-shadow: 0 0 3px rgba(0,255,120,0.5), 0 0 10px rgba(0,255,120,0.2);
-    }
-    .fx-canvas.fx-wave3d {
-      color: #7affc7;
-      text-shadow: -1px 0 rgba(0,200,255,0.35), 1px 0 rgba(180,0,255,0.25), 0 0 8px rgba(100,220,200,0.45);
-    }
-    .fx-canvas.fx-ripple {
-      color: #8affff;
-      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(80,255,200,0.35), 0 0 8px rgba(120,230,255,0.5);
-    }
-    .fx-canvas.fx-life {
-      color: #c8ff72;
-      text-shadow: 0 0 4px rgba(180,255,80,0.45), 0 0 10px rgba(180,255,80,0.2);
-    }
-    .fx-canvas.fx-cube {
-      color: #ffd066;
-      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
-    }
-    .fx-canvas.fx-kaleido {
-      color: #ff7ad1;
-      text-shadow: -1px 0 rgba(100,0,255,0.35), 1px 0 rgba(0,255,200,0.35), 0 0 8px rgba(255,120,200,0.5);
-    }
-    .fx-canvas.fx-meta {
-      color: #9cffd5;
-      text-shadow: -1px 0 rgba(0,180,255,0.35), 1px 0 rgba(150,0,255,0.3), 0 0 10px rgba(100,255,210,0.4);
-    }
-    .fx-canvas.fx-mandel {
-      color: #ffb648;
-      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,0,0.4), 0 0 8px rgba(255,140,0,0.45);
-    }
-    .fx-canvas.fx-copper {
-      color: #ff6bd2;
-      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,100,200,0.45);
-    }
-    .fx-canvas.fx-cellular {
-      color: #b5ff8a;
-      text-shadow: 0 0 3px rgba(140,255,120,0.45), 0 0 10px rgba(140,255,120,0.15);
-    }
-    .fx-canvas.fx-spiral {
-      color: #8ad5ff;
-      text-shadow: -1px 0 rgba(255,80,220,0.3), 1px 0 rgba(0,220,255,0.4), 0 0 8px rgba(120,200,255,0.45);
-    }
-    .fx-canvas.fx-voxel {
-      color: #a8ff7a;
-      text-shadow: -1px 0 rgba(180,120,0,0.35), 1px 0 rgba(0,200,120,0.35), 0 0 8px rgba(140,255,100,0.35);
-    }
-    .fx-canvas.fx-checker {
-      color: #ffd58a;
-      text-shadow: -1px 0 rgba(255,100,160,0.35), 1px 0 rgba(0,200,255,0.35), 0 0 8px rgba(255,180,60,0.35);
-    }
-    .fx-canvas.fx-vectors {
-      color: #ff9edc;
-      text-shadow: -1px 0 rgba(80,0,200,0.45), 1px 0 rgba(0,255,255,0.4), 0 0 8px rgba(255,120,200,0.5);
-    }
-    .fx-canvas.fx-rotozoom {
-      color: #d8b0ff;
-      text-shadow: -1px 0 rgba(0,220,255,0.35), 1px 0 rgba(255,0,180,0.35), 0 0 8px rgba(200,160,255,0.45);
-    }
-    .fx-canvas.fx-sphere3d {
-      color: #aef0ff;
-      text-shadow: -1px 0 rgba(180,0,255,0.3), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(160,220,255,0.45);
-    }
-    .fx-canvas.fx-twister {
-      color: #ffca5a;
-      text-shadow: -1px 0 rgba(255,0,100,0.4), 1px 0 rgba(255,220,0,0.4), 0 0 8px rgba(255,180,60,0.5);
-    }
-    .fx-canvas.fx-warp {
-      color: #e0f5ff;
-      text-shadow: -1px 0 rgba(0,180,255,0.5), 1px 0 rgba(180,80,255,0.4), 0 0 8px rgba(200,220,255,0.55);
-    }
-    .fx-canvas.fx-moire {
-      color: #ff7aa2;
-      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,200,0,0.35), 0 0 8px rgba(255,120,160,0.5);
-    }
-    .fx-canvas.fx-landscape {
-      color: #88eaa6;
-      text-shadow: -1px 0 rgba(0,180,120,0.35), 1px 0 rgba(100,200,255,0.35), 0 0 8px rgba(120,240,160,0.4);
-    }
-    .fx-canvas.fx-ribbon {
-      color: #c6d5ff;
-      text-shadow: -1px 0 rgba(255,80,180,0.35), 1px 0 rgba(0,200,255,0.45), 0 0 8px rgba(180,200,255,0.45);
-    }
-    .fx-canvas.fx-shadebobs {
-      color: #ff8ad5;
-      text-shadow: -1px 0 rgba(255,200,0,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,140,200,0.5);
-    }
-    .fx-canvas.fx-bobs {
-      color: #ffd066;
-      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(0,220,255,0.35), 0 0 8px rgba(255,200,80,0.45);
-    }
-    .fx-canvas.fx-fountain {
-      color: #b0f0ff;
-      text-shadow: -1px 0 rgba(255,100,200,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(180,220,255,0.5);
-    }
-    .fx-canvas.fx-snake {
-      color: #b5ff8a;
-      text-shadow: -1px 0 rgba(0,200,120,0.35), 1px 0 rgba(180,255,80,0.45), 0 0 8px rgba(140,255,120,0.45);
-    }
-    .fx-canvas.fx-lightning {
-      color: #f0f0ff;
-      text-shadow: -1px 0 rgba(180,80,255,0.5), 1px 0 rgba(80,200,255,0.5), 0 0 12px rgba(220,220,255,0.7);
-    }
-    .fx-canvas.fx-rain {
-      color: #8acfff;
-      text-shadow: -1px 0 rgba(0,180,255,0.4), 1px 0 rgba(120,200,255,0.4), 0 0 8px rgba(140,200,255,0.45);
-    }
-    .fx-canvas.fx-clifford {
-      color: #d8a8ff;
-      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,80,200,0.4), 0 0 8px rgba(200,160,255,0.5);
-    }
-    .fx-canvas.fx-lorenz {
-      color: #ffb678;
-      text-shadow: -1px 0 rgba(255,40,120,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,160,80,0.5);
-    }
-    .fx-canvas.fx-tree {
-      color: #c2ff8a;
-      text-shadow: -1px 0 rgba(120,80,40,0.45), 1px 0 rgba(160,255,100,0.45), 0 0 8px rgba(180,255,140,0.4);
-    }
-    .fx-canvas.fx-mbox {
-      color: #ffb0d5;
-      text-shadow: -1px 0 rgba(255,80,200,0.5), 1px 0 rgba(0,200,255,0.4), 0 0 8px rgba(255,160,200,0.5);
-    }
-    .fx-canvas.fx-hilbert {
-      color: #b0d0ff;
-      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(160,200,255,0.45);
-    }
-    .fx-canvas.fx-julia {
-      color: #ffd28a;
-      text-shadow: -1px 0 rgba(255,40,180,0.4), 1px 0 rgba(255,200,40,0.4), 0 0 8px rgba(255,180,80,0.5);
-    }
-    .fx-canvas.fx-rd {
-      color: #a8ffd0;
-      text-shadow: -1px 0 rgba(0,200,180,0.45), 1px 0 rgba(120,255,200,0.45), 0 0 8px rgba(140,255,200,0.5);
-    }
-    .fx-canvas.fx-voronoi {
-      color: #ffc8a0;
-      text-shadow: -1px 0 rgba(255,80,160,0.4), 1px 0 rgba(255,200,80,0.4), 0 0 8px rgba(255,180,120,0.5);
-    }
-    .fx-canvas.fx-hex {
-      color: #ff8aa6;
-      text-shadow: -1px 0 rgba(0,200,255,0.4), 1px 0 rgba(255,180,40,0.4), 0 0 8px rgba(255,140,160,0.5);
-    }
-    .fx-canvas.fx-highlife {
-      color: #f0e890;
-      text-shadow: -1px 0 rgba(255,80,160,0.35), 1px 0 rgba(180,255,80,0.35), 0 0 8px rgba(220,200,80,0.45);
-    }
-    .fx-canvas.fx-sdf {
-      color: #c8e0ff;
-      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.5), 0 0 8px rgba(200,220,255,0.55);
-    }
-    .fx-canvas.fx-dna {
-      color: #ff9eea;
-      text-shadow: -1px 0 rgba(0,220,255,0.4), 1px 0 rgba(255,80,180,0.45), 0 0 8px rgba(255,160,220,0.5);
-    }
-    .fx-canvas.fx-galaxy {
-      color: #d8c8ff;
-      text-shadow: -1px 0 rgba(180,80,255,0.4), 1px 0 rgba(0,200,255,0.4), 0 0 10px rgba(200,180,255,0.55);
-    }
-    .fx-canvas.fx-kdfx {
-      color: #00ff99;
-      text-shadow: -2px 0 rgba(255,0,128,0.6), 2px 0 rgba(0,200,255,0.6), 0 0 6px rgba(0,255,150,0.5);
-    }
-    @media (max-width: 520px) {
-      .fx-canvas { font-size: 9.5px; line-height: 1.15; height: calc(9.5px * 1.15 * 17 + 2px); }
-      .fx-ticker { font-size: 11px; line-height: 1.45; }
-      .fx-ticker-wrap { height: calc(11px * 1.45 * 5); }
-      .fx-header, .fx-footer { font-size: 8.5px; letter-spacing: 1px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .fx-canvas { text-shadow: 0 0 4px rgba(0,255,150,0.4); color: #00ff99; transition: none; }
-    }
+  }
+  /* Very narrow phones: drop the "— NO ACCOUNT" tail (aria-label keeps it for SR). */
+  @media (max-width: 380px) { .b-suffix { display: none; } }
+
+  /* ══════════════════ Reduced motion ══════════════════ */
+  @media (prefers-reduced-motion: reduce) {
+    .fx-bg { opacity: 0.7; }
+    .fx-canvas { text-shadow: 0 0 5px rgba(0,255,150,0.4); transition: none; }
+    .btn-primary { animation: none; }
+    .btn { transition: none; }
+    .btn::after, .info-btn::after, .pc-fill { animation: none; }
+    .btn::after { opacity: 0; }
+  }
+
+  /* ══════════════════ Custom retro cursor + ASCII mouse/touch trail ══════════════════ */
+  /* Custom retro cursor is drawn by JS (#kd-cursor) and follows the mouse —
+     Chrome ignores SVG data-URI cursors, so we hide the native cursor instead. */
+  html.kd-customcursor, html.kd-customcursor * { cursor: none !important; }
+  #kd-cursor {
+    position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 10000;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
+    transform: translate(-100px, -100px); will-change: transform;
+  }
+  #kd-cursor.on { opacity: 1; }
+  /* Dark halo so the cursor stays visible on bright surfaces (the lime button). */
+  #kd-cursor svg { position: absolute; filter: drop-shadow(0 0 1.5px rgba(5,17,13,0.95)) drop-shadow(0 0 3px rgba(5,17,13,0.6)); }
+  #kd-cursor .cur-arrow { left: -3px; top: -2px; }
+  #kd-cursor .cur-point { left: -12px; top: -12px; display: none; }
+  #kd-cursor.point .cur-arrow { display: none; }
+  #kd-cursor.point .cur-point { display: block; }
+  .matrix-char {
+    position: fixed; pointer-events: none; z-index: 9998;
+    font-family: var(--mono); font-size: var(--trail-size, 14px); color: var(--lime);
+    text-shadow: 0 0 8px rgba(0,255,150,0.8); opacity: 0;
+    animation: charFade 0.8s ease-out forwards;
+  }
+  @keyframes charFade {
+    0%   { opacity: 0.9; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-30px) scale(0.5); }
+  }
+  .click-ripple {
+    position: fixed; pointer-events: none; z-index: 9997;
+    border: 1.5px solid var(--lime); border-radius: 50%; opacity: 0;
+    animation: rippleExpand 0.6s ease-out forwards;
+  }
+  @keyframes rippleExpand {
+    0%   { width: 0; height: 0; opacity: 0.7; transform: translate(-50%,-50%) scale(1); }
+    100% { width: var(--ripple-max, 60px); height: var(--ripple-max, 60px); opacity: 0; transform: translate(-50%,-50%) scale(1); }
+  }
+  .touch-glow {
+    position: fixed; pointer-events: none; z-index: 9997;
+    width: var(--glow-size, 40px); height: var(--glow-size, 40px);
+    border-radius: 50%; background: radial-gradient(circle, rgba(0,255,150,0.3) 0%, transparent 70%);
+    animation: touchPulse 0.5s ease-out forwards;
+  }
+  @keyframes touchPulse {
+    0%   { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(2); }
+  }
 </style>
 </head>
 <body>
-  <main class="signin">
-    <div class="fx-wrap" aria-hidden="true">
-      <div class="fx-header"><span class="fx-tag">KD/HOMEBREW</span><span class="fx-mid">PRV-INTRO/0x01</span><span class="fx-fx">FX:<span class="fx-scene">KD.FX</span></span></div>
-      <pre class="fx-canvas fx-kdfx" id="fx-canvas"></pre>
-      <div class="fx-ticker-wrap">
-        <pre class="fx-ticker" id="fx-ticker"></pre>
-      </div>
-      <div class="fx-footer"><span class="fx-chan">&gt; bbs/kd ·  node 01</span><span class="fx-timer" id="fx-timer">T+0.0s</span></div>
+  <!-- Procedural demoscene wallpaper -->
+  <div class="fx-bg" aria-hidden="true"><pre class="fx-canvas fx-kdfx" id="fx-canvas"></pre></div>
+  <div class="fx-veil" aria-hidden="true"></div>
+
+  <main class="crt">
+    <!-- top HUD: engine telemetry -->
+    <div class="hud hud-top" aria-hidden="true">
+      <span class="h-tag">KD/HOMEBREW</span>
+      <span class="h-fx">FX:<span class="fx-scene">KD.FX</span></span>
+      <span class="h-timer" id="fx-timer">T+0.0s</span>
     </div>
 
-    <h1 class="signin-title">KD's Homebrew Digital Archive</h1>
+    <div class="body">
+      <h1 class="title">
+        <span class="t-main">KD's HOMEBREW DIGITAL ARCHIVE</span>
+        <span class="t-sub">a home-grown mirror of the public internet</span>
+      </h1>
 
-    <p class="signin-inventory">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix &amp; Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 13 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
+      <div class="chips" aria-hidden="true">
+        <span class="chip"><b>12 TB</b> offline</span>
+        <span class="chip"><b>119</b> wikis</span>
+        <span class="chip"><b>20+</b> StackExchange</span>
+        <span class="chip"><b>23,000+</b> PDFs</span>
+        <span class="chip"><b>~30 W</b> · solar</span>
+      </div>
 
-    <a class="signin-btn" href="{{.StartHref}}">Sign in with Google</a>
-    <div class="signin-foot">free for all, free forever</div>
+      <details class="manifest">
+        <summary>what's inside — the manifest</summary>
+        <div class="m-body">
+          Seven sub-archives served from a shelf in a house, not a rack in a data centre:
+          two Raspberry Pi 4 nodes (8 GB) + an N150 mini-PC (12 GB) on ~30 W, engineered to
+          run off-grid on solar. <b>119 offline wikis</b> in ZIM (the Wikipedia family,
+          Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), <b>20+ Stack Exchange</b>
+          sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix &amp; Linux,
+          MathOverflow, Cryptography, Retrocomputing…), <b>30+ DevDocs</b> references
+          (C, C++, JS, Python, Go, Bash, Git, Docker, PyTorch, Qt…), 13 LibreTexts libraries,
+          Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MedlinePlus, NHS,
+          WikiCiv, ProofWiki, Explain XKCD; <b>23,000+ PDFs</b> across 800 GB; OS images and
+          drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated
+          YouTube mirrors, and audiobooks. Developed by Kunal Dawn with AI assistance.
+        </div>
+      </details>
+
+      <div class="auth">
+        {{if .AnonEnabled}}
+        <p class="lead">Pick how you come in — the fast door is on top.</p>
+
+        <!-- PRIMARY: anonymous guest -->
+        <div class="opt">
+          <button type="button" class="btn btn-primary" id="anon-guest-btn" data-redirect="{{.Redirect}}" aria-label="Sign in anonymously with proof-of-work">
+            <span class="b-label"><span class="b-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><rect x="4.5" y="1" width="9" height="5.5" rx="2" fill="currentColor"/><rect x="1" y="5.5" width="16" height="2.5" rx="1.25" fill="currentColor"/><circle cx="5.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 13.5h1.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>Sign in Anonymously<span class="b-suffix"> · proof-of-work</span></span>
+            <span class="grind"><span class="spin" id="pc-spin1">⠋</span><span id="grind-label">FORGING ACCESS KEY</span><span id="grind-pct">0%</span></span>
+          </button>
+          <div class="meta anon">
+            <span>no account</span><span class="dot">·</span>
+            <span>bot-gated</span><span class="dot">·</span>
+            <span class="ttl">{{.AnonTTLHuman}}</span>
+            <button type="button" class="info-btn" id="anon-info-btn" aria-label="How guest entry works" aria-haspopup="dialog"><span class="i-glyph">?</span></button>
+          </div>
+          <div class="anon-status" id="anon-status" aria-live="polite"></div>
+          <!-- Live SHA-256 grind telemetry (purely decorative; aria-hidden). -->
+          <div class="pow-console" id="pow-console" aria-hidden="true">
+            <div class="pc-head">
+              <span id="pc-state">SHA-256 PROOF-OF-WORK</span>
+              <span class="pc-head-r"><span class="spin" id="pc-spin2">⠋</span><button type="button" class="pc-close" id="pc-close" aria-label="Cancel">✕</button></span>
+            </div>
+            <div class="pc-bar"><span class="pc-fill" id="pc-fill"></span><span class="pc-bar-pct" id="pc-bar-pct">0%</span></div>
+            <div class="pc-data">
+              <span class="pc-k">HASH</span><span class="pc-hash" id="pc-hash"><span class="hz" id="pc-hz"></span><span id="pc-hr">—</span></span>
+              <span class="pc-k">TARGET</span><span class="pc-target" id="pc-target">—</span>
+              <span class="pc-k">RATE</span><span class="pc-v" id="pc-rate">0 H/s</span>
+              <span class="pc-k">NONCE</span><span class="pc-v" id="pc-nonce">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECONDARY: google -->
+        <div class="opt">
+          <a class="btn btn-ghost" href="{{.StartHref}}">
+            <span class="g-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg></span><span>Sign in with Google</span>
+          </a>
+          <div class="meta google">
+            <span>Google OAuth</span><span class="dot">·</span>
+            <span>stays signed in</span><span class="dot">·</span>
+            <span class="ttl">{{.SessionTTLHuman}}</span>
+            <button type="button" class="info-btn" id="google-info-btn" aria-label="How Google sign-in works" aria-haspopup="dialog"><span class="i-glyph">?</span></button>
+          </div>
+        </div>
+        {{else}}
+        <!-- Anonymous disabled: Google only -->
+        <div class="opt">
+          <a class="btn btn-primary" href="{{.StartHref}}" style="animation:none;">
+            <span class="g-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg></span><span>Sign in with Google</span>
+          </a>
+          <div class="meta google">
+            <span>Google OAuth</span><span class="dot">·</span>
+            <span>stays signed in</span><span class="dot">·</span>
+            <span class="ttl">{{.SessionTTLHuman}}</span>
+            <button type="button" class="info-btn" id="google-info-btn" aria-label="How Google sign-in works" aria-haspopup="dialog"><span class="i-glyph">?</span></button>
+          </div>
+        </div>
+        {{end}}
+      </div>
+
+      <div class="foot">free for all, free forever</div>
+    </div>
+
+    <!-- bottom HUD: scrolling NFO ticker -->
+    <div class="hud hud-bot" aria-hidden="true">
+      <div class="h-chan"><span>&gt; bbs/kd · node 01</span><span class="h-feed">▲ LIVE FEED ▲</span></div>
+      <div class="tty-wrap"><div class="tty-screen" id="tty-feed"></div></div>
+    </div>
   </main>
 
-  <script src="/fx.js"></script>
+  {{if .AnonEnabled}}
+  <!-- ── Guest "how it works" popup ── -->
+  <dialog class="info" id="anon-info">
+    <form method="dialog" class="d-head">
+      <span>Guest entry — how it works</span>
+      <button class="d-close" value="close" aria-label="Close">✕</button>
+    </form>
+    <div class="d-body">
+      <p>Guest entry lets you in <b>without an account</b> and without storing anything that
+      could identify you — no email, no name, no tracking.</p>
+      <p>To keep bots out without a CAPTCHA, your browser quietly solves a small
+      <b>proof-of-work</b> puzzle first:</p>
+      <ol>
+        <li>The server hands your browser a one-time challenge tied to your IP.</li>
+        <li>A background worker grinds <b>SHA-256</b> hashes until it finds one with enough
+          leading zero bits — costs you a few seconds of CPU, costs a bot farm a fortune at scale.</li>
+        <li>The server checks the proof and issues a short-lived, anonymous session.</li>
+      </ol>
+
+      <details class="d-deep">
+        <summary>The algorithm &amp; why it works — for the curious</summary>
+        <div class="deep-body">
+          <p>It's <b>hashcash</b>: a server-set, IP-bound proof-of-work. No CAPTCHA, no third
+          party, no image puzzles — just a few seconds of your CPU.</p>
+
+          <h4>1 · Challenge</h4>
+          <p>Your browser POSTs <code>/auth/anon/challenge</code>. The server returns a
+          <b>stateless, HMAC-signed</b> token (it stores nothing per challenge) carrying a random
+          128-bit nonce, a difficulty <b>b</b> in leading-zero bits (~20 by default), a 90-second
+          expiry, and an <b>IP tag</b> = HMAC(secret, your IP — the <code>/64</code> network for
+          IPv6).</p>
+
+          <h4>2 · Grind <span class="c">— in a Web Worker, off the UI thread</span></h4>
+          <div class="d-code">for n = 0, 1, 2, …:
+  h = SHA-256(challenge + ":" + n)
+  if leadingZeroBits(h) &#8805; b:
+    solution = n            <span class="c"># found it</span></div>
+          <p>Finding one takes about <b>2<sup>b</sup></b> hashes on average (geometric
+          distribution) — the live console shows the candidate hashes, hashrate and nonce as it
+          runs. Verifying it later costs the server exactly <b>one</b> hash.</p>
+
+          <h4>3 · Redeem</h4>
+          <p>Your browser POSTs <code>/auth/anon/redeem</code> with {challenge, solution}. The
+          server checks, in order: the signature + 90-second freshness + that the IP tag matches
+          your network (constant-time), then that <code>SHA-256(challenge + ":" + n)</code> really
+          has &#8805; b zero bits, then marks the nonce <b>single-use</b>. Only then does it mint
+          the session — a JWT with <code>sub = "anon:" + random</code>, <b>empty email</b>,
+          <code>anon: true</code>, expiring in {{.AnonTTLHuman}}.</p>
+
+          <h4>Why it works</h4>
+          <ul>
+            <li><b>Asymmetric cost.</b> Solving needs ≈ 2<sup>b</sup> SHA-256 ops; verifying needs
+            <b>one</b>. You spend seconds, the server spends microseconds — and a bot farm pays
+            that cost <i>per session, forever</i>.</li>
+            <li><b>Difficulty can't be lowered.</b> <b>b</b> lives inside the signed challenge;
+            change it and the HMAC check fails.</li>
+            <li><b>IP-bound.</b> The puzzle is tied to your network, so the grind can't be farmed
+            out to a pool of cheap throwaway IPs — a solution only counts from the address it was
+            issued to.</li>
+            <li><b>One-shot.</b> Each nonce mints exactly one session; replays are rejected.</li>
+            <li><b>Self-escalating.</b> Repeat hits from one network raise <b>b</b> — every +1 bit
+            <i>doubles</i> the work — and both endpoints are rate-limited, so floods get
+            exponentially expensive.</li>
+            <li><b>Domain-separated keys.</b> Challenges are signed with a key <i>derived</i> from
+            the master secret and rotated every server boot — distinct from the session-cookie key
+            — so a challenge token can never be replayed as a login.</li>
+            <li><b>Zero identity.</b> The session's subject is random and maps to no record
+            anywhere — no email, no profile, no cross-site tracking — and it self-expires.</li>
+          </ul>
+        </div>
+      </details>
+
+      <p class="amber">The pass is short-lived — it lasts {{.AnonTTLHuman}}. Want to stay signed
+      in longer? Use Google instead.</p>
+    </div>
+    <div class="d-foot">No data leaves your browser but the proof itself. Esc or click outside to close.</div>
+  </dialog>
+  {{end}}
+
+  <!-- ── Google "how it works" popup ── -->
+  <dialog class="info" id="google-info">
+    <form method="dialog" class="d-head">
+      <span>Google sign-in — how it works</span>
+      <button class="d-close" value="close" aria-label="Close">✕</button>
+    </form>
+    <div class="d-body">
+      <p>Signing in with Google uses standard <b>OAuth 2.0</b>: Google confirms your email
+      address to this site and nothing more — no password is ever shared here.</p>
+      <ol>
+        <li>You authenticate on Google's own page.</li>
+        <li>This site receives only your verified email and checks it against the allow-list.</li>
+        <li>A signed session cookie is set, scoped to kunaldawn.com and its subdomains.</li>
+      </ol>
+      <p>Best for a device you own and trust: the session is <b>persistent</b> — it lasts
+      {{.SessionTTLHuman}}, so you won't have to sign in again for a long while.</p>
+    </div>
+    <div class="d-foot">Only your email is read. Esc or click outside to close.</div>
+  </dialog>
+
+  <!-- ?v bust so the new tickerLines export loads immediately on deploy (fx.js is
+       cached max-age=3600); the static handler routes by path and ignores the query.
+       Bump this token whenever fx.js changes in a way the login page depends on. -->
+  <script src="/fx.js?v=tty1"></script>
   <script>
     (function () {
       if (typeof window.createFxInstance !== 'function') return;
-      if (!document.getElementById('fx-canvas')) return;
-      window.createFxInstance({
-        canvas: document.getElementById('fx-canvas'),
-        ticker: document.getElementById('fx-ticker'),
+      var canvas = document.getElementById('fx-canvas');
+      if (!canvas) return;
+      // No `ticker` passed — the bottom feed is now a TTY driven below; fx.js's
+      // getElementById('fx-ticker') fallback also misses (we renamed it), so the
+      // engine leaves the feed alone.
+      window.__fxInst = window.createFxInstance({
+        canvas: canvas,
         sceneLabel: document.querySelector('.fx-scene'),
-        timerLabel: document.getElementById('fx-timer')
+        timerLabel: document.getElementById('fx-timer'),
+        // Centered card covers the middle — render the KD.FX title bumper up in
+        // the visible top band so it isn't hidden behind the panel.
+        bannerRowFrac: 0.12
       });
     })();
   </script>
+
+  <!-- Streaming TTY: types the SAME NFO feed fx.js used (window.__fxInst
+       .tickerLines), line by line, with a blinking cursor scrolling up like a
+       telnet/SSH session. Only the animation changes — the text is unchanged. -->
+  <script>
+  (function () {
+    var screen = document.getElementById('tty-feed');
+    var inst = window.__fxInst;
+    if (!screen || !inst || !inst.tickerLines || !inst.tickerLines.length) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var KEEP = 6; // committed lines retained (older ones scroll into the top fade)
+    var rnd = function (n) { return (Math.random() * n) | 0; };
+
+    // [cls, txt] pairs from fx.js → {cls, t}. trimEnd is visual-only (drops the
+    // scroller's right-pad so the cursor stops at the content, not in blank space).
+    var feed = inst.tickerLines.map(function (p) {
+      return { cls: p[0] || '', t: String(p[1] == null ? '' : p[1]).replace(/\s+$/, '') };
+    });
+
+    var fi = 0, lines = [], meta = feed[0], cur = '', ci = 0;
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function lineHTML(m, text, withCursor, typing) {
+      return '<div class="tty-ln' + (m.cls ? ' ' + m.cls : '') + '">' + esc(text || ' ') +
+        (withCursor ? '<span class="tty-cur' + (typing ? ' on' : '') + '"></span>' : '') + '</div>';
+    }
+    function render(typing) {
+      var html = '';
+      for (var i = 0; i < lines.length; i++) html += lineHTML(lines[i], lines[i].t, false, false);
+      html += lineHTML(meta, cur, true, typing);
+      screen.innerHTML = html;
+    }
+    function commit() {
+      lines.push(meta);
+      while (lines.length > KEEP) lines.shift();
+      fi = (fi + 1) % feed.length;   // loop the same NFO continuously
+      meta = feed[fi]; cur = ''; ci = 0;
+    }
+    function typeNext() {
+      if (ci < meta.t.length) {
+        cur += meta.t.charAt(ci++);
+        render(true);
+        setTimeout(typeNext, 13 + rnd(30));                 // ~13–43 ms/char, jittered
+      } else {
+        render(false);
+        // No dwell at line end — commit and roll straight into the next line for
+        // a faster stream (a tiny tick keeps blank lines from flashing past).
+        setTimeout(function () { commit(); typeNext(); }, meta.t === '' ? 30 : 45);
+      }
+    }
+
+    if (reduce) {                                            // static frame, no typing
+      lines = feed.slice(0, KEEP);
+      meta = feed[KEEP] || { t: '', cls: '' };
+      render(false);
+    } else {
+      render(true);
+      typeNext();
+    }
+  })();
+  </script>
+
+  <!-- Uniform panel zoom: scale the whole console (aspect-ratio preserved, like
+       browser zoom) so it fits ~70% of the viewport height on desktop. The
+       layout box stays the natural size (transform doesn't reflow), so body
+       centering keeps it centred; offsetHeight is transform-independent, so
+       there is no measure/scale feedback loop. -->
+  <script>
+  (function () {
+    var crt = document.querySelector('.crt');
+    if (!crt) return;
+    var mqMobile = window.matchMedia('(max-width: 520px)');
+    var TARGET = 0.70, MIN = 0.75, MAX = 2.6, MARGIN = 48;
+    function fit() {
+      if (mqMobile.matches) {
+        crt.style.transform = '';                     // mobile: natural full-width
+        document.documentElement.style.setProperty('--panel-scale', '1');
+        window.__kdPanelScale = 1;
+        return;
+      }
+      var natH = crt.offsetHeight, natW = crt.offsetWidth;          // layout size (unscaled)
+      if (!natH || !natW) return;
+      var s = Math.min(
+        TARGET * window.innerHeight / natH,           // fit ~70% of height
+        (window.innerWidth - MARGIN) / natW,          // never wider than the viewport
+        MAX
+      );
+      if (s < MIN) s = MIN;
+      crt.style.transform = 'scale(' + s.toFixed(4) + ')';
+      // Expose the panel scale so the info dialogs can match it (otherwise they
+      // look tiny next to the zoomed panel on 4K).
+      document.documentElement.style.setProperty('--panel-scale', s.toFixed(4));
+      window.__kdPanelScale = s;
+    }
+    fit();
+    window.addEventListener('resize', fit);
+    window.addEventListener('load', fit);            // re-fit once the mono font loads
+    // Re-fit when the panel's natural height changes (manifest <details>, PoW
+    // console). offsetHeight is transform-independent, so this never loops.
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(crt);
+  })();
+  </script>
+
+  <!-- Custom retro cursor: a lime pixel arrow that becomes a target reticle over
+       clickables. Drawn in the DOM (Chrome ignores SVG cursors). Dropped on touch. -->
+  <script>
+  (function () {
+    var root = document.documentElement;
+    var cur = document.createElement('div');
+    cur.id = 'kd-cursor'; cur.setAttribute('aria-hidden', 'true');
+    cur.innerHTML =
+      '<svg class="cur-arrow" width="22" height="22" viewBox="0 0 22 22"><path d="M3 2L3 17L7.5 13L10.5 19.5L13 18.5L10 12L16 12Z" fill="#05110d" stroke="#00ff99" stroke-width="1.7" stroke-linejoin="round"/></svg>' +
+      '<svg class="cur-point" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="#05110d" fill-opacity="0.55" stroke="#00ff99" stroke-width="1.8"/><path d="M12 1L12 5M12 19L12 23M1 12L5 12M19 12L23 12" stroke="#00ff99" stroke-width="1.8"/><circle cx="12" cy="12" r="1.8" fill="#00ff99"/></svg>';
+    document.body.appendChild(cur);
+    root.classList.add('kd-customcursor');
+    var sel = 'a,.btn,.info-btn,.d-close,.pc-close,summary,[role=button]';
+
+    // A modal <dialog> (showModal) renders in the browser TOP LAYER, above all
+    // z-index — so the cursor + trail must live INSIDE the open dialog to stay
+    // visible over it (the native cursor is hidden, so otherwise there's no
+    // cursor at all over the popup). refresh() re-homes them under the open modal
+    // dialog (or <body> when none is open). It's called on every move, so it
+    // self-heals on both open AND close without relying on the dialog 'close'
+    // event (which is unreliable). Returns the current spawn root.
+    window.__kdFx = {
+      cur: cur,
+      root: document.body,
+      refresh: function () {
+        var d = document.querySelector('dialog[open]');
+        this.root = d || document.body;
+        if (this.cur && this.cur.parentNode !== this.root) this.root.appendChild(this.cur);
+        return this.root;
+      }
+    };
+
+    // Scale the cursor + trail proportionally to the viewport (shared via
+    // window.__kdUiScale + CSS vars). Cursor scales around its 0x0 origin so the
+    // hotspot stays anchored. Reference baseline ~780px short-edge = 1x.
+    var uiScale = 1;
+    function calcScale() {
+      var m = Math.min(window.innerWidth, window.innerHeight) / 780;
+      return m < 0.85 ? 0.85 : (m > 2.2 ? 2.2 : m);
+    }
+    function applyScale() {
+      uiScale = calcScale();
+      window.__kdUiScale = uiScale;
+      root.style.setProperty('--trail-size', (14 * uiScale).toFixed(1) + 'px');
+      root.style.setProperty('--ripple-max', Math.round(60 * uiScale) + 'px');
+      root.style.setProperty('--glow-size', Math.round(40 * uiScale) + 'px');
+    }
+    applyScale();
+    window.addEventListener('resize', applyScale);
+
+    document.addEventListener('mousemove', function (e) {
+      window.__kdFx.refresh(); // keep the cursor in the open dialog's top layer
+      cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px) scale(' + uiScale + ')';
+      cur.classList.add('on');
+      var t = e.target;
+      if (t && t.closest && t.closest(sel)) cur.classList.add('point');
+      else cur.classList.remove('point');
+    }, { passive: true });
+    document.addEventListener('mouseleave', function () { cur.classList.remove('on'); });
+    // Touch device → no custom cursor (the trail handles touch).
+    window.addEventListener('touchstart', function () {
+      root.classList.remove('kd-customcursor'); cur.style.display = 'none';
+    }, { passive: true, once: true });
+  })();
+  </script>
+
+  <!-- ASCII mouse/touch trail (matrix chars + click ripple + touch glow), same
+       effect as the home page. Skipped under reduced-motion. -->
+  <script>
+  (function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var TRAIL = '01ABCDEF>_/\\{}[]<>#$%';
+    var lastT = 0, lx = 0, ly = 0;
+    function scale() { return window.__kdUiScale || 1; }   // shared with the cursor script
+    function fxRoot() { return (window.__kdFx && window.__kdFx.refresh()) || document.body; }
+    function spawn(x, y) {
+      var s = scale();
+      var el = document.createElement('div');
+      el.className = 'matrix-char';
+      el.textContent = TRAIL.charAt((Math.random() * TRAIL.length) | 0);
+      el.style.left = (x + (Math.random() - 0.5) * 16 * s) + 'px';
+      el.style.top = (y + (Math.random() - 0.5) * 16 * s) + 'px';
+      fxRoot().appendChild(el);
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
+    }
+    function move(x, y) {
+      var now = Date.now(), dx = x - lx, dy = y - ly;
+      var thr = 22 * scale();                              // spawn spacing scales with the UI
+      if (dx * dx + dy * dy > thr * thr && now - lastT > 55) { spawn(x, y); lastT = now; lx = x; ly = y; }
+    }
+    document.addEventListener('mousemove', function (e) { if (!document.hidden) move(e.clientX, e.clientY); }, { passive: true });
+    document.addEventListener('click', function (e) {
+      var r = document.createElement('div'); r.className = 'click-ripple';
+      r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+      fxRoot().appendChild(r);
+      setTimeout(function () { if (r.parentNode) r.parentNode.removeChild(r); }, 600);
+    });
+    document.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientX, t.clientY); }, { passive: true });
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      var g = document.createElement('div'); g.className = 'touch-glow';
+      g.style.left = t.clientX + 'px'; g.style.top = t.clientY + 'px';
+      fxRoot().appendChild(g);
+      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 500);
+    }, { passive: true });
+  })();
+  </script>
+
+  <!-- Info popup wiring (native <dialog>; Esc + close button + backdrop-click) -->
+  <script>
+  (function () {
+    function wire(btnId, dlgId) {
+      var btn = document.getElementById(btnId), dlg = document.getElementById(dlgId);
+      if (!btn || !dlg || typeof dlg.showModal !== 'function') return;
+      btn.addEventListener('click', function () {
+        dlg.showModal();
+        // Immediately re-home the cursor into the modal's top layer (otherwise it
+        // stays behind the popup until the next mouse move); subsequent moves keep
+        // it there via refresh().
+        if (window.__kdFx) window.__kdFx.refresh();
+      });
+      // Click on the backdrop (outside the dialog box) closes it.
+      dlg.addEventListener('click', function (e) {
+        var r = dlg.getBoundingClientRect();
+        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
+          dlg.close();
+        }
+      });
+    }
+    wire('anon-info-btn', 'anon-info');
+    wire('google-info-btn', 'google-info');
+  })();
+  </script>
+
+  {{if .AnonEnabled}}
+  <script>
+  (function () {
+    var btn = document.getElementById('anon-guest-btn');
+    if (!btn) return;
+    var status = document.getElementById('anon-status');
+    var con = document.getElementById('pow-console');
+    var elState = document.getElementById('pc-state');
+    var elFill = document.getElementById('pc-fill');
+    var elBarPct = document.getElementById('pc-bar-pct');
+    var elHz = document.getElementById('pc-hz');
+    var elHr = document.getElementById('pc-hr');
+    var elTarget = document.getElementById('pc-target');
+    var elRate = document.getElementById('pc-rate');
+    var elNonce = document.getElementById('pc-nonce');
+    var elGrindPct = document.getElementById('grind-pct');
+    var elGrindLabel = document.getElementById('grind-label');
+    var spin1 = document.getElementById('pc-spin1');
+    var spin2 = document.getElementById('pc-spin2');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function say(t) { if (status) status.textContent = t; }
+    function now() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
+
+    // Braille spinner on the main thread (the worker does the hashing, so the
+    // main thread stays free to animate at 12fps without stutter).
+    var SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+    var spinI = 0, spinTimer = 0;
+    function spinStart() {
+      if (reduce) return;
+      spinTimer = setInterval(function () {
+        spinI = (spinI + 1) % SPIN.length;
+        var c = SPIN.charAt(spinI);
+        if (spin1) spin1.textContent = c;
+        if (spin2) spin2.textContent = c;
+      }, 80);
+    }
+    function spinStop(ch) {
+      if (spinTimer) { clearInterval(spinTimer); spinTimer = 0; }
+      if (spin1) spin1.textContent = ch;
+      if (spin2) spin2.textContent = ch;
+    }
+    function setPct(frac) {
+      if (frac < 0) frac = 0; if (frac > 1) frac = 1;
+      var pct = Math.floor(frac * 100) + '%';
+      if (elFill) elFill.style.width = (frac * 100) + '%';
+      if (elBarPct) elBarPct.textContent = pct;
+      if (elGrindPct) elGrindPct.textContent = pct;
+    }
+    function setHash(hex) {                // split off leading zeros for the glow
+      if (!hex) return;
+      var z = hex.match(/^0*/)[0];
+      if (elHz) elHz.textContent = z;
+      if (elHr) elHr.textContent = hex.slice(z.length);
+    }
+    function fmtRate(r) {
+      if (!isFinite(r) || r <= 0) return '0 H/s';
+      return r >= 1000 ? (r / 1000).toFixed(1) + ' kH/s' : Math.round(r) + ' H/s';
+    }
+
+    // Web Worker grinds SHA-256 off the main thread; it streams sample hashes
+    // (first 8 bytes, hex) so the console can flicker live candidate digests.
+    var workerSrc =
+      'self.onmessage=async function(e){' +
+      ' var ch=e.data.challenge,bits=e.data.bits,i=0;' +
+      ' var enc=new TextEncoder();' +
+      ' function hx(b){var s="";for(var j=0;j<8;j++){s+=("0"+b[j].toString(16)).slice(-2);}return s;}' +
+      ' while(true){' +
+      '  var buf=await crypto.subtle.digest("SHA-256",enc.encode(ch+":"+i));' +
+      '  var b=new Uint8Array(buf),z=0;' +
+      '  for(var k=0;k<b.length;k++){if(b[k]===0){z+=8;continue;}var v=b[k],c=0;while(v<128){c++;v<<=1;}z+=c;break;}' +
+      '  if(z>=bits){self.postMessage({solution:""+i,hash:hx(b)});return;}' +
+      '  if((i&4095)===0)self.postMessage({progress:i,hash:hx(b)});' +
+      '  i++;' +
+      ' }' +
+      '};';
+    var worker = null, grindReject = null, cancelled = false;
+
+    // Cancel/close: abort the grind, hide the console, restore the button.
+    function hardReset() {
+      if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+      spinStop('⠋');
+      btn.classList.remove('solving');
+      if (con) con.classList.remove('live', 'done', 'fail');
+      btn.disabled = false;
+      setPct(0);
+      say('');
+    }
+    function cancel() {
+      cancelled = true;
+      hardReset();
+      if (grindReject) { var r = grindReject; grindReject = null; r(new Error('cancelled')); }
+    }
+    var elClose = document.getElementById('pc-close');
+    if (elClose) elClose.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); cancel(); });
+
+    btn.addEventListener('click', async function () {
+      if (btn.disabled) return;
+      cancelled = false;
+      btn.disabled = true;
+      btn.classList.add('solving');
+      if (con) { con.classList.remove('done', 'fail'); con.classList.add('live'); }
+      setPct(0); spinStart();
+      if (elGrindLabel) elGrindLabel.textContent = 'FORGING ACCESS KEY';
+      if (elState) elState.textContent = 'REQUESTING CHALLENGE';
+      say('Requesting access key…');
+      try {
+        var chResp = await fetch('/auth/anon/challenge', {
+          method: 'POST', headers: { 'X-KD-Anon': '1' }
+        });
+        if (!chResp.ok) throw new Error('challenge');
+        var ch = await chResp.json();
+        // Expected work for a b-bit puzzle is ~2^b hashes — an honest progress
+        // proxy (probabilistic, so cap below 100% until we actually solve).
+        var expected = Math.pow(2, ch.bits);
+        var nibbles = Math.floor(ch.bits / 4);
+        if (elTarget) elTarget.innerHTML = '<span class="tz">' + new Array(nibbles + 1).join('0') + '</span>… · ' + ch.bits + ' bits';
+        if (elState) elState.textContent = 'GRINDING SHA-256';
+        say('Solving proof-of-work…');
+
+        var lastI = 0, lastT = now();
+        var blob = new Blob([workerSrc], { type: 'text/javascript' });
+        var url = URL.createObjectURL(blob);
+        worker = new Worker(url);
+        URL.revokeObjectURL(url);
+        var solution = await new Promise(function (resolve, reject) {
+          grindReject = reject;
+          worker.onmessage = function (e) {
+            var d = e.data;
+            if (d.hash) setHash(d.hash);
+            if (d.solution !== undefined) { resolve(d.solution); return; }
+            if (d.progress !== undefined) {
+              setPct(Math.min(0.99, d.progress / expected));
+              if (elNonce) elNonce.textContent = d.progress.toLocaleString();
+              var t = now(), dt = t - lastT;
+              if (dt > 250) {
+                if (elRate) elRate.textContent = fmtRate((d.progress - lastI) / (dt / 1000));
+                lastI = d.progress; lastT = t;
+              }
+            }
+          };
+          worker.onerror = function () { reject(new Error('worker')); };
+          worker.postMessage({ challenge: ch.challenge, bits: ch.bits });
+        });
+        grindReject = null;
+        worker.terminate();
+        worker = null;
+        setPct(1); spinStop('✔');
+        if (elNonce) elNonce.textContent = (parseInt(solution, 10) || 0).toLocaleString();
+        if (con) con.classList.add('done');
+        if (elState) elState.textContent = 'KEY FORGED · ACCESS GRANTED';
+        if (elGrindLabel) elGrindLabel.textContent = 'ACCESS GRANTED';
+        say('Access granted — opening archive…');
+        var rdResp = await fetch('/auth/anon/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-KD-Anon': '1' },
+          body: JSON.stringify({
+            challenge: ch.challenge,
+            solution: solution,
+            redirect: btn.getAttribute('data-redirect')
+          })
+        });
+        if (!rdResp.ok) throw new Error('redeem');
+        var rd = await rdResp.json();
+        window.location.assign(rd.redirect);
+      } catch (err) {
+        grindReject = null;
+        if (cancelled) { cancelled = false; return; } // user closed it; already reset
+        if (worker) { worker.terminate(); worker = null; }
+        spinStop('✕');
+        if (con) con.classList.add('fail');
+        if (elState) elState.textContent = 'GUEST ENTRY FAILED';
+        btn.classList.remove('solving');
+        say('Guest entry failed — try Google sign-in');
+        btn.disabled = false;
+      }
+    });
+  })();
+  </script>
+  <noscript><style>#anon-guest-btn{display:none}</style></noscript>
+  {{end}}
 </body>
 </html>
