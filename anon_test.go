@@ -123,7 +123,10 @@ func TestAnonChallengeRejectsExpired(t *testing.T) {
 		Purpose: "anon-pow", IssuedAt: time.Now().Add(-10 * time.Minute).Unix(),
 		ExpiresAt: time.Now().Add(-time.Minute).Unix(),
 	})
-	tok := signToken(payload, c.Secret)
+	// Sign with the SAME derived key verifyAnonChallenge uses, so the signature
+	// passes and the expiry branch is actually exercised (not short-circuited by
+	// a signature mismatch).
+	tok := signToken(payload, anonChallengeKey(c.Secret))
 	if _, err := c.verifyAnonChallenge(tok, "203.0.113.7"); err == nil {
 		t.Error("expired challenge must be rejected")
 	}
@@ -195,7 +198,9 @@ func TestHandleAnonChallengeReturnsToken(t *testing.T) {
 	c := anonTestCfg()
 	c.anonGuard = newAnonGuard()
 	r := httptest.NewRequest("POST", "/auth/anon/challenge", nil)
+	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	r.Header.Set("X-KD-Anon", "1")
 	w := httptest.NewRecorder()
 	c.handleAnonChallenge(w, r)
 	if w.Code != 200 {
@@ -223,7 +228,9 @@ func TestHandleAnonRedeemHappyPath(t *testing.T) {
 	sol := solveAnon(t, chTok, 12)
 	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/wiki"}`
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	r.Header.Set("X-KD-Anon", "1")
 	w := httptest.NewRecorder()
 	c.handleAnonRedeem(w, r)
 	if w.Code != 200 {
@@ -253,7 +260,9 @@ func TestHandleAnonRedeemRejectsReplay(t *testing.T) {
 	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
 	mk := func() *httptest.ResponseRecorder {
 		r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+		r.RemoteAddr = "127.0.0.1:1234"
 		r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+		r.Header.Set("X-KD-Anon", "1")
 		w := httptest.NewRecorder()
 		c.handleAnonRedeem(w, r)
 		return w
@@ -275,7 +284,9 @@ func TestHandleAnonRedeemRejectsWrongIP(t *testing.T) {
 	sol := solveAnon(t, chTok, 12)
 	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.99") // different IP
+	r.Header.Set("X-KD-Anon", "1")
 	w := httptest.NewRecorder()
 	c.handleAnonRedeem(w, r)
 	if w.Code == 200 {
@@ -291,7 +302,9 @@ func TestHandleAnonRedeemRejectsBadSolution(t *testing.T) {
 	chTok, _ := c.signAnonChallenge("203.0.113.7", 20)
 	body := `{"challenge":"` + chTok + `","solution":"definitely-not-valid","redirect":"/"}`
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
+	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	r.Header.Set("X-KD-Anon", "1")
 	w := httptest.NewRecorder()
 	c.handleAnonRedeem(w, r)
 	if w.Code == 200 {

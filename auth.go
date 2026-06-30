@@ -400,12 +400,12 @@ func (c authConfig) signState(nonce, redirect string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return signToken(payload, c.Secret), nil
+	return signToken(payload, purposeKey(c.Secret, "oauth-state")), nil
 }
 
 func (c authConfig) verifyState(token string) (stateClaims, error) {
 	var s stateClaims
-	payload, err := verifyToken(token, c.Secret)
+	payload, err := verifyToken(token, purposeKey(c.Secret, "oauth-state"))
 	if err != nil {
 		return s, err
 	}

@@ -34,6 +34,18 @@ func sign(input string, secret []byte) string {
 	return b64.EncodeToString(m.Sum(nil))
 }
 
+// purposeKey derives a per-purpose signing subkey from the master secret so a
+// token minted for one purpose cannot be verified — and thus reused — as
+// another (e.g. a PoW challenge or OAuth-state token replayed as a session
+// cookie). The SESSION token is intentionally NOT derived: it stays signed with
+// the raw AUTH_SECRET so subdomains can verify it with a stock HS256 JWT
+// library. Every other token type MUST be signed/verified with a derived key.
+func purposeKey(secret []byte, purpose string) []byte {
+	m := hmac.New(sha256.New, secret)
+	m.Write([]byte("kdhome/tokenkey/v1/" + purpose))
+	return m.Sum(nil)
+}
+
 // signToken frames payload as an HS256 JWT and signs it.
 func signToken(payload []byte, secret []byte) string {
 	header := b64.EncodeToString([]byte(`{"alg":"HS256","typ":"JWT"}`))
@@ -123,6 +135,12 @@ func verifySession(token string, secret []byte) (sessionClaims, error) {
 	}
 	if err := json.Unmarshal(payload, &c); err != nil {
 		return c, errors.New("bad payload json")
+	}
+	// Pin the token type: only tokens minted as sessions carry this issuer.
+	// Defence-in-depth against type confusion (challenge/state tokens are also
+	// signed with derived keys, so they already fail the signature check here).
+	if c.Issuer != sessionIssuer {
+		return c, errors.New("wrong issuer")
 	}
 	if c.ExpiresAt <= time.Now().Unix() {
 		return c, errors.New("token expired")
