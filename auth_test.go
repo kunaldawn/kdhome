@@ -405,8 +405,8 @@ func TestPowBitsForDuration(t *testing.T) {
 		ms       int
 		want     int
 	}{
-		{50000, 5000, 18}, // 50k*5 = 250k hashes, log2 ≈ 17.93 -> 18
-		{50000, 1000, 16}, // 50k hashes, log2 ≈ 15.6 -> 16
+		{50000, 5000, 18},  // 50k*5 = 250k hashes, log2 ≈ 17.93 -> 18
+		{50000, 1000, 16},  // 50k hashes, log2 ≈ 15.6 -> 16
 		{100000, 5000, 19}, // 500k hashes, log2 ≈ 18.93 -> 19
 		{50000, 1, 6},      // 50 hashes, log2 ≈ 5.6 -> 6
 		{1e15, 1000, 32},   // clamps to 32
@@ -414,6 +414,30 @@ func TestPowBitsForDuration(t *testing.T) {
 	for _, c := range cases {
 		if got := powBitsForDuration(c.hashrate, c.ms); got != c.want {
 			t.Errorf("powBitsForDuration(%.0f, %d) = %d, want %d", c.hashrate, c.ms, got, c.want)
+		}
+	}
+}
+
+func TestHumanizeDuration(t *testing.T) {
+	cases := []struct {
+		d    time.Duration
+		want string
+	}{
+		{720 * time.Hour, "30 days"},
+		{24 * time.Hour, "1 day"},
+		{48 * time.Hour, "2 days"},
+		{30 * time.Minute, "30 minutes"},
+		{time.Hour, "1 hour"},
+		{12 * time.Hour, "12 hours"},
+		{90 * time.Minute, "90 minutes"},
+		{time.Minute, "1 minute"},
+		{45 * time.Second, "45 seconds"},
+		{time.Second, "1 second"},
+		{0, "0 seconds"},
+	}
+	for _, c := range cases {
+		if got := humanizeDuration(c.d); got != c.want {
+			t.Errorf("humanizeDuration(%s) = %q, want %q", c.d, got, c.want)
 		}
 	}
 }

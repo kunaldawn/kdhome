@@ -85,6 +85,28 @@ func powBitsForDuration(hashrate float64, ms int) int {
 	return b
 }
 
+// humanizeDuration renders a duration as a friendly "N unit(s)" string for the
+// sign-in page, picking the largest whole unit (days/hours/minutes/seconds)
+// that divides the duration evenly. 720h -> "30 days", 30m -> "30 minutes".
+func humanizeDuration(d time.Duration) string {
+	plural := func(n int64, unit string) string {
+		if n == 1 {
+			return "1 " + unit
+		}
+		return strconv.FormatInt(n, 10) + " " + unit + "s"
+	}
+	switch {
+	case d >= 24*time.Hour && d%(24*time.Hour) == 0:
+		return plural(int64(d/(24*time.Hour)), "day")
+	case d >= time.Hour && d%time.Hour == 0:
+		return plural(int64(d/time.Hour), "hour")
+	case d >= time.Minute && d%time.Minute == 0:
+		return plural(int64(d/time.Minute), "minute")
+	default:
+		return plural(int64(d/time.Second), "second")
+	}
+}
+
 // loadAuthConfig reads AUTH_* and GOOGLE_* env vars. AUTH_ENABLED is truthy on
 // 1/true/on/yes. Missing optional values fall back to defaults.
 func loadAuthConfig() authConfig {
@@ -493,10 +515,12 @@ func (c authConfig) loginPage(redirect string) []byte {
 	startHref := "/auth/google/start?redirect=" + url.QueryEscape(redirect)
 	var buf bytes.Buffer
 	data := struct {
-		StartHref   string
-		AnonEnabled bool
-		Redirect    string
-	}{startHref, c.AnonEnabled, redirect}
+		StartHref       string
+		AnonEnabled     bool
+		Redirect        string
+		AnonTTLHuman    string
+		SessionTTLHuman string
+	}{startHref, c.AnonEnabled, redirect, humanizeDuration(c.AnonTTL), humanizeDuration(c.SessionTTL)}
 	if err := loginTmpl.Execute(&buf, data); err != nil {
 		return []byte("sign-in temporarily unavailable")
 	}
