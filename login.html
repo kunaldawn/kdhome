@@ -605,10 +605,38 @@
   <script>
     (function () {
       if (typeof window.createFxInstance !== 'function') return;
-      if (!document.getElementById('fx-canvas')) return;
+      var canvas = document.getElementById('fx-canvas');
+      if (!canvas) return;
+      var tickerEl = document.getElementById('fx-ticker');
+      var wrap = tickerEl ? tickerEl.parentElement : null;
+
+      // The NFO ticker has fixed-width lines (56 cols desktop / 42 mobile). Size
+      // its font so a full line exactly fits the panel width — never clipped on
+      // the right, and filling the width. Done BEFORE createFxInstance so fx.js
+      // measures the final height for its scroll loop (no stale half-height).
+      if (tickerEl && wrap) {
+        var cols = window.matchMedia('(max-width: 520px)').matches ? 42 : 56;
+        var cs = getComputedStyle(tickerEl);
+        var basePx = parseFloat(cs.fontSize) || 13;
+        var probe = document.createElement('pre');
+        probe.style.cssText = 'position:absolute;visibility:hidden;margin:0;padding:0 4px;' +
+          'white-space:pre;letter-spacing:0.5px;font-family:' + cs.fontFamily + ';font-size:' + basePx + 'px';
+        probe.textContent = new Array(cols + 1).join('0');
+        wrap.appendChild(probe);
+        var contentW = probe.getBoundingClientRect().width;
+        var availW = wrap.clientWidth;
+        wrap.removeChild(probe);
+        if (contentW > 0 && availW > 0) {
+          var fontPx = basePx * (availW / contentW) * 0.99;   // fit to width
+          if (fontPx < 9) fontPx = 9; if (fontPx > 15) fontPx = 15;
+          tickerEl.style.fontSize = fontPx + 'px';
+          wrap.style.height = (fontPx * 1.5 * 4) + 'px';       // keep 4 lines visible
+        }
+      }
+
       window.createFxInstance({
-        canvas: document.getElementById('fx-canvas'),
-        ticker: document.getElementById('fx-ticker'),
+        canvas: canvas,
+        ticker: tickerEl,
         sceneLabel: document.querySelector('.fx-scene'),
         timerLabel: document.getElementById('fx-timer'),
         // Centered card covers the middle — render the KD.FX title bumper up in
