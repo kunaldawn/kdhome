@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -27,8 +26,7 @@ import (
 
 var (
 	visitDB    *sql.DB
-	humanCount int64 // atomic, cached in memory
-	botCount   int64 // atomic, cached in memory
+	visitCount int64 // atomic, cached in memory — total visits
 )
 
 // archives mirrors the JS ARCHIVES registry in static/index.html.
@@ -45,7 +43,6 @@ var archives = []struct {
 	{"tube", "https://tube.kunaldawn.com"},
 	{"audio", "https://audio.kunaldawn.com"},
 }
-
 
 func initVisitDB(dataDir string) {
 	os.MkdirAll(dataDir, 0755)
@@ -76,10 +73,9 @@ func initVisitDB(dataDir string) {
 		return
 	}
 
-	// Add the human/bot split columns. ADD COLUMN errors on the second boot
-	// ("duplicate column name"), which is benign; any other error is real and
-	// would leave the columns absent, so surface it. The old `n` column is
-	// retired — no longer read/written. (col is a fixed constant set here.)
+	// Legacy DBs carry human/bot split columns from the retired bot-counting
+	// scheme. Ensure they exist so the consolidation step below can read them
+	// (idempotent: "duplicate column name" on later boots is benign).
 	for _, col := range []string{"human", "bot"} {
 		if _, err := visitDB.Exec(`ALTER TABLE visit_count ADD COLUMN ` + col + ` INTEGER NOT NULL DEFAULT 0`); err != nil &&
 			!strings.Contains(err.Error(), "duplicate column name") {
@@ -87,27 +83,33 @@ func initVisitDB(dataDir string) {
 		}
 	}
 
-	// One-time reset, gated by PRAGMA user_version so restarts never re-zero
-	// accumulating counts. The pre-existing total can't be split (no UA was
-	// ever stored), so the human/bot tally starts clean at the 0 → 1 bump.
+	// Migrations are gated by PRAGMA user_version so restarts never re-run them.
 	var userVersion int
 	visitDB.QueryRow(`PRAGMA user_version`).Scan(&userVersion)
+
+	// v1 (historical): reset for the since-removed human/bot split.
 	if userVersion < 1 {
-		if _, err := visitDB.Exec(`UPDATE visit_count SET n = 0, human = 0, bot = 0 WHERE id = 1`); err != nil {
-			log.Printf("[VISITS] reset migration failed: %v", err)
-		} else if _, err := visitDB.Exec(`PRAGMA user_version = 1`); err != nil {
-			// Counters were reset but the gate didn't advance; without this
-			// bump the next restart would reset them again. Surface it.
-			log.Printf("[VISITS] failed to bump user_version after reset: %v", err)
-		} else {
-			log.Printf("[VISITS] reset visit counters to 0 (human/bot split migration)")
+		visitDB.Exec(`UPDATE visit_count SET n = 0, human = 0, bot = 0 WHERE id = 1`)
+		if _, err := visitDB.Exec(`PRAGMA user_version = 1`); err != nil {
+			log.Printf("[VISITS] failed to bump user_version to 1: %v", err)
 		}
 	}
 
-	var human, bot int64
-	visitDB.QueryRow(`SELECT human, bot FROM visit_count WHERE id = 1`).Scan(&human, &bot)
-	atomic.StoreInt64(&humanCount, human)
-	atomic.StoreInt64(&botCount, bot)
+	// v2: drop the bot split — fold any accumulated human+bot counts back into a
+	// single total `n`, which is the only counter from here on.
+	if userVersion < 2 {
+		if _, err := visitDB.Exec(`UPDATE visit_count SET n = n + human + bot WHERE id = 1`); err != nil {
+			log.Printf("[VISITS] consolidation migration failed: %v", err)
+		} else if _, err := visitDB.Exec(`PRAGMA user_version = 2`); err != nil {
+			log.Printf("[VISITS] failed to bump user_version to 2: %v", err)
+		} else {
+			log.Printf("[VISITS] consolidated visit counts into a single total")
+		}
+	}
+
+	var total int64
+	visitDB.QueryRow(`SELECT n FROM visit_count WHERE id = 1`).Scan(&total)
+	atomic.StoreInt64(&visitCount, total)
 
 	// Daily probe rollup table. One row per (UTC date, archive_id). Updated
 	// via UPSERT from the status probe; aggregates total/ok probe counts
@@ -130,63 +132,22 @@ func initVisitDB(dataDir string) {
 	// surfaced on the admin page.
 	ensureUsersTable()
 
-	log.Printf("[VISITS] initialized — humans: %d, bots: %d", human, bot)
+	log.Printf("[VISITS] initialized — total visits: %d", total)
 }
 
-// botUA matches self-declaring crawlers, monitors, HTTP libraries, and
-// link-preview fetchers. It's a deny-list: real browser User-Agents carry none
-// of these tokens and fall through to "human". Grouped only for maintenance —
-// order within the alternation is irrelevant. All tokens are literal (no regexp
-// metacharacters), so none need escaping.
-var botUA = regexp.MustCompile(`(?i)` + strings.Join([]string{
-	// generic
-	"bot", "crawl", "spider", "slurp", "scrape",
-	// AI / research
-	"gptbot", "oai-searchbot", "chatgpt", "claudebot", "anthropic-ai",
-	"ccbot", "perplexitybot", "google-extended", "bytespider", "amazonbot",
-	"applebot", "diffbot", "cohere-ai", "imagesiftbot", "omgili",
-	// search
-	"googlebot", "bingbot", "duckduckbot", "baiduspider", "yandexbot",
-	// SEO
-	"ahrefsbot", "semrushbot", "mj12bot", "dotbot", "dataforseo",
-	// monitors
-	"uptimerobot", "pingdom", "statuscake", "site24x7",
-	// HTTP libs / headless
-	"curl", "wget", "libwww", "python-requests", "go-http-client", "okhttp",
-	"java/", "node-fetch", "axios", "headlesschrome", "phantomjs",
-	// link preview
-	"facebookexternalhit", "twitterbot", "slackbot", "discordbot",
-	// NOTE: "whatsapp" deliberately excluded — WhatsApp's in-app browser
-	// (a real human) shares the "WhatsApp/" UA token with its link-unfurl
-	// bot, so matching it would undercount real visitors.
-	"telegrambot", "linkedinbot", "embedly", "redditbot",
-}, "|"))
-
-// isBot reports whether a request's User-Agent looks automated. An empty or
-// whitespace-only UA counts as a bot (scripts that send no UA).
-func isBot(ua string) bool {
-	if strings.TrimSpace(ua) == "" {
-		return true
-	}
-	return botUA.MatchString(ua)
-}
-
-func recordVisit(bot bool) {
+// recordVisit increments the single total visit counter. The site is auth-gated,
+// so only authenticated loads of the homepage reach this — bot/crawler filtering
+// is no longer needed.
+func recordVisit() {
 	if visitDB == nil {
 		return
 	}
-	col, ctr := "human", &humanCount
-	if bot {
-		col, ctr = "bot", &botCount
-	}
 	go func() {
-		// col is from a fixed two-value set (never user input), so building the
-		// SQL by concatenation is safe here.
-		if _, err := visitDB.Exec(`UPDATE visit_count SET ` + col + ` = ` + col + ` + 1 WHERE id = 1`); err != nil {
-			log.Printf("[VISITS] update error (%s): %v", col, err)
+		if _, err := visitDB.Exec(`UPDATE visit_count SET n = n + 1 WHERE id = 1`); err != nil {
+			log.Printf("[VISITS] update error: %v", err)
 			return
 		}
-		atomic.AddInt64(ctr, 1)
+		atomic.AddInt64(&visitCount, 1)
 	}()
 }
 
@@ -197,8 +158,7 @@ func visitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	fmt.Fprintf(w, `{"humans":%d,"bots":%d}`,
-		atomic.LoadInt64(&humanCount), atomic.LoadInt64(&botCount))
+	fmt.Fprintf(w, `{"visits":%d}`, atomic.LoadInt64(&visitCount))
 }
 
 // ─── Middleware & Handlers ───
@@ -452,12 +412,11 @@ func staticHandler(fallback http.Handler) http.HandlerFunc {
 
 		// Server-side visit counter. Counts every GET to the index page
 		// (including conditional 304 responses below) so cache, bfcache, and
-		// no-JS clients are all reflected; isBot(UA) routes each hit into the
-		// human or bot bucket. Skips HEAD on purpose — HEAD is metadata-only,
-		// not a real page view.
+		// no-JS clients are all reflected. Skips HEAD on purpose — HEAD is
+		// metadata-only, not a real page view.
 		if r.Method == http.MethodGet &&
 			(r.URL.Path == "/" || r.URL.Path == "/index.html") {
-			recordVisit(isBot(r.UserAgent()))
+			recordVisit()
 		}
 
 		cf, ok := staticCache[r.URL.Path]

@@ -4242,9 +4242,8 @@
       </div>
 
       <div class="system-tray">
-        <div id="visit-count" class="visit-widget" title="Humans · filtered bots">
-          <span id="vc-humans" class="vw-num vw-human">--</span><span class="vw-label vw-human">human</span>
-          <span id="vc-bots" class="vw-num vw-bot">--</span><span class="vw-label vw-bot">bot</span>
+        <div id="visit-count" class="visit-widget" title="Total visits">
+          <span id="vc-visits" class="vw-num vw-human">--</span><span class="vw-label vw-human">visits</span>
         </div>
         <span style="color: rgba(0,255,150,0.2);">|</span>
         <span id="clock" style="color: var(--neon); font-family: 'Share Tech Mono', monospace; font-size: 12px;">00:00:00</span>
@@ -4780,16 +4779,13 @@
           fetch('/api/visit')
             .then(r => r.ok ? r.json() : null)
             .then(data => {
-              if (el && data && data.humans != null && data.bots != null) {
-                const h = document.getElementById('vc-humans');
-                const b = document.getElementById('vc-bots');
-                if (h) h.textContent = abbrev(data.humans);
-                if (b) b.textContent = abbrev(data.bots);
-                el.title = data.humans.toLocaleString() + ' humans · ' +
-                           data.bots.toLocaleString() + ' bots filtered';
-                // Let the cat react to milestone crossings (human count only).
+              if (el && data && data.visits != null) {
+                const v = document.getElementById('vc-visits');
+                if (v) v.textContent = abbrev(data.visits);
+                el.title = data.visits.toLocaleString() + ' total visits';
+                // Let the cat react to milestone crossings.
                 window.dispatchEvent(new CustomEvent('kd-visit-count', {
-                  detail: { humans: data.humans, bots: data.bots }
+                  detail: { visits: data.visits }
                 }));
               }
             })
@@ -5091,7 +5087,7 @@
             this.cat.addEventListener('transitionstart', () => this.leavePawPrints());
             this.applyPalette();
             this.installKeystrokeTriggers();
-            window.addEventListener('kd-visit-count', (e) => this.onVisitCount(e.detail.humans));
+            window.addEventListener('kd-visit-count', (e) => this.onVisitCount(e.detail.visits));
           }
 
           // ─── Mood Helpers ───
