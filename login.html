@@ -397,45 +397,50 @@
   /* ── Info popups (native <dialog>) ── */
   /* Responsive: width + base font scale with the viewport (children use em so they
      cascade); max-height clamps to the viewport with scroll so it never overflows. */
+  /* Font + width track the parent panel's zoom (--panel-scale, set by the fit
+     JS) so the popup doesn't look tiny next to the scaled panel on 4K. The box
+     stays viewport-bound (max-height + scroll); all inner sizing is em-based so
+     it scales with the root font. */
   dialog.info {
-    width: min(92vw, clamp(320px, 40vw, 560px));
+    --ds: var(--panel-scale, 1);
+    width: min(92vw, max(320px, calc(400px * var(--ds))));
     max-height: min(88vh, 88dvh); overflow-y: auto; overscroll-behavior: contain;
-    font-size: clamp(12px, calc(0.55vw + 8px), 15px);
-    border: 1px solid var(--line); border-radius: 12px;
+    font-size: clamp(12px, calc(12px * var(--ds)), 30px);
+    border: 1px solid var(--line); border-radius: 0.9em;
     background: rgba(7,22,17,0.97); color: var(--fg); font-family: var(--mono);
     padding: 0; box-shadow: 0 24px 60px rgba(0,0,0,0.7), 0 0 50px rgba(0,255,150,0.08);
   }
   dialog.info::backdrop { background: rgba(2,8,6,0.72); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
   dialog.info .d-head {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: clamp(10px,0.9vw,14px) clamp(12px,1.1vw,18px); border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between; gap: 0.7em;
+    padding: 0.85em 1.1em; border-bottom: 1px solid var(--line);
     font-size: 0.92em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--lime);
   }
   dialog.info .d-close {
     border: 1px solid var(--line); background: transparent; color: var(--teal);
-    width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 14px;
+    width: 1.9em; height: 1.9em; border-radius: 0.45em; cursor: pointer; font-size: 1em;
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
   dialog.info .d-close:hover { background: rgba(127,209,179,0.10); }
-  dialog.info .d-body { padding: clamp(12px,1.1vw,18px); font-size: 1em; line-height: 1.6; }
-  dialog.info .d-body p { margin: 0 0 10px; }
-  dialog.info .d-body ol, dialog.info .d-body ul { margin: 0 0 10px; padding-left: 18px; }
-  dialog.info .d-body li { margin: 0 0 5px; }
+  dialog.info .d-body { padding: 1.1em; font-size: 1em; line-height: 1.6; }
+  dialog.info .d-body p { margin: 0 0 0.7em; }
+  dialog.info .d-body ol, dialog.info .d-body ul { margin: 0 0 0.7em; padding-left: 1.3em; }
+  dialog.info .d-body li { margin: 0 0 0.35em; }
   dialog.info .d-body b { color: var(--lime); }
   dialog.info .d-body .amber { color: var(--amber); }
-  dialog.info .d-foot { padding: 0 clamp(12px,1.1vw,18px) clamp(10px,0.9vw,14px); font-size: 0.85em; opacity: 0.6; }
-  /* Nerdy deep-dive (collapsed by default). */
-  dialog.info .d-deep { margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(0,0,0,0.25); }
-  dialog.info .d-deep > summary { cursor: pointer; list-style: none; padding: 8px 10px; color: var(--teal); font-size: 0.9em; letter-spacing: 0.5px; }
+  dialog.info .d-foot { padding: 0 1.1em 0.9em; font-size: 0.85em; opacity: 0.6; }
+  /* Nerdy deep-dive (collapsed by default). All em-based so it scales with --ds. */
+  dialog.info .d-deep { margin: 0.3em 0 0.9em; border: 1px solid var(--line); border-radius: 0.45em; background: rgba(0,0,0,0.25); }
+  dialog.info .d-deep > summary { cursor: pointer; list-style: none; padding: 0.6em 0.8em; color: var(--teal); font-size: 0.9em; letter-spacing: 0.5px; }
   dialog.info .d-deep > summary::-webkit-details-marker { display: none; }
   dialog.info .d-deep > summary::before { content: "▸ "; color: var(--lime); }
   dialog.info .d-deep[open] > summary::before { content: "▾ "; }
-  dialog.info .d-deep .deep-body { padding: 0 12px 10px; }
-  dialog.info .d-deep h4 { margin: 12px 0 5px; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; color: var(--lime); }
+  dialog.info .d-deep .deep-body { padding: 0 1em 0.8em; }
+  dialog.info .d-deep h4 { margin: 0.9em 0 0.4em; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; color: var(--lime); }
   dialog.info .d-deep code { color: var(--lime); }
   dialog.info .d-code {
-    margin: 6px 0; padding: 8px 10px; border-left: 2px solid var(--lime);
-    background: rgba(0,255,150,0.06); border-radius: 0 4px 4px 0;
+    margin: 0.5em 0; padding: 0.6em 0.8em; border-left: 2px solid var(--lime);
+    background: rgba(0,255,150,0.06); border-radius: 0 0.3em 0.3em 0;
     font-family: var(--mono); font-size: 0.86em; line-height: 1.55;
     white-space: pre-wrap; word-break: break-word; color: #9fe9c7;
   }
@@ -802,7 +807,12 @@
     var mqMobile = window.matchMedia('(max-width: 520px)');
     var TARGET = 0.70, MIN = 0.75, MAX = 2.6, MARGIN = 48;
     function fit() {
-      if (mqMobile.matches) { crt.style.transform = ''; return; }  // mobile: natural full-width
+      if (mqMobile.matches) {
+        crt.style.transform = '';                     // mobile: natural full-width
+        document.documentElement.style.setProperty('--panel-scale', '1');
+        window.__kdPanelScale = 1;
+        return;
+      }
       var natH = crt.offsetHeight, natW = crt.offsetWidth;          // layout size (unscaled)
       if (!natH || !natW) return;
       var s = Math.min(
@@ -812,6 +822,10 @@
       );
       if (s < MIN) s = MIN;
       crt.style.transform = 'scale(' + s.toFixed(4) + ')';
+      // Expose the panel scale so the info dialogs can match it (otherwise they
+      // look tiny next to the zoomed panel on 4K).
+      document.documentElement.style.setProperty('--panel-scale', s.toFixed(4));
+      window.__kdPanelScale = s;
     }
     fit();
     window.addEventListener('resize', fit);
