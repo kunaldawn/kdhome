@@ -8560,13 +8560,20 @@
         try { await ensurePlayer(); } catch (e) { return; }
         if (player) { try { player.stop(); } catch(e) {} loadAndPlay(); }
       });
-      // ─── Minimize on mobile by default ───
-      // Use a viewport-width query rather than touch-capability: a touch
-      // check falsely fires on touchscreen laptops, while desktop-mode
-      // browsers on phones wouldn't set either flag. 800px matches the
-      // breakpoint the rest of the mobile layout uses.
+      // ─── Maximize-in-background on mobile by default ───
+      // On mobile the player opens maximized (full-screen state) but sits
+      // *behind* the vault: the vault is the foreground window the user
+      // lands on, and minimizing/closing it reveals the already-maximized
+      // player. The window + taskbar start visible/active (see markup), so we
+      // only add the maximized state and lift the vault above the player —
+      // music-window's CSS z-index (998) otherwise covers the vault (2).
+      // Viewport-width query, not touch-capability: a touch check falsely
+      // fires on touchscreen laptops, while desktop-mode browsers on phones
+      // wouldn't set either flag. 800px matches the rest of the mobile layout.
       if (window.matchMedia('(max-width: 800px)').matches) {
-        minimizeChiptunes();
+        maximizeChiptunes();
+        var vaultEl = document.querySelector('.vault');
+        if (vaultEl && window.bringToFront) window.bringToFront(vaultEl);
       }
     })();
     </script>
