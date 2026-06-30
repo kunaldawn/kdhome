@@ -566,6 +566,12 @@ func main() {
 		mux.HandleFunc("/logout", authCfg.handleLogout)
 		mux.HandleFunc("/admin", authCfg.handleAdmin)
 		mux.HandleFunc("/api/me", authCfg.handleMe)
+		if authCfg.AnonEnabled {
+			mux.HandleFunc("/auth/anon/challenge", authCfg.handleAnonChallenge)
+			mux.HandleFunc("/auth/anon/redeem", authCfg.handleAnonRedeem)
+			log.Printf("[AUTH] anonymous guest login ENABLED (PoW %d-%d bits, TTL %s)",
+				authCfg.AnonPoWBits, authCfg.AnonPoWCeil, authCfg.AnonTTL)
+		}
 		log.Printf("[AUTH] Google auth ENABLED (cookie domain %s)", authCfg.CookieDomain)
 		if authCfg.SuperAdmin != "" {
 			log.Printf("[AUTH] super admin: %s", authCfg.SuperAdmin)

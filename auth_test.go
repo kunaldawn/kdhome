@@ -346,3 +346,26 @@ func TestLoadAuthConfigAnonOverrides(t *testing.T) {
 		t.Errorf("bits/ceil = %d/%d, want 18/26", c.AnonPoWBits, c.AnonPoWCeil)
 	}
 }
+
+func TestAnonPathsArePublic(t *testing.T) {
+	if !publicPaths["/auth/anon/challenge"] {
+		t.Error("/auth/anon/challenge must bypass the auth gate")
+	}
+	if !publicPaths["/auth/anon/redeem"] {
+		t.Error("/auth/anon/redeem must bypass the auth gate")
+	}
+}
+
+func TestMiddlewareAllowsAnonChallenge(t *testing.T) {
+	c := authConfig{Secret: []byte("test-secret-test-secret"), CookieName: "kd_session"}
+	reached := false
+	h := c.middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached = true
+	}))
+	r := httptest.NewRequest("POST", "/auth/anon/challenge", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if !reached {
+		t.Error("anon challenge path should pass through the gate without a session")
+	}
+}

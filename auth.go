@@ -215,6 +215,8 @@ var publicPaths = map[string]bool{
 	"/auth/google/start":          true,
 	"/auth/google/callback":       true,
 	"/logout":                     true,
+	"/auth/anon/challenge":        true,
+	"/auth/anon/redeem":           true,
 	"/robots.txt":                 true,
 	"/sitemap.xml":                true,
 	"/llms.txt":                   true,
