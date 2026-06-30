@@ -2686,5 +2686,8 @@
       }
       document.addEventListener('visibilitychange', onVisibility);
 
-      return { stop: teardown };
+      // Expose the NFO ticker lines ([cls, txt] pairs) so a consumer can render
+      // them however it likes (e.g. a teletype stream) instead of the built-in
+      // scroller. Same content the scroller uses.
+      return { stop: teardown, tickerLines: TICKER_LINES };
     };

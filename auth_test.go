@@ -172,7 +172,7 @@ func TestLoginPageEmbedsRedirect(t *testing.T) {
 	if !strings.Contains(page, want) {
 		t.Fatalf("login page should link to %q", want)
 	}
-	for _, frag := range []string{`id="fx-canvas"`, `src="/fx.js"`, "Sign in with Google"} {
+	for _, frag := range []string{`id="fx-canvas"`, `src="/fx.js`, "Sign in with Google"} {
 		if !strings.Contains(page, frag) {
 			t.Fatalf("login page missing expected fragment %q", frag)
 		}

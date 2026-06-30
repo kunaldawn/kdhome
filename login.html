@@ -180,21 +180,34 @@
 
   /* Bottom-bar NFO ticker — full card width, 4 visible lines (engine animates
      translateY; mask fades the ends). */
-  .fx-ticker-wrap {
+  /* Streaming TTY live feed — lines type out char-by-char and scroll up like a
+     telnet/SSH session. Bottom-anchored so new lines push older ones up into the
+     top fade. Inside .crt, so it scales with the panel zoom. */
+  .tty-wrap {
     position: relative; width: 100%;
-    height: calc(clamp(11px, 0.9vw, 14px) * 1.5 * 4); overflow: hidden;
-    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
-            mask-image: linear-gradient(180deg, transparent 0%, #000 15%, #000 85%, transparent 100%);
+    height: calc(clamp(11px, 0.9vw, 13px) * 1.5 * 5); overflow: hidden;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 100%);
+            mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 100%);
   }
-  .fx-ticker {
-    margin: 0 auto; padding: 0 4px; font-family: var(--mono);
-    font-size: clamp(11px, 0.9vw, 14px); line-height: 1.5; letter-spacing: 0.5px;
-    color: var(--teal); white-space: pre; text-align: left;
-    width: fit-content; max-width: 100%; will-change: transform;
-    text-shadow: 0 0 4px rgba(0,255,150,0.25);
+  .tty-screen {
+    padding: 0 10px; font-family: var(--mono);
+    font-size: clamp(11px, 0.9vw, 13px); line-height: 1.5; letter-spacing: 0.5px;
+    color: var(--teal); text-shadow: 0 0 4px rgba(0,255,150,0.25);
   }
-  .fx-ticker .tk-ok { color:#00ff99; } .fx-ticker .tk-hot { color:#ff48a0; }
-  .fx-ticker .tk-warn { color:#ffb648; } .fx-ticker .tk-dim { color:#4a8f76; }
+  .tty-ln { white-space: pre; overflow: hidden; }
+  .tty-ln.tk-ok   { color: #00ff99; }
+  .tty-ln.tk-warn { color: #ffb648; }
+  .tty-ln.tk-hot  { color: #ff48a0; text-shadow: 0 0 6px rgba(255,72,160,0.4); }
+  .tty-ln.tk-dim  { color: #4a8f76; }
+  .tty-cur {
+    display: inline-block; width: 0.58em; height: 1.05em; vertical-align: -0.18em;
+    margin-left: 1px; background: var(--lime); box-shadow: 0 0 6px rgba(0,255,150,0.7);
+    animation: tty-blink 1s steps(1) infinite;
+  }
+  .tty-cur.on { animation: none; opacity: 1; } /* solid while actively typing */
+  @keyframes tty-blink { 0%,50% { opacity: 1; } 50.01%,100% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .tty-cur { animation: none; opacity: 0.8; } }
 
   /* ── Card body ── */
   /* flex:1 so the body fills a tall panel; content stays vertically centered and
@@ -647,7 +660,7 @@
     <!-- bottom HUD: scrolling NFO ticker -->
     <div class="hud hud-bot" aria-hidden="true">
       <div class="h-chan"><span>&gt; bbs/kd · node 01</span><span class="h-feed">▲ LIVE FEED ▲</span></div>
-      <div class="fx-ticker-wrap"><pre class="fx-ticker" id="fx-ticker"></pre></div>
+      <div class="tty-wrap"><div class="tty-screen" id="tty-feed"></div></div>
     </div>
   </main>
 
@@ -750,42 +763,20 @@
     <div class="d-foot">Only your email is read. Esc or click outside to close.</div>
   </dialog>
 
-  <script src="/fx.js"></script>
+  <!-- ?v bust so the new tickerLines export loads immediately on deploy (fx.js is
+       cached max-age=3600); the static handler routes by path and ignores the query.
+       Bump this token whenever fx.js changes in a way the login page depends on. -->
+  <script src="/fx.js?v=tty1"></script>
   <script>
     (function () {
       if (typeof window.createFxInstance !== 'function') return;
       var canvas = document.getElementById('fx-canvas');
       if (!canvas) return;
-      var tickerEl = document.getElementById('fx-ticker');
-      var wrap = tickerEl ? tickerEl.parentElement : null;
-
-      // The NFO ticker has fixed-width lines (56 cols desktop / 42 mobile). Size
-      // its font so a full line exactly fits the panel width — never clipped on
-      // the right, and filling the width. Done BEFORE createFxInstance so fx.js
-      // measures the final height for its scroll loop (no stale half-height).
-      if (tickerEl && wrap) {
-        var cols = window.matchMedia('(max-width: 520px)').matches ? 42 : 56;
-        var cs = getComputedStyle(tickerEl);
-        var basePx = parseFloat(cs.fontSize) || 13;
-        var probe = document.createElement('pre');
-        probe.style.cssText = 'position:absolute;visibility:hidden;margin:0;padding:0 4px;' +
-          'white-space:pre;letter-spacing:0.5px;font-family:' + cs.fontFamily + ';font-size:' + basePx + 'px';
-        probe.textContent = new Array(cols + 1).join('0');
-        wrap.appendChild(probe);
-        var contentW = probe.getBoundingClientRect().width;
-        var availW = wrap.clientWidth;
-        wrap.removeChild(probe);
-        if (contentW > 0 && availW > 0) {
-          var fontPx = basePx * (availW / contentW) * 0.99;   // fit to width
-          if (fontPx < 9) fontPx = 9; if (fontPx > 15) fontPx = 15;
-          tickerEl.style.fontSize = fontPx + 'px';
-          wrap.style.height = (fontPx * 1.5 * 4) + 'px';       // keep 4 lines visible
-        }
-      }
-
-      window.createFxInstance({
+      // No `ticker` passed — the bottom feed is now a TTY driven below; fx.js's
+      // getElementById('fx-ticker') fallback also misses (we renamed it), so the
+      // engine leaves the feed alone.
+      window.__fxInst = window.createFxInstance({
         canvas: canvas,
-        ticker: tickerEl,
         sceneLabel: document.querySelector('.fx-scene'),
         timerLabel: document.getElementById('fx-timer'),
         // Centered card covers the middle — render the KD.FX title bumper up in
@@ -793,6 +784,66 @@
         bannerRowFrac: 0.12
       });
     })();
+  </script>
+
+  <!-- Streaming TTY: types the SAME NFO feed fx.js used (window.__fxInst
+       .tickerLines), line by line, with a blinking cursor scrolling up like a
+       telnet/SSH session. Only the animation changes — the text is unchanged. -->
+  <script>
+  (function () {
+    var screen = document.getElementById('tty-feed');
+    var inst = window.__fxInst;
+    if (!screen || !inst || !inst.tickerLines || !inst.tickerLines.length) return;
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var KEEP = 6; // committed lines retained (older ones scroll into the top fade)
+    var rnd = function (n) { return (Math.random() * n) | 0; };
+
+    // [cls, txt] pairs from fx.js → {cls, t}. trimEnd is visual-only (drops the
+    // scroller's right-pad so the cursor stops at the content, not in blank space).
+    var feed = inst.tickerLines.map(function (p) {
+      return { cls: p[0] || '', t: String(p[1] == null ? '' : p[1]).replace(/\s+$/, '') };
+    });
+
+    var fi = 0, lines = [], meta = feed[0], cur = '', ci = 0;
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function lineHTML(m, text, withCursor, typing) {
+      return '<div class="tty-ln' + (m.cls ? ' ' + m.cls : '') + '">' + esc(text || ' ') +
+        (withCursor ? '<span class="tty-cur' + (typing ? ' on' : '') + '"></span>' : '') + '</div>';
+    }
+    function render(typing) {
+      var html = '';
+      for (var i = 0; i < lines.length; i++) html += lineHTML(lines[i], lines[i].t, false, false);
+      html += lineHTML(meta, cur, true, typing);
+      screen.innerHTML = html;
+    }
+    function commit() {
+      lines.push(meta);
+      while (lines.length > KEEP) lines.shift();
+      fi = (fi + 1) % feed.length;   // loop the same NFO continuously
+      meta = feed[fi]; cur = ''; ci = 0;
+    }
+    function typeNext() {
+      if (ci < meta.t.length) {
+        cur += meta.t.charAt(ci++);
+        render(true);
+        setTimeout(typeNext, 13 + rnd(30));                 // ~13–43 ms/char, jittered
+      } else {
+        render(false);                                       // pause: cursor blinks
+        // Blank lines flick past; content lines hold a beat (longer if punctuated).
+        var pause = meta.t === '' ? 120 : (260 + rnd(360));
+        setTimeout(function () { commit(); typeNext(); }, pause);
+      }
+    }
+
+    if (reduce) {                                            // static frame, no typing
+      lines = feed.slice(0, KEEP);
+      meta = feed[KEEP] || { t: '', cls: '' };
+      render(false);
+    } else {
+      render(true);
+      typeNext();
+    }
+  })();
   </script>
 
   <!-- Uniform panel zoom: scale the whole console (aspect-ratio preserved, like
