@@ -61,7 +61,8 @@ services:
       - AUTH_ANON_TTL=${AUTH_ANON_TTL:-30m}
       # PoW difficulty. Set it ONE of two ways (leave the others empty):
       #  A) Directly, in leading-zero bits — base (clean IP) and adaptive ceiling.
-      #     Each +1 bit ≈ doubles the work. Empty -> code defaults (20 / base+4).
+      #     Each +1 bit ≈ doubles the work. Empty -> code defaults (~10s target
+      #     @ 50000 H/s -> 19 bits base, 23 ceil).
       - AUTH_ANON_POW_BITS=${AUTH_ANON_POW_BITS:-}
       - AUTH_ANON_POW_CEIL=${AUTH_ANON_POW_CEIL:-}
       #  B) By TARGET solve time in milliseconds. The server converts it to bits
@@ -69,8 +70,8 @@ services:
       #     browser's WebCrypto SHA-256 in a Worker). PoW is verified by work,
       #     not wall-clock, so this is exact only on the reference device —
       #     measure and tune the hashrate (startup log prints the derived bits).
-      #     Explicit AUTH_ANON_POW_BITS wins over this. Example: ~5s target:
-      #       AUTH_ANON_POW_MS=5000   (with the default 50000 H/s -> ~18 bits)
+      #     Explicit AUTH_ANON_POW_BITS wins over this. Example: ~10s target:
+      #       AUTH_ANON_POW_MS=10000  (with the default 50000 H/s -> ~19 bits)
       - AUTH_ANON_POW_MS=${AUTH_ANON_POW_MS:-}
       - AUTH_ANON_POW_HASHRATE=${AUTH_ANON_POW_HASHRATE:-50000}
 

@@ -328,8 +328,9 @@ func TestLoadAuthConfigAnonDefaults(t *testing.T) {
 	if c.AnonTTL != 30*time.Minute {
 		t.Errorf("AnonTTL = %v, want 30m", c.AnonTTL)
 	}
-	if c.AnonPoWBits != 20 || c.AnonPoWCeil != 24 {
-		t.Errorf("bits/ceil = %d/%d, want 20/24", c.AnonPoWBits, c.AnonPoWCeil)
+	// Default base derives from a 10s target @ 50k H/s -> 19 bits; ceil = +4 = 23.
+	if c.AnonPoWBits != 19 || c.AnonPoWCeil != 23 {
+		t.Errorf("bits/ceil = %d/%d, want 19/23", c.AnonPoWBits, c.AnonPoWCeil)
 	}
 }
 

@@ -64,6 +64,10 @@ type authConfig struct {
 const (
 	defaultAnonPoWHashrate = 50000
 	defaultAnonPoWHeadroom = 4
+	// defaultAnonPoWMS is the default base PoW target solve time (ms) on the
+	// reference device, used when neither AUTH_ANON_POW_BITS nor AUTH_ANON_POW_MS
+	// is set. Converted to bits via powBitsForDuration(defaultAnonPoWHashrate, …).
+	defaultAnonPoWMS = 10000
 )
 
 // powBitsForDuration converts a target solve time (milliseconds) at an assumed
@@ -116,8 +120,8 @@ func loadAuthConfig() authConfig {
 		CookieName:   "kd_session",
 		SessionTTL:   720 * time.Hour,
 		AnonTTL:      30 * time.Minute,
-		AnonPoWBits:  20,
-		AnonPoWCeil:  24,
+		AnonPoWBits:  powBitsForDuration(defaultAnonPoWHashrate, defaultAnonPoWMS),
+		AnonPoWCeil:  powBitsForDuration(defaultAnonPoWHashrate, defaultAnonPoWMS) + defaultAnonPoWHeadroom,
 	}
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_ENABLED"))) {
 	case "1", "true", "on", "yes":
