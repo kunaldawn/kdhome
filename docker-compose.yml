@@ -52,6 +52,18 @@ services:
       # entry in the start menu and can open /admin (user registry).
       - SUPER_ADMIN_EMAIL=${SUPER_ADMIN_EMAIL:-}
 
+      # ─── Anonymous guest login (optional, off by default) ───
+      # Truthy adds an "Enter as guest" button beside Google sign-in. Requires
+      # AUTH_ENABLED. Mints a short-lived, identity-free session after the
+      # browser solves an IP-bound proof-of-work (bot protection).
+      - AUTH_ANON_ENABLED=${AUTH_ANON_ENABLED:-off}
+      # Anonymous session lifetime (Go duration). Short by design.
+      - AUTH_ANON_TTL=${AUTH_ANON_TTL:-30m}
+      # PoW difficulty in leading zero bits: base (clean IP) and adaptive ceiling.
+      # ~20 bits ≈ 1s on a typical phone; raises per-IP under repeated minting.
+      - AUTH_ANON_POW_BITS=${AUTH_ANON_POW_BITS:-20}
+      - AUTH_ANON_POW_CEIL=${AUTH_ANON_POW_CEIL:-24}
+
 networks:
   web:
     driver: bridge

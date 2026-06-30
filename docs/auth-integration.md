@@ -20,6 +20,14 @@ Any standard JWT library can verify it: check the **HS256** signature against
 `AUTH_SECRET`, then check `exp` is in the future. `AUTH_SECRET` must be the
 **exact same value** on the main server and every subdomain app.
 
+### Anonymous guest sessions
+
+When `AUTH_ANON_ENABLED` is on, anonymous sessions carry an additional claim
+`anon:true` and an **empty `email`** field. The `sub` claim starts with `anon:`.
+Subdomain apps that verify the shared JWT can treat `anon:true` as a read-only
+guest session and **must not rely on the `email` field** for authentication or
+authorization decisions.
+
 ## Reference verification (Go, stdlib)
 
 ```go
