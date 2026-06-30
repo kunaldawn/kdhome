@@ -424,6 +424,22 @@
   dialog.info .d-body b { color: var(--lime); }
   dialog.info .d-body .amber { color: var(--amber); }
   dialog.info .d-foot { padding: 0 clamp(12px,1.1vw,18px) clamp(10px,0.9vw,14px); font-size: 0.85em; opacity: 0.6; }
+  /* Nerdy deep-dive (collapsed by default). */
+  dialog.info .d-deep { margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 6px; background: rgba(0,0,0,0.25); }
+  dialog.info .d-deep > summary { cursor: pointer; list-style: none; padding: 8px 10px; color: var(--teal); font-size: 0.9em; letter-spacing: 0.5px; }
+  dialog.info .d-deep > summary::-webkit-details-marker { display: none; }
+  dialog.info .d-deep > summary::before { content: "▸ "; color: var(--lime); }
+  dialog.info .d-deep[open] > summary::before { content: "▾ "; }
+  dialog.info .d-deep .deep-body { padding: 0 12px 10px; }
+  dialog.info .d-deep h4 { margin: 12px 0 5px; font-size: 0.8em; letter-spacing: 1px; text-transform: uppercase; color: var(--lime); }
+  dialog.info .d-deep code { color: var(--lime); }
+  dialog.info .d-code {
+    margin: 6px 0; padding: 8px 10px; border-left: 2px solid var(--lime);
+    background: rgba(0,255,150,0.06); border-radius: 0 4px 4px 0;
+    font-family: var(--mono); font-size: 0.86em; line-height: 1.55;
+    white-space: pre-wrap; word-break: break-word; color: #9fe9c7;
+  }
+  dialog.info .d-code .c { color: #4a8f76; }
 
   /* Desktop zoom is applied via transform:scale() in JS — a UNIFORM, aspect-ratio
      preserving zoom (like browser zoom) that fits the panel's natural size to
@@ -648,6 +664,60 @@
           leading zero bits — costs you a few seconds of CPU, costs a bot farm a fortune at scale.</li>
         <li>The server checks the proof and issues a short-lived, anonymous session.</li>
       </ol>
+
+      <details class="d-deep">
+        <summary>The algorithm &amp; why it works — for the curious</summary>
+        <div class="deep-body">
+          <p>It's <b>hashcash</b>: a server-set, IP-bound proof-of-work. No CAPTCHA, no third
+          party, no image puzzles — just a few seconds of your CPU.</p>
+
+          <h4>1 · Challenge</h4>
+          <p>Your browser POSTs <code>/auth/anon/challenge</code>. The server returns a
+          <b>stateless, HMAC-signed</b> token (it stores nothing per challenge) carrying a random
+          128-bit nonce, a difficulty <b>b</b> in leading-zero bits (~20 by default), a 90-second
+          expiry, and an <b>IP tag</b> = HMAC(secret, your IP — the <code>/64</code> network for
+          IPv6).</p>
+
+          <h4>2 · Grind <span class="c">— in a Web Worker, off the UI thread</span></h4>
+          <div class="d-code">for n = 0, 1, 2, …:
+  h = SHA-256(challenge + ":" + n)
+  if leadingZeroBits(h) &#8805; b:
+    solution = n            <span class="c"># found it</span></div>
+          <p>Finding one takes about <b>2<sup>b</sup></b> hashes on average (geometric
+          distribution) — the live console shows the candidate hashes, hashrate and nonce as it
+          runs. Verifying it later costs the server exactly <b>one</b> hash.</p>
+
+          <h4>3 · Redeem</h4>
+          <p>Your browser POSTs <code>/auth/anon/redeem</code> with {challenge, solution}. The
+          server checks, in order: the signature + 90-second freshness + that the IP tag matches
+          your network (constant-time), then that <code>SHA-256(challenge + ":" + n)</code> really
+          has &#8805; b zero bits, then marks the nonce <b>single-use</b>. Only then does it mint
+          the session — a JWT with <code>sub = "anon:" + random</code>, <b>empty email</b>,
+          <code>anon: true</code>, expiring in {{.AnonTTLHuman}}.</p>
+
+          <h4>Why it works</h4>
+          <ul>
+            <li><b>Asymmetric cost.</b> Solving needs ≈ 2<sup>b</sup> SHA-256 ops; verifying needs
+            <b>one</b>. You spend seconds, the server spends microseconds — and a bot farm pays
+            that cost <i>per session, forever</i>.</li>
+            <li><b>Difficulty can't be lowered.</b> <b>b</b> lives inside the signed challenge;
+            change it and the HMAC check fails.</li>
+            <li><b>IP-bound.</b> The puzzle is tied to your network, so the grind can't be farmed
+            out to a pool of cheap throwaway IPs — a solution only counts from the address it was
+            issued to.</li>
+            <li><b>One-shot.</b> Each nonce mints exactly one session; replays are rejected.</li>
+            <li><b>Self-escalating.</b> Repeat hits from one network raise <b>b</b> — every +1 bit
+            <i>doubles</i> the work — and both endpoints are rate-limited, so floods get
+            exponentially expensive.</li>
+            <li><b>Domain-separated keys.</b> Challenges are signed with a key <i>derived</i> from
+            the master secret and rotated every server boot — distinct from the session-cookie key
+            — so a challenge token can never be replayed as a login.</li>
+            <li><b>Zero identity.</b> The session's subject is random and maps to no record
+            anywhere — no email, no profile, no cross-site tracking — and it self-expires.</li>
+          </ul>
+        </div>
+      </details>
+
       <p class="amber">The pass is short-lived — it lasts {{.AnonTTLHuman}}. Want to stay signed
       in longer? Use Google instead.</p>
     </div>
