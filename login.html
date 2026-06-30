@@ -41,28 +41,35 @@
   .fx-bg {
     position: fixed; inset: 0; z-index: 0;
     overflow: hidden;
-    background: radial-gradient(circle at 50% 38%, rgba(0,255,150,0.06), transparent 70%);
-    opacity: 0.55;
+    background: radial-gradient(circle at 50% 40%, rgba(0,255,150,0.05), transparent 70%);
+    opacity: 0.92;
     pointer-events: none;
   }
   .fx-bg .fx-canvas {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
+    /* Fill the viewport so fx.js's ResizeObserver measures the FULL screen and
+       renders a dense grid (up to its 120x60 cap) at real glyph size — the
+       demoscene reads as a full composition, not a few huge zoomed glyphs.
+       A shrink-wrapped <pre> (the old centered+vmax approach) made the engine
+       measure a tiny box and render almost nothing. */
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
     margin: 0; padding: 0;
     font-family: var(--mono);
-    font-size: 4.6vmax; line-height: 1.05; letter-spacing: 0;
-    white-space: pre; text-align: center;
+    font-size: 15px; line-height: 1.2; letter-spacing: 0;
+    white-space: pre; text-align: center; overflow: hidden;
     color: var(--lime);
     font-variant-numeric: tabular-nums;
     transition: color 0.6s ease, text-shadow 0.6s ease;
-    text-shadow: 0 0 8px rgba(0,255,150,0.35);
+    text-shadow: 0 0 6px rgba(0,255,150,0.45);
   }
-  /* Scanline + vignette overlay sits between wallpaper and card. */
+  /* Light scanlines + a whisper of corner falloff. Deliberately NOT a strong
+     vignette: the card covers the center, so darkening the edges would hide the
+     only FX the viewer can actually see. */
   .fx-veil {
     position: fixed; inset: 0; z-index: 1; pointer-events: none;
     background:
-      repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.62) 100%);
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 80%, rgba(0,0,0,0.28) 100%);
   }
 
   /* ── Per-scene wallpaper tints (engine toggles fx-<scene> on the canvas) ── */
@@ -274,8 +281,8 @@
   @media (max-width: 520px) {
     body { padding: 14px; align-items: flex-start; }
     .crt { max-width: 100%; -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(7,22,17,0.92); }
-    .fx-bg { opacity: 0.42; }
-    .fx-bg .fx-canvas { font-size: 6.2vmax; }
+    .fx-bg { opacity: 0.85; }
+    .fx-bg .fx-canvas { font-size: 12px; }
     .body { padding: 16px 13px 14px; gap: 12px; }
     .title .t-main { font-size: 15px; }
     .hud { font-size: 8.5px; letter-spacing: 1px; }
@@ -284,7 +291,7 @@
 
   /* ══════════════════ Reduced motion ══════════════════ */
   @media (prefers-reduced-motion: reduce) {
-    .fx-bg { opacity: 0.32; }
+    .fx-bg { opacity: 0.7; }
     .fx-canvas { text-shadow: 0 0 5px rgba(0,255,150,0.4); transition: none; }
     .btn-primary { animation: none; }
     .btn { transition: none; }
