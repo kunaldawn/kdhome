@@ -244,7 +244,8 @@
     transform: skewX(-20deg); pointer-events: none;
     animation: btn-sheen 5.5s ease-in-out infinite;
   }
-  .btn-primary::after { background: linear-gradient(100deg, transparent, rgba(255,255,255,0.45), transparent); }
+  /* Dark glint on the bright lime button (white was invisible on lime). */
+  .btn-primary::after { width: 42%; background: linear-gradient(100deg, transparent, rgba(5,17,13,0.34), transparent); }
   .btn-ghost::after   { background: linear-gradient(100deg, transparent, rgba(127,209,179,0.22), transparent); animation-delay: 1.6s; }
   @keyframes btn-sheen { 0% { left: -75%; } 22%, 100% { left: 135%; } }
   .btn[disabled]::after, .btn-primary.solving::after { animation: none; opacity: 0; }
@@ -417,6 +418,9 @@
       max-width: 100%; -webkit-backdrop-filter: none; backdrop-filter: none;
       background: rgba(7,22,17,0.55);
       min-height: 88vh; min-height: 88dvh;
+      /* Auto-margins center the card vertically (body is flex-start to stay
+         clip-safe); collapses to top-pinned only if the card exceeds the screen. */
+      margin-block: auto;
       box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.40), 0 0 30px rgba(0,255,150,0.07);
     }
     .fx-bg { opacity: 0.85; }
@@ -444,6 +448,50 @@
     .btn { transition: none; }
     .btn::after, .info-btn::after, .pc-fill { animation: none; }
     .btn::after { opacity: 0; }
+  }
+
+  /* ══════════════════ Custom retro cursor + ASCII mouse/touch trail ══════════════════ */
+  /* Custom retro cursor is drawn by JS (#kd-cursor) and follows the mouse —
+     Chrome ignores SVG data-URI cursors, so we hide the native cursor instead. */
+  html.kd-customcursor, html.kd-customcursor * { cursor: none !important; }
+  #kd-cursor {
+    position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 10000;
+    pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
+    transform: translate(-100px, -100px); will-change: transform;
+  }
+  #kd-cursor.on { opacity: 1; }
+  #kd-cursor svg { position: absolute; filter: drop-shadow(0 0 3px rgba(0,255,150,0.55)); }
+  #kd-cursor .cur-arrow { left: -3px; top: -2px; }
+  #kd-cursor .cur-point { left: -12px; top: -12px; display: none; }
+  #kd-cursor.point .cur-arrow { display: none; }
+  #kd-cursor.point .cur-point { display: block; }
+  .matrix-char {
+    position: fixed; pointer-events: none; z-index: 9998;
+    font-family: var(--mono); font-size: 14px; color: var(--lime);
+    text-shadow: 0 0 8px rgba(0,255,150,0.8); opacity: 0;
+    animation: charFade 0.8s ease-out forwards;
+  }
+  @keyframes charFade {
+    0%   { opacity: 0.9; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-30px) scale(0.5); }
+  }
+  .click-ripple {
+    position: fixed; pointer-events: none; z-index: 9997;
+    border: 1.5px solid var(--lime); border-radius: 50%; opacity: 0;
+    animation: rippleExpand 0.6s ease-out forwards;
+  }
+  @keyframes rippleExpand {
+    0%   { width: 0; height: 0; opacity: 0.7; transform: translate(-50%,-50%) scale(1); }
+    100% { width: 60px; height: 60px; opacity: 0; transform: translate(-50%,-50%) scale(1); }
+  }
+  .touch-glow {
+    position: fixed; pointer-events: none; z-index: 9997; width: 40px; height: 40px;
+    border-radius: 50%; background: radial-gradient(circle, rgba(0,255,150,0.3) 0%, transparent 70%);
+    animation: touchPulse 0.5s ease-out forwards;
+  }
+  @keyframes touchPulse {
+    0%   { opacity: 1; transform: translate(-50%,-50%) scale(0.5); }
+    100% { opacity: 0; transform: translate(-50%,-50%) scale(2); }
   }
 </style>
 </head>
@@ -497,13 +545,14 @@
 
         <!-- PRIMARY: anonymous guest -->
         <div class="opt">
-          <button type="button" class="btn btn-primary" id="anon-guest-btn" data-redirect="{{.Redirect}}" aria-label="Enter as guest — no account needed">
-            <span class="b-label"><span class="b-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><rect x="4.5" y="1" width="9" height="5.5" rx="2" fill="currentColor"/><rect x="1" y="5.5" width="16" height="2.5" rx="1.25" fill="currentColor"/><circle cx="5.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 13.5h1.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>ENTER AS GUEST<span class="b-suffix"> — NO ACCOUNT</span></span>
+          <button type="button" class="btn btn-primary" id="anon-guest-btn" data-redirect="{{.Redirect}}" aria-label="Anonymous login with proof of work">
+            <span class="b-label"><span class="b-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><rect x="4.5" y="1" width="9" height="5.5" rx="2" fill="currentColor"/><rect x="1" y="5.5" width="16" height="2.5" rx="1.25" fill="currentColor"/><circle cx="5.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 13.5h1.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>Anonymous login<span class="b-suffix"> with PoW</span></span>
             <span class="grind"><span class="spin" id="pc-spin1">⠋</span><span id="grind-label">FORGING ACCESS KEY</span><span id="grind-pct">0%</span></span>
           </button>
           <div class="meta anon">
             <span>no account</span><span class="dot">·</span>
             <span>bot-gated</span><span class="dot">·</span>
+            <span>proof of work</span><span class="dot">·</span>
             <span class="ttl">{{.AnonTTLHuman}}</span>
             <button type="button" class="info-btn" id="anon-info-btn" aria-label="How guest entry works" aria-haspopup="dialog"><span class="i-glyph">?</span></button>
           </div>
@@ -675,6 +724,72 @@
     // Re-fit when the panel's natural height changes (manifest <details>, PoW
     // console). offsetHeight is transform-independent, so this never loops.
     if (window.ResizeObserver) new ResizeObserver(fit).observe(crt);
+  })();
+  </script>
+
+  <!-- Custom retro cursor: a lime pixel arrow that becomes a target reticle over
+       clickables. Drawn in the DOM (Chrome ignores SVG cursors). Dropped on touch. -->
+  <script>
+  (function () {
+    var root = document.documentElement;
+    var cur = document.createElement('div');
+    cur.id = 'kd-cursor'; cur.setAttribute('aria-hidden', 'true');
+    cur.innerHTML =
+      '<svg class="cur-arrow" width="22" height="22" viewBox="0 0 22 22"><path d="M3 2L3 17L7.5 13L10.5 19.5L13 18.5L10 12L16 12Z" fill="#00ff99" stroke="#05110d" stroke-width="1.4" stroke-linejoin="round"/></svg>' +
+      '<svg class="cur-point" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="#00ff99" stroke-width="1.6"/><path d="M12 1L12 5M12 19L12 23M1 12L5 12M19 12L23 12" stroke="#00ff99" stroke-width="1.6"/><circle cx="12" cy="12" r="1.6" fill="#00ff99"/></svg>';
+    document.body.appendChild(cur);
+    root.classList.add('kd-customcursor');
+    var sel = 'a,.btn,.info-btn,.d-close,summary,[role=button]';
+    document.addEventListener('mousemove', function (e) {
+      cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)';
+      cur.classList.add('on');
+      var t = e.target;
+      if (t && t.closest && t.closest(sel)) cur.classList.add('point');
+      else cur.classList.remove('point');
+    }, { passive: true });
+    document.addEventListener('mouseleave', function () { cur.classList.remove('on'); });
+    // Touch device → no custom cursor (the trail handles touch).
+    window.addEventListener('touchstart', function () {
+      root.classList.remove('kd-customcursor'); cur.style.display = 'none';
+    }, { passive: true, once: true });
+  })();
+  </script>
+
+  <!-- ASCII mouse/touch trail (matrix chars + click ripple + touch glow), same
+       effect as the home page. Skipped under reduced-motion. -->
+  <script>
+  (function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var TRAIL = '01ABCDEF>_/\\{}[]<>#$%';
+    var lastT = 0, lx = 0, ly = 0;
+    function spawn(x, y) {
+      var el = document.createElement('div');
+      el.className = 'matrix-char';
+      el.textContent = TRAIL.charAt((Math.random() * TRAIL.length) | 0);
+      el.style.left = (x + (Math.random() - 0.5) * 16) + 'px';
+      el.style.top = (y + (Math.random() - 0.5) * 16) + 'px';
+      document.body.appendChild(el);
+      setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
+    }
+    function move(x, y) {
+      var now = Date.now(), dx = x - lx, dy = y - ly;
+      if (dx * dx + dy * dy > 484 && now - lastT > 55) { spawn(x, y); lastT = now; lx = x; ly = y; }
+    }
+    document.addEventListener('mousemove', function (e) { if (!document.hidden) move(e.clientX, e.clientY); }, { passive: true });
+    document.addEventListener('click', function (e) {
+      var r = document.createElement('div'); r.className = 'click-ripple';
+      r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
+      document.body.appendChild(r);
+      setTimeout(function () { if (r.parentNode) r.parentNode.removeChild(r); }, 600);
+    });
+    document.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientX, t.clientY); }, { passive: true });
+    document.addEventListener('touchstart', function (e) {
+      var t = e.touches[0]; if (!t) return;
+      var g = document.createElement('div'); g.className = 'touch-glow';
+      g.style.left = t.clientX + 'px'; g.style.top = t.clientY + 'px';
+      document.body.appendChild(g);
+      setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 500);
+    }, { passive: true });
   })();
   </script>
 
