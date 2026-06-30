@@ -347,6 +347,19 @@ func TestLoadAuthConfigAnonOverrides(t *testing.T) {
 	}
 }
 
+func TestLoadAuthConfigAnonCeilFloor(t *testing.T) {
+	t.Setenv("AUTH_ANON_ENABLED", "on")
+	t.Setenv("AUTH_ANON_POW_BITS", "26")
+	// AUTH_ANON_POW_CEIL left unset; default is 24, which is below bits=26.
+	c := loadAuthConfig()
+	if c.AnonPoWBits != 26 {
+		t.Fatalf("AnonPoWBits = %d, want 26", c.AnonPoWBits)
+	}
+	if c.AnonPoWCeil < c.AnonPoWBits {
+		t.Fatalf("AnonPoWCeil (%d) < AnonPoWBits (%d); ceil should have been raised", c.AnonPoWCeil, c.AnonPoWBits)
+	}
+}
+
 func TestAnonPathsArePublic(t *testing.T) {
 	if !publicPaths["/auth/anon/challenge"] {
 		t.Error("/auth/anon/challenge must bypass the auth gate")

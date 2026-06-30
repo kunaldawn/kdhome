@@ -104,12 +104,20 @@ func loadAuthConfig() authConfig {
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_BITS")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
 			c.AnonPoWBits = n
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_BITS %q, using default %d", v, c.AnonPoWBits)
 		}
 	}
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_CEIL")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= c.AnonPoWBits && n <= 32 {
 			c.AnonPoWCeil = n
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_CEIL %q, using default %d", v, c.AnonPoWCeil)
 		}
+	}
+	if c.AnonPoWCeil < c.AnonPoWBits {
+		log.Printf("[AUTH] AUTH_ANON_POW_CEIL (%d) < BITS (%d); raising ceil to bits", c.AnonPoWCeil, c.AnonPoWBits)
+		c.AnonPoWCeil = c.AnonPoWBits
 	}
 	c.oauth = &oauth2.Config{
 		ClientID:     c.ClientID,

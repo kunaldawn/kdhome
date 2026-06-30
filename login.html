@@ -398,7 +398,9 @@
         var ch = await chResp.json();
         say('DECRYPTING ACCESS KEY ▓░░░░');
         var blob = new Blob([workerSrc], { type: 'text/javascript' });
-        worker = new Worker(URL.createObjectURL(blob));
+        var url = URL.createObjectURL(blob);
+        worker = new Worker(url);
+        URL.revokeObjectURL(url);
         var solution = await new Promise(function (resolve, reject) {
           worker.onmessage = function (e) {
             if (e.data.solution !== undefined) resolve(e.data.solution);
@@ -408,6 +410,7 @@
           worker.postMessage({ challenge: ch.challenge, bits: ch.bits });
         });
         worker.terminate();
+        worker = null;
         say('ACCESS GRANTED');
         var rdResp = await fetch('/auth/anon/redeem', {
           method: 'POST',
@@ -422,6 +425,7 @@
         var rd = await rdResp.json();
         window.location.assign(rd.redirect);
       } catch (err) {
+        if (worker) { worker.terminate(); worker = null; }
         say('GUEST ENTRY FAILED — try Google sign-in');
         btn.disabled = false;
       }

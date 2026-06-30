@@ -228,12 +228,12 @@ func (c authConfig) handleAnonRedeem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "challenge already used", http.StatusForbidden)
 		return
 	}
-	c.anonGuard.recordMint(ip)
 	tok, err := signAnonSession(c.AnonTTL, c.Secret)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+	c.anonGuard.recordMint(ip)
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.CookieName,
 		Value:    tok,
