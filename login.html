@@ -836,6 +836,24 @@
     root.classList.add('kd-customcursor');
     var sel = 'a,.btn,.info-btn,.d-close,summary,[role=button]';
 
+    // A modal <dialog> (showModal) renders in the browser TOP LAYER, above all
+    // z-index — so the cursor + trail must live INSIDE the open dialog to stay
+    // visible over it (the native cursor is hidden, so otherwise there's no
+    // cursor at all over the popup). refresh() re-homes them under the open modal
+    // dialog (or <body> when none is open). It's called on every move, so it
+    // self-heals on both open AND close without relying on the dialog 'close'
+    // event (which is unreliable). Returns the current spawn root.
+    window.__kdFx = {
+      cur: cur,
+      root: document.body,
+      refresh: function () {
+        var d = document.querySelector('dialog[open]');
+        this.root = d || document.body;
+        if (this.cur && this.cur.parentNode !== this.root) this.root.appendChild(this.cur);
+        return this.root;
+      }
+    };
+
     // Scale the cursor + trail proportionally to the viewport (shared via
     // window.__kdUiScale + CSS vars). Cursor scales around its 0x0 origin so the
     // hotspot stays anchored. Reference baseline ~780px short-edge = 1x.
@@ -855,6 +873,7 @@
     window.addEventListener('resize', applyScale);
 
     document.addEventListener('mousemove', function (e) {
+      window.__kdFx.refresh(); // keep the cursor in the open dialog's top layer
       cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px) scale(' + uiScale + ')';
       cur.classList.add('on');
       var t = e.target;
@@ -877,6 +896,7 @@
     var TRAIL = '01ABCDEF>_/\\{}[]<>#$%';
     var lastT = 0, lx = 0, ly = 0;
     function scale() { return window.__kdUiScale || 1; }   // shared with the cursor script
+    function fxRoot() { return (window.__kdFx && window.__kdFx.refresh()) || document.body; }
     function spawn(x, y) {
       var s = scale();
       var el = document.createElement('div');
@@ -884,7 +904,7 @@
       el.textContent = TRAIL.charAt((Math.random() * TRAIL.length) | 0);
       el.style.left = (x + (Math.random() - 0.5) * 16 * s) + 'px';
       el.style.top = (y + (Math.random() - 0.5) * 16 * s) + 'px';
-      document.body.appendChild(el);
+      fxRoot().appendChild(el);
       setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
     }
     function move(x, y) {
@@ -896,7 +916,7 @@
     document.addEventListener('click', function (e) {
       var r = document.createElement('div'); r.className = 'click-ripple';
       r.style.left = e.clientX + 'px'; r.style.top = e.clientY + 'px';
-      document.body.appendChild(r);
+      fxRoot().appendChild(r);
       setTimeout(function () { if (r.parentNode) r.parentNode.removeChild(r); }, 600);
     });
     document.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (t) move(t.clientX, t.clientY); }, { passive: true });
@@ -904,7 +924,7 @@
       var t = e.touches[0]; if (!t) return;
       var g = document.createElement('div'); g.className = 'touch-glow';
       g.style.left = t.clientX + 'px'; g.style.top = t.clientY + 'px';
-      document.body.appendChild(g);
+      fxRoot().appendChild(g);
       setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 500);
     }, { passive: true });
   })();
@@ -916,7 +936,13 @@
     function wire(btnId, dlgId) {
       var btn = document.getElementById(btnId), dlg = document.getElementById(dlgId);
       if (!btn || !dlg || typeof dlg.showModal !== 'function') return;
-      btn.addEventListener('click', function () { dlg.showModal(); });
+      btn.addEventListener('click', function () {
+        dlg.showModal();
+        // Immediately re-home the cursor into the modal's top layer (otherwise it
+        // stays behind the popup until the next mouse move); subsequent moves keep
+        // it there via refresh().
+        if (window.__kdFx) window.__kdFx.refresh();
+      });
       // Click on the backdrop (outside the dialog box) closes it.
       dlg.addEventListener('click', function (e) {
         var r = dlg.getBoundingClientRect();
