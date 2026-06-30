@@ -468,7 +468,7 @@
   #kd-cursor.point .cur-point { display: block; }
   .matrix-char {
     position: fixed; pointer-events: none; z-index: 9998;
-    font-family: var(--mono); font-size: 14px; color: var(--lime);
+    font-family: var(--mono); font-size: var(--trail-size, 14px); color: var(--lime);
     text-shadow: 0 0 8px rgba(0,255,150,0.8); opacity: 0;
     animation: charFade 0.8s ease-out forwards;
   }
@@ -483,10 +483,11 @@
   }
   @keyframes rippleExpand {
     0%   { width: 0; height: 0; opacity: 0.7; transform: translate(-50%,-50%) scale(1); }
-    100% { width: 60px; height: 60px; opacity: 0; transform: translate(-50%,-50%) scale(1); }
+    100% { width: var(--ripple-max, 60px); height: var(--ripple-max, 60px); opacity: 0; transform: translate(-50%,-50%) scale(1); }
   }
   .touch-glow {
-    position: fixed; pointer-events: none; z-index: 9997; width: 40px; height: 40px;
+    position: fixed; pointer-events: none; z-index: 9997;
+    width: var(--glow-size, 40px); height: var(--glow-size, 40px);
     border-radius: 50%; background: radial-gradient(circle, rgba(0,255,150,0.3) 0%, transparent 70%);
     animation: touchPulse 0.5s ease-out forwards;
   }
@@ -741,8 +742,27 @@
     document.body.appendChild(cur);
     root.classList.add('kd-customcursor');
     var sel = 'a,.btn,.info-btn,.d-close,summary,[role=button]';
+
+    // Scale the cursor + trail proportionally to the viewport (shared via
+    // window.__kdUiScale + CSS vars). Cursor scales around its 0x0 origin so the
+    // hotspot stays anchored. Reference baseline ~780px short-edge = 1x.
+    var uiScale = 1;
+    function calcScale() {
+      var m = Math.min(window.innerWidth, window.innerHeight) / 780;
+      return m < 0.85 ? 0.85 : (m > 2.2 ? 2.2 : m);
+    }
+    function applyScale() {
+      uiScale = calcScale();
+      window.__kdUiScale = uiScale;
+      root.style.setProperty('--trail-size', (14 * uiScale).toFixed(1) + 'px');
+      root.style.setProperty('--ripple-max', Math.round(60 * uiScale) + 'px');
+      root.style.setProperty('--glow-size', Math.round(40 * uiScale) + 'px');
+    }
+    applyScale();
+    window.addEventListener('resize', applyScale);
+
     document.addEventListener('mousemove', function (e) {
-      cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px)';
+      cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px) scale(' + uiScale + ')';
       cur.classList.add('on');
       var t = e.target;
       if (t && t.closest && t.closest(sel)) cur.classList.add('point');
@@ -763,18 +783,21 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var TRAIL = '01ABCDEF>_/\\{}[]<>#$%';
     var lastT = 0, lx = 0, ly = 0;
+    function scale() { return window.__kdUiScale || 1; }   // shared with the cursor script
     function spawn(x, y) {
+      var s = scale();
       var el = document.createElement('div');
       el.className = 'matrix-char';
       el.textContent = TRAIL.charAt((Math.random() * TRAIL.length) | 0);
-      el.style.left = (x + (Math.random() - 0.5) * 16) + 'px';
-      el.style.top = (y + (Math.random() - 0.5) * 16) + 'px';
+      el.style.left = (x + (Math.random() - 0.5) * 16 * s) + 'px';
+      el.style.top = (y + (Math.random() - 0.5) * 16 * s) + 'px';
       document.body.appendChild(el);
       setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 800);
     }
     function move(x, y) {
       var now = Date.now(), dx = x - lx, dy = y - ly;
-      if (dx * dx + dy * dy > 484 && now - lastT > 55) { spawn(x, y); lastT = now; lx = x; ly = y; }
+      var thr = 22 * scale();                              // spawn spacing scales with the UI
+      if (dx * dx + dy * dy > thr * thr && now - lastT > 55) { spawn(x, y); lastT = now; lx = x; ly = y; }
     }
     document.addEventListener('mousemove', function (e) { if (!document.hidden) move(e.clientX, e.clientY); }, { passive: true });
     document.addEventListener('click', function (e) {
