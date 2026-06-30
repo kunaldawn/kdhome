@@ -409,8 +409,12 @@ func (c authConfig) handleLogout(w http.ResponseWriter, r *http.Request) {
 func (c authConfig) loginPage(redirect string) []byte {
 	startHref := "/auth/google/start?redirect=" + url.QueryEscape(redirect)
 	var buf bytes.Buffer
-	if err := loginTmpl.Execute(&buf, struct{ StartHref string }{startHref}); err != nil {
-		// Template is compiled at init; an execution error is a programmer bug.
+	data := struct {
+		StartHref   string
+		AnonEnabled bool
+		Redirect    string
+	}{startHref, c.AnonEnabled, redirect}
+	if err := loginTmpl.Execute(&buf, data); err != nil {
 		return []byte("sign-in temporarily unavailable")
 	}
 	return buf.Bytes()

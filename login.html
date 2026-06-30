@@ -340,6 +340,13 @@
     <p class="signin-inventory">KD's Homebrew Digital Archive — a home-grown mirror of the public internet. 12 TB of preserved knowledge served from an archive in a home: two Raspberry Pi 4 nodes (8 GB) plus an N150 mini-PC (12 GB), on a 5-port switch fed from a single 65 W USB-C adapter. 4x 2 TB HDDs + 2x 2 TB SSDs hot, with a 12 TB external HDD for cold backup. About 30 watts total, engineered to run off-grid on a modest solar rig. Seven sub-archives in total: 119 offline wikis in ZIM format including the Wikipedia family (Wikipedia, Wiktionary, Wikisource, Wikispecies, Wikiquote, Wikibooks), 20+ Stack Exchange sites (Stack Overflow, Super User, Server Fault, Ask Ubuntu, Unix &amp; Linux, MathOverflow, Software Engineering, Cryptography, Retrocomputing, and more), 30+ DevDocs developer references (C, C++, JavaScript, Python, Go, Bash, Git, Docker, PyTorch, Qt, and more), 13 LibreTexts academic libraries (Mathematics, Physics, Chemistry, Biology, Engineering, Medicine, Humanities, Social Sciences, and more), Khan Academy, iFixit, Project Gutenberg, ArchWiki, Gentoo Wiki, MDWiki medical encyclopedia, MedlinePlus, NHS, WikiCiv survival knowledge, ProofWiki, RationalWiki, and Explain XKCD; 23,000+ PDFs across 800 GB; dedicated archives of operating system images and drivers, vintage CD/DVD software and abandonware, chiptune and keygen music, curated YouTube mirrors, and audiobooks. A shelf in a house, not a rack in a data centre. Developed by Kunal Dawn with AI assistance.</p>
 
     <a class="signin-btn" href="{{.StartHref}}">Sign in with Google</a>
+    {{if .AnonEnabled}}
+    <button type="button" class="signin-btn" id="anon-guest-btn"
+            data-redirect="{{.Redirect}}" style="margin-top:8px;cursor:pointer;">
+      ▶ Enter as guest — no account
+    </button>
+    <div class="signin-foot" id="anon-status" aria-live="polite"></div>
+    {{end}}
     <div class="signin-foot">free for all, free forever</div>
   </main>
 
@@ -356,5 +363,72 @@
       });
     })();
   </script>
+  {{if .AnonEnabled}}
+  <script>
+  (function () {
+    var btn = document.getElementById('anon-guest-btn');
+    if (!btn) return;
+    var status = document.getElementById('anon-status');
+    function say(t) { if (status) status.textContent = t; }
+
+    // Web Worker grinds SHA-256 off the main thread so the FX never stutters.
+    var workerSrc =
+      'self.onmessage=async function(e){' +
+      ' var ch=e.data.challenge,bits=e.data.bits,i=0;' +
+      ' var enc=new TextEncoder();' +
+      ' while(true){' +
+      '  var buf=await crypto.subtle.digest("SHA-256",enc.encode(ch+":"+i));' +
+      '  var b=new Uint8Array(buf),z=0;' +
+      '  for(var k=0;k<b.length;k++){if(b[k]===0){z+=8;continue;}var v=b[k],c=0;while(v<128){c++;v<<=1;}z+=c;break;}' +
+      '  if(z>=bits){self.postMessage({solution:""+i});return;}' +
+      '  if((i&8191)===0)self.postMessage({progress:i});' +
+      '  i++;' +
+      ' }' +
+      '};';
+    var worker = null;
+
+    btn.addEventListener('click', async function () {
+      btn.disabled = true;
+      say('REQUESTING ACCESS KEY…');
+      try {
+        var chResp = await fetch('/auth/anon/challenge', {
+          method: 'POST', headers: { 'X-KD-Anon': '1' }
+        });
+        if (!chResp.ok) throw new Error('challenge');
+        var ch = await chResp.json();
+        say('DECRYPTING ACCESS KEY ▓░░░░');
+        var blob = new Blob([workerSrc], { type: 'text/javascript' });
+        worker = new Worker(URL.createObjectURL(blob));
+        var solution = await new Promise(function (resolve, reject) {
+          worker.onmessage = function (e) {
+            if (e.data.solution !== undefined) resolve(e.data.solution);
+            else say('DECRYPTING ACCESS KEY ▓▓▓░░');
+          };
+          worker.onerror = function () { reject(new Error('worker')); };
+          worker.postMessage({ challenge: ch.challenge, bits: ch.bits });
+        });
+        worker.terminate();
+        say('ACCESS GRANTED');
+        var rdResp = await fetch('/auth/anon/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-KD-Anon': '1' },
+          body: JSON.stringify({
+            challenge: ch.challenge,
+            solution: solution,
+            redirect: btn.getAttribute('data-redirect')
+          })
+        });
+        if (!rdResp.ok) throw new Error('redeem');
+        var rd = await rdResp.json();
+        window.location.assign(rd.redirect);
+      } catch (err) {
+        say('GUEST ENTRY FAILED — try Google sign-in');
+        btn.disabled = false;
+      }
+    });
+  })();
+  </script>
+  <noscript><style>#anon-guest-btn{display:none}</style></noscript>
+  {{end}}
 </body>
 </html>

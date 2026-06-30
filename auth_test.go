@@ -369,3 +369,19 @@ func TestMiddlewareAllowsAnonChallenge(t *testing.T) {
 		t.Error("anon challenge path should pass through the gate without a session")
 	}
 }
+
+func TestLoginPageShowsGuestButtonWhenAnonEnabled(t *testing.T) {
+	c := authConfig{BaseURL: "https://kunaldawn.com", AnonEnabled: true}
+	page := string(c.loginPage("https://kunaldawn.com/wiki"))
+	if !strings.Contains(page, "anon-guest-btn") {
+		t.Error("guest button should render when AnonEnabled")
+	}
+}
+
+func TestLoginPageHidesGuestButtonWhenAnonDisabled(t *testing.T) {
+	c := authConfig{BaseURL: "https://kunaldawn.com", AnonEnabled: false}
+	page := string(c.loginPage("https://kunaldawn.com/wiki"))
+	if strings.Contains(page, "anon-guest-btn") {
+		t.Error("guest button must not render when anon disabled")
+	}
+}
