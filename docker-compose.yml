@@ -59,21 +59,31 @@ services:
       - AUTH_ANON_ENABLED=${AUTH_ANON_ENABLED:-off}
       # Anonymous session lifetime (Go duration). Short by design.
       - AUTH_ANON_TTL=${AUTH_ANON_TTL:-30m}
-      # PoW difficulty. Set it ONE of two ways (leave the others empty):
-      #  A) Directly, in leading-zero bits — base (clean IP) and adaptive ceiling.
-      #     Each +1 bit ≈ doubles the work. Empty -> code defaults (~10s target
-      #     @ 50000 H/s -> 19 bits base, 23 ceil).
-      - AUTH_ANON_POW_BITS=${AUTH_ANON_POW_BITS:-}
-      - AUTH_ANON_POW_CEIL=${AUTH_ANON_POW_CEIL:-}
-      #  B) By TARGET solve time in milliseconds. The server converts it to bits
-      #     using AUTH_ANON_POW_HASHRATE (assumed hashes/sec of a reference
-      #     browser's WebCrypto SHA-256 in a Worker). PoW is verified by work,
-      #     not wall-clock, so this is exact only on the reference device —
-      #     measure and tune the hashrate (startup log prints the derived bits).
-      #     Explicit AUTH_ANON_POW_BITS wins over this. Example: ~10s target:
-      #       AUTH_ANON_POW_MS=10000  (with the default 50000 H/s -> ~19 bits)
-      - AUTH_ANON_POW_MS=${AUTH_ANON_POW_MS:-}
-      - AUTH_ANON_POW_HASHRATE=${AUTH_ANON_POW_HASHRATE:-50000}
+      # PoW = k independent sub-puzzles of AUTH_ANON_POW_SUBBITS leading-zero bits
+      # each. Splitting the work makes the solve time land in a tight band (Erlang-k,
+      # variance ∝ 1/k) instead of the sub-second-to-forever swing a single big
+      # puzzle gives. The browser benchmarks its own SHA-256 speed and the server
+      # sizes k to hit AUTH_ANON_POW_MS on THAT device — so it's a REAL wall-clock
+      # target now, not an approximation.
+      #
+      #   AUTH_ANON_POW_MS        target total solve time (ms) on an honest device.
+      #                           Empty -> 7000 (~7s, lands roughly 5–10s).
+      - AUTH_ANON_POW_MS=${AUTH_ANON_POW_MS:-7000}
+      #   AUTH_ANON_POW_SUBBITS   bits per sub-puzzle (~2^14 = 16384 hashes each).
+      #                           Empty -> 14. Lower = finer k granularity.
+      - AUTH_ANON_POW_SUBBITS=${AUTH_ANON_POW_SUBBITS:-}
+      #   AUTH_ANON_POW_HASHRATE  assumed browser H/s when a client sends no
+      #                           benchmark; also anchors the default KMin floor.
+      #                           Empty -> 200000 (measured mainstream value).
+      - AUTH_ANON_POW_HASHRATE=${AUTH_ANON_POW_HASHRATE:-}
+      #   AUTH_ANON_POW_KMIN      sub-puzzle floor = the security/bot cost everyone
+      #                           pays, even a client faking a slow rate. Empty ->
+      #                           the work to hit the target at the assumed rate
+      #                           (~85). Raise this to make bots pay more.
+      - AUTH_ANON_POW_KMIN=${AUTH_ANON_POW_KMIN:-}
+      #   AUTH_ANON_POW_KMAX      sub-puzzle ceiling (bounds verify cost + the
+      #                           slow-device worst case). Empty -> KMin × 8.
+      - AUTH_ANON_POW_KMAX=${AUTH_ANON_POW_KMAX:-}
 
 networks:
   web:

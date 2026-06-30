@@ -696,8 +696,8 @@
       <b>proof-of-work</b> puzzle first:</p>
       <ol>
         <li>The server hands your browser a one-time challenge tied to your IP.</li>
-        <li>A background worker grinds <b>SHA-256</b> hashes until it finds one with enough
-          leading zero bits — costs you a few seconds of CPU, costs a bot farm a fortune at scale.</li>
+        <li>A background worker grinds <b>SHA-256</b> hashes to solve a batch of small
+          leading-zero-bit puzzles — costs you a few seconds of CPU, costs a bot farm a fortune at scale.</li>
         <li>The server checks the proof and issues a short-lived, anonymous session.</li>
       </ol>
 
@@ -707,44 +707,52 @@
           <p>It's <b>hashcash</b>: a server-set, IP-bound proof-of-work. No CAPTCHA, no third
           party, no image puzzles — just a few seconds of your CPU.</p>
 
-          <h4>1 · Challenge</h4>
-          <p>Your browser POSTs <code>/auth/anon/challenge</code>. The server returns a
+          <h4>1 · Calibrate &amp; challenge</h4>
+          <p>Your browser first <b>benchmarks</b> its own SHA-256 speed, then POSTs
+          <code>/auth/anon/challenge</code> with that rate. The server returns a
           <b>stateless, HMAC-signed</b> token (it stores nothing per challenge) carrying a random
-          128-bit nonce, a difficulty <b>b</b> in leading-zero bits (~20 by default), a 90-second
-          expiry, and an <b>IP tag</b> = HMAC(secret, your IP — the <code>/64</code> network for
-          IPv6).</p>
+          128-bit nonce, the puzzle spec — <b>k</b> independent sub-puzzles of <b>d</b> leading-zero
+          bits each — sized so the grind takes a target few seconds <i>on your device</i>, a
+          90-second expiry, and an <b>IP tag</b> = HMAC(secret, your IP — the <code>/64</code>
+          network for IPv6). A server-side floor on <b>k</b> means a device that under-reports its
+          speed still pays full bot-grade cost.</p>
 
           <h4>2 · Grind <span class="c">— in a Web Worker, off the UI thread</span></h4>
-          <div class="d-code">for n = 0, 1, 2, …:
-  h = SHA-256(challenge + ":" + n)
-  if leadingZeroBits(h) &#8805; b:
-    solution = n            <span class="c"># found it</span></div>
-          <p>Finding one takes about <b>2<sup>b</sup></b> hashes on average (geometric
-          distribution) — the live console shows the candidate hashes, hashrate and nonce as it
-          runs. Verifying it later costs the server exactly <b>one</b> hash.</p>
+          <div class="d-code">for j = 0 … k-1:           <span class="c"># one sub-puzzle each</span>
+  for n = 0, 1, 2, …:
+    h = SHA-256(challenge + ":" + j + ":" + n)
+    if leadingZeroBits(h) &#8805; d:
+      solution[j] = n       <span class="c"># found it, next sub-puzzle</span></div>
+          <p>Each sub-puzzle takes about <b>2<sup>d</sup></b> hashes on average; the total over
+          <b>k</b> of them is an <b>Erlang-k</b> distribution, so the wall-clock lands in a tight
+          band (variance ∝ 1/k) instead of the sub-second-to-forever swing a single big puzzle gives.
+          The live console shows candidate hashes, hashrate, and the <b>solved / k</b> count.
+          Verifying it later costs the server exactly <b>k</b> hashes.</p>
 
           <h4>3 · Redeem</h4>
-          <p>Your browser POSTs <code>/auth/anon/redeem</code> with {challenge, solution}. The
+          <p>Your browser POSTs <code>/auth/anon/redeem</code> with {challenge, solutions[]}. The
           server checks, in order: the signature + 90-second freshness + that the IP tag matches
-          your network (constant-time), then that <code>SHA-256(challenge + ":" + n)</code> really
-          has &#8805; b zero bits, then marks the nonce <b>single-use</b>. Only then does it mint
-          the session — a JWT with <code>sub = "anon:" + random</code>, <b>empty email</b>,
-          <code>anon: true</code>, expiring in {{.AnonTTLHuman}}.</p>
+          your network (constant-time), then that all <b>k</b> hashes really have &#8805; d zero
+          bits, then marks the nonce <b>single-use</b>. Only then does it mint the session — a JWT
+          with <code>sub = "anon:" + random</code>, <b>empty email</b>, <code>anon: true</code>,
+          expiring in {{.AnonTTLHuman}}.</p>
 
           <h4>Why it works</h4>
           <ul>
-            <li><b>Asymmetric cost.</b> Solving needs ≈ 2<sup>b</sup> SHA-256 ops; verifying needs
-            <b>one</b>. You spend seconds, the server spends microseconds — and a bot farm pays
+            <li><b>Asymmetric cost.</b> Solving needs ≈ k·2<sup>d</sup> SHA-256 ops; verifying needs
+            <b>k</b>. You spend seconds, the server spends microseconds — and a bot farm pays
             that cost <i>per session, forever</i>.</li>
-            <li><b>Difficulty can't be lowered.</b> <b>b</b> lives inside the signed challenge;
-            change it and the HMAC check fails.</li>
+            <li><b>Deterministic time.</b> Splitting the work into k sub-puzzles collapses the
+            variance, so honest solves land in a predictable few-second band — no unlucky 60-second
+            stalls.</li>
+            <li><b>Difficulty can't be lowered.</b> <b>k</b> and <b>d</b> live inside the signed
+            challenge; change them and the HMAC check fails.</li>
             <li><b>IP-bound.</b> The puzzle is tied to your network, so the grind can't be farmed
             out to a pool of cheap throwaway IPs — a solution only counts from the address it was
             issued to.</li>
             <li><b>One-shot.</b> Each nonce mints exactly one session; replays are rejected.</li>
-            <li><b>Self-escalating.</b> Repeat hits from one network raise <b>b</b> — every +1 bit
-            <i>doubles</i> the work — and both endpoints are rate-limited, so floods get
-            exponentially expensive.</li>
+            <li><b>Self-escalating.</b> Repeat logins from one network raise <b>k</b> linearly, and
+            both endpoints are rate-limited, so floods get expensive fast.</li>
             <li><b>Domain-separated keys.</b> Challenges are signed with a key <i>derived</i> from
             the master secret and rotated every server boot — distinct from the session-cookie key
             — so a challenge token can never be replayed as a login.</li>
@@ -1123,21 +1131,36 @@
       return r >= 1000 ? (r / 1000).toFixed(1) + ' kH/s' : Math.round(r) + ' H/s';
     }
 
-    // Web Worker grinds SHA-256 off the main thread; it streams sample hashes
-    // (first 8 bytes, hex) so the console can flicker live candidate digests.
+    // Web Worker grinds SHA-256 off the main thread. Two jobs:
+    //   bench: hash for ~benchMs and report the device's measured hashrate, so the
+    //          server can size the puzzle count to hit the target solve time here.
+    //   solve: find a solution for each of the k independent sub-puzzles
+    //          (challenge:j:i with >= subBits leading zero bits). Splitting the
+    //          work into k pieces makes the total time Erlang-k (tight band)
+    //          instead of geometric (sub-second … forever).
+    // It streams sample hashes (first 8 bytes, hex) so the console flickers live.
     var workerSrc =
+      'function lz(b){var z=0;for(var k=0;k<b.length;k++){if(b[k]===0){z+=8;continue;}var v=b[k],c=0;while(v<128){c++;v<<=1;}z+=c;break;}return z;}' +
+      'function hx(b){var s="";for(var j=0;j<8;j++){s+=("0"+b[j].toString(16)).slice(-2);}return s;}' +
       'self.onmessage=async function(e){' +
-      ' var ch=e.data.challenge,bits=e.data.bits,i=0;' +
       ' var enc=new TextEncoder();' +
-      ' function hx(b){var s="";for(var j=0;j<8;j++){s+=("0"+b[j].toString(16)).slice(-2);}return s;}' +
-      ' while(true){' +
-      '  var buf=await crypto.subtle.digest("SHA-256",enc.encode(ch+":"+i));' +
-      '  var b=new Uint8Array(buf),z=0;' +
-      '  for(var k=0;k<b.length;k++){if(b[k]===0){z+=8;continue;}var v=b[k],c=0;while(v<128){c++;v<<=1;}z+=c;break;}' +
-      '  if(z>=bits){self.postMessage({solution:""+i,hash:hx(b)});return;}' +
-      '  if((i&4095)===0)self.postMessage({progress:i,hash:hx(b)});' +
-      '  i++;' +
+      ' if(e.data.bench){' +
+      '  var ms=e.data.bench,t0=performance.now(),n=0;' +
+      '  while(performance.now()-t0<ms){await crypto.subtle.digest("SHA-256",enc.encode("bench:"+n));n++;}' +
+      '  self.postMessage({hps:n/((performance.now()-t0)/1000)});return;' +
       ' }' +
+      ' var ch=e.data.challenge,sub=e.data.subBits,k=e.data.k,sols=[];' +
+      ' for(var j=0;j<k;j++){' +
+      '  var i=0;' +
+      '  while(true){' +
+      '   var buf=await crypto.subtle.digest("SHA-256",enc.encode(ch+":"+j+":"+i));' +
+      '   var b=new Uint8Array(buf);' +
+      '   if(lz(b)>=sub){sols.push(""+i);self.postMessage({solved:j+1,k:k,hash:hx(b)});break;}' +
+      '   if((i&2047)===0)self.postMessage({solved:j,k:k,sub:i,hash:hx(b)});' +
+      '   i++;' +
+      '  }' +
+      ' }' +
+      ' self.postMessage({solutions:sols});' +
       '};';
     var worker = null, grindReject = null, cancelled = false;
 
@@ -1167,51 +1190,62 @@
       if (con) { con.classList.remove('done', 'fail'); con.classList.add('live'); }
       setPct(0); spinStart();
       if (elGrindLabel) elGrindLabel.textContent = 'FORGING ACCESS KEY';
-      if (elState) elState.textContent = 'REQUESTING CHALLENGE';
-      say('Requesting access key…');
       try {
-        var chResp = await fetch('/auth/anon/challenge', {
-          method: 'POST', headers: { 'X-KD-Anon': '1' }
-        });
-        if (!chResp.ok) throw new Error('challenge');
-        var ch = await chResp.json();
-        // Expected work for a b-bit puzzle is ~2^b hashes — an honest progress
-        // proxy (probabilistic, so cap below 100% until we actually solve).
-        var expected = Math.pow(2, ch.bits);
-        var nibbles = Math.floor(ch.bits / 4);
-        if (elTarget) elTarget.innerHTML = '<span class="tz">' + new Array(nibbles + 1).join('0') + '</span>… · ' + ch.bits + ' bits';
-        if (elState) elState.textContent = 'GRINDING SHA-256';
-        say('Solving proof-of-work…');
-
-        var lastI = 0, lastT = now();
+        // One worker for the whole flow: benchmark this device, then grind.
         var blob = new Blob([workerSrc], { type: 'text/javascript' });
         var url = URL.createObjectURL(blob);
         worker = new Worker(url);
         URL.revokeObjectURL(url);
-        var solution = await new Promise(function (resolve, reject) {
+
+        // 1 · Benchmark — measure this device's WebCrypto SHA-256 hashrate so the
+        // server can size the puzzle count to hit the target solve time here.
+        if (elState) elState.textContent = 'CALIBRATING';
+        say('Calibrating proof-of-work…');
+        var hps = await new Promise(function (resolve, reject) {
+          grindReject = reject;
+          worker.onmessage = function (e) { if (e.data.hps !== undefined) resolve(e.data.hps); };
+          worker.onerror = function () { reject(new Error('worker')); };
+          worker.postMessage({ bench: 500 });
+        });
+        grindReject = null;
+        if (elRate) elRate.textContent = fmtRate(hps);
+
+        // 2 · Request a challenge sized to this device (server clamps to its floor).
+        if (elState) elState.textContent = 'REQUESTING CHALLENGE';
+        say('Requesting access key…');
+        var chResp = await fetch('/auth/anon/challenge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-KD-Anon': '1' },
+          body: JSON.stringify({ hps: Math.round(hps) })
+        });
+        if (!chResp.ok) throw new Error('challenge');
+        var ch = await chResp.json(); // { challenge, subBits, k }
+        var zeros = new Array(Math.floor(ch.subBits / 4) + 1).join('0');
+        if (elTarget) elTarget.innerHTML = ch.k + ' × <span class="tz">' + zeros + '</span>… · ' + ch.subBits + ' bits';
+        if (elState) elState.textContent = 'GRINDING SHA-256';
+        say('Solving proof-of-work…');
+
+        // 3 · Solve all k sub-puzzles. Progress is exact: solved / k (no more
+        // probabilistic guesswork — the bar moves once per completed sub-puzzle).
+        var solutions = await new Promise(function (resolve, reject) {
           grindReject = reject;
           worker.onmessage = function (e) {
             var d = e.data;
             if (d.hash) setHash(d.hash);
-            if (d.solution !== undefined) { resolve(d.solution); return; }
-            if (d.progress !== undefined) {
-              setPct(Math.min(0.99, d.progress / expected));
-              if (elNonce) elNonce.textContent = d.progress.toLocaleString();
-              var t = now(), dt = t - lastT;
-              if (dt > 250) {
-                if (elRate) elRate.textContent = fmtRate((d.progress - lastI) / (dt / 1000));
-                lastI = d.progress; lastT = t;
-              }
+            if (d.solutions !== undefined) { resolve(d.solutions); return; }
+            if (d.solved !== undefined) {
+              setPct(Math.min(0.99, d.solved / d.k));
+              if (elNonce) elNonce.textContent = d.solved + ' / ' + d.k;
             }
           };
           worker.onerror = function () { reject(new Error('worker')); };
-          worker.postMessage({ challenge: ch.challenge, bits: ch.bits });
+          worker.postMessage({ challenge: ch.challenge, subBits: ch.subBits, k: ch.k });
         });
         grindReject = null;
         worker.terminate();
         worker = null;
         setPct(1); spinStop('✔');
-        if (elNonce) elNonce.textContent = (parseInt(solution, 10) || 0).toLocaleString();
+        if (elNonce) elNonce.textContent = ch.k + ' / ' + ch.k;
         if (con) con.classList.add('done');
         if (elState) elState.textContent = 'KEY FORGED · ACCESS GRANTED';
         if (elGrindLabel) elGrindLabel.textContent = 'ACCESS GRANTED';
@@ -1221,7 +1255,7 @@
           headers: { 'Content-Type': 'application/json', 'X-KD-Anon': '1' },
           body: JSON.stringify({
             challenge: ch.challenge,
-            solution: solution,
+            solutions: solutions,
             redirect: btn.getAttribute('data-redirect')
           })
         });

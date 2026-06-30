@@ -35,58 +35,69 @@ var googleEndpoint = oauth2.Endpoint{
 
 // authConfig is the env-driven auth configuration, read once at startup.
 type authConfig struct {
-	Enabled      bool
-	ClientID     string
-	ClientSecret string
-	Secret       []byte
-	BaseURL      string
-	CookieDomain string
-	CookieName   string
-	SessionTTL   time.Duration
-	SuperAdmin   string
-	AnonEnabled  bool
-	AnonTTL      time.Duration
-	AnonPoWBits  int
-	AnonPoWCeil  int
-	oauth        *oauth2.Config
-	exchanger    tokenExchanger
-	anonGuard    *anonGuard
+	Enabled         bool
+	ClientID        string
+	ClientSecret    string
+	Secret          []byte
+	BaseURL         string
+	CookieDomain    string
+	CookieName      string
+	SessionTTL      time.Duration
+	SuperAdmin      string
+	AnonEnabled     bool
+	AnonTTL         time.Duration
+	AnonPoWSubBits  int     // leading-zero bits required per sub-puzzle
+	AnonPoWTargetMS int     // target total solve time (ms) for an honest device
+	AnonPoWHashrate float64 // assumed browser SHA-256 H/s when the client sends no benchmark
+	AnonPoWKMin     int     // sub-puzzle floor (security/bot-cost minimum)
+	AnonPoWKMax     int     // sub-puzzle ceiling (bounds verify cost + slow-device worst case)
+	oauth           *oauth2.Config
+	exchanger       tokenExchanger
+	anonGuard       *anonGuard
 }
 
-// Reference values for the AUTH_ANON_POW_MS time-target conversion.
-//   - defaultAnonPoWHashrate: assumed hashes/sec of a reference browser solving
-//     the PoW (one crypto.subtle SHA-256 digest per attempt in a Web Worker).
-//     This is deliberately conservative; the per-call WebCrypto overhead makes
-//     JS far slower than raw SHA-256. Tune AUTH_ANON_POW_HASHRATE to your
-//     audience after measuring — the startup log prints the derived bits.
-//   - defaultAnonPoWHeadroom: extra bits the adaptive per-IP ceiling sits above
-//     the base when AUTH_ANON_POW_CEIL isn't set (preserves escalation room).
+// PoW is k independent sub-puzzles of subBits leading-zero bits each. Total
+// expected work is k·2^subBits hashes; the Erlang-k solve-time distribution keeps
+// wall-clock in a tight band around the target (variance ∝ 1/k), unlike a single
+// big puzzle whose geometric distribution swings from sub-second to "never".
+//   - defaultAnonPoWSubBits: bits per sub-puzzle (~2^14 = 16384 hashes each). Big
+//     enough that per-puzzle overhead is amortised, small enough for fine k steps.
+//   - defaultAnonPoWHashrate: assumed browser WebCrypto SHA-256 H/s when the
+//     client sends no benchmark. Measured mainstream value; the client normally
+//     reports its own rate so the server can size k to that device.
+//   - defaultAnonPoWTargetMS: target total solve time on an honest device.
+//   - anonPoWHashrateCap: clamp on a client-reported hashrate (bounds k math).
+//   - anonKEscalationStep: extra sub-puzzles added per recent successful mint
+//     (linear anti-abuse; see kFor).
 const (
-	defaultAnonPoWHashrate = 50000
-	defaultAnonPoWHeadroom = 4
-	// defaultAnonPoWMS is the default base PoW target solve time (ms) on the
-	// reference device, used when neither AUTH_ANON_POW_BITS nor AUTH_ANON_POW_MS
-	// is set. Converted to bits via powBitsForDuration(defaultAnonPoWHashrate, …).
-	defaultAnonPoWMS = 10000
+	defaultAnonPoWSubBits  = 14
+	defaultAnonPoWHashrate = 200000
+	defaultAnonPoWTargetMS = 7000
+	anonPoWHashrateCap     = 5000000
+	anonKEscalationStep    = 24
+	// anonPoWKMaxFactor caps k at this multiple of KMin when KMax isn't set, so a
+	// very fast device (or escalation) can't blow up server-side verify cost.
+	anonPoWKMaxFactor = 8
 )
 
-// powBitsForDuration converts a target solve time (milliseconds) at an assumed
-// hashrate into a PoW difficulty in leading-zero bits: a b-bit puzzle needs
-// ~2^b hashes on average, so bits ≈ log2(hashrate * seconds). Result is clamped
-// to [1, 32].
-func powBitsForDuration(hashrate float64, ms int) int {
-	work := hashrate * float64(ms) / 1000.0
-	if work < 2 {
-		return 1
+// powKForHashrate sizes the sub-puzzle count to spend ~targetMS solving on a
+// device of the given hashrate: target work = hashrate·targetMS, divided by the
+// per-puzzle cost 2^subBits, clamped to [kMin, kMax]. kMin is the security floor
+// (the minimum work anyone pays, even a client that under-reports its speed);
+// kMax bounds verification cost and the slow-device worst case.
+func powKForHashrate(hashrate float64, targetMS, subBits, kMin, kMax int) int {
+	if hashrate < 1 {
+		hashrate = 1
 	}
-	b := int(math.Round(math.Log2(work)))
-	if b < 1 {
-		b = 1
+	work := hashrate * float64(targetMS) / 1000.0
+	k := int(math.Round(work / math.Exp2(float64(subBits))))
+	if k < kMin {
+		k = kMin
 	}
-	if b > 32 {
-		b = 32
+	if k > kMax {
+		k = kMax
 	}
-	return b
+	return k
 }
 
 // humanizeDuration renders a duration as a friendly "N unit(s)" string for the
@@ -115,13 +126,14 @@ func humanizeDuration(d time.Duration) string {
 // 1/true/on/yes. Missing optional values fall back to defaults.
 func loadAuthConfig() authConfig {
 	c := authConfig{
-		BaseURL:      "https://kunaldawn.com",
-		CookieDomain: ".kunaldawn.com",
-		CookieName:   "kd_session",
-		SessionTTL:   720 * time.Hour,
-		AnonTTL:      30 * time.Minute,
-		AnonPoWBits:  powBitsForDuration(defaultAnonPoWHashrate, defaultAnonPoWMS),
-		AnonPoWCeil:  powBitsForDuration(defaultAnonPoWHashrate, defaultAnonPoWMS) + defaultAnonPoWHeadroom,
+		BaseURL:         "https://kunaldawn.com",
+		CookieDomain:    ".kunaldawn.com",
+		CookieName:      "kd_session",
+		SessionTTL:      720 * time.Hour,
+		AnonTTL:         30 * time.Minute,
+		AnonPoWSubBits:  defaultAnonPoWSubBits,
+		AnonPoWTargetMS: defaultAnonPoWTargetMS,
+		AnonPoWHashrate: defaultAnonPoWHashrate,
 	}
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("AUTH_ENABLED"))) {
 	case "1", "true", "on", "yes":
@@ -160,66 +172,64 @@ func loadAuthConfig() authConfig {
 			log.Printf("[AUTH] invalid AUTH_ANON_TTL %q, using default %s", v, c.AnonTTL)
 		}
 	}
-	// Base PoW difficulty can be set two ways:
-	//   1. AUTH_ANON_POW_BITS  — the difficulty in leading-zero bits, directly.
-	//   2. AUTH_ANON_POW_MS    — a TARGET solve time in milliseconds, which the
-	//      server converts to bits using AUTH_ANON_POW_HASHRATE (the assumed
-	//      hashes/sec of a reference browser's WebCrypto SHA-256 in a Worker).
-	// PoW is verified by amount-of-work (bits), never wall-clock, so a time
-	// target is only exact on the reference device and approximate elsewhere —
-	// tune AUTH_ANON_POW_HASHRATE after measuring on real hardware. Explicit
-	// BITS always wins over a MS target.
-	bitsSet := false
-	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_BITS")); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
-			c.AnonPoWBits = n
-			bitsSet = true
+	// PoW is k sub-puzzles of AnonPoWSubBits bits each. Tunables:
+	//   AUTH_ANON_POW_SUBBITS   — bits per sub-puzzle (granularity of k).
+	//   AUTH_ANON_POW_MS        — target total solve time (ms) on an honest device.
+	//   AUTH_ANON_POW_HASHRATE  — assumed browser H/s when a client sends no
+	//                             benchmark; also anchors the default KMin floor.
+	//   AUTH_ANON_POW_KMIN      — sub-puzzle floor (security/bot cost). Default:
+	//                             the work to hit the target at the assumed rate.
+	//   AUTH_ANON_POW_KMAX      — sub-puzzle ceiling. Default: KMin·anonPoWKMaxFactor.
+	// Unlike the old bits scheme this hits a real wall-clock target: the client
+	// reports its measured rate and the server sizes k to it (clamped to the floor).
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_SUBBITS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 32 {
+			c.AnonPoWSubBits = n
 		} else {
-			log.Printf("[AUTH] invalid AUTH_ANON_POW_BITS %q, using default %d", v, c.AnonPoWBits)
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_SUBBITS %q, using default %d", v, c.AnonPoWSubBits)
 		}
 	}
-	hashrate := float64(defaultAnonPoWHashrate)
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_HASHRATE")); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			hashrate = float64(n)
+			c.AnonPoWHashrate = float64(n)
 		} else {
-			log.Printf("[AUTH] invalid AUTH_ANON_POW_HASHRATE %q, using default %d", v, defaultAnonPoWHashrate)
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_HASHRATE %q, using default %.0f", v, c.AnonPoWHashrate)
 		}
 	}
 	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_MS")); v != "" {
 		if ms, err := strconv.Atoi(v); err == nil && ms > 0 {
-			derived := powBitsForDuration(hashrate, ms)
-			if bitsSet {
-				log.Printf("[AUTH] AUTH_ANON_POW_BITS is set (%d); ignoring AUTH_ANON_POW_MS=%d (would be ~%d bits)", c.AnonPoWBits, ms, derived)
-			} else {
-				c.AnonPoWBits = derived
-				log.Printf("[AUTH] AUTH_ANON_POW_MS=%d @ %.0f H/s -> base difficulty %d bits", ms, hashrate, derived)
-			}
+			c.AnonPoWTargetMS = ms
 		} else {
-			log.Printf("[AUTH] invalid AUTH_ANON_POW_MS %q, ignoring", v)
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_MS %q, using default %d", v, c.AnonPoWTargetMS)
 		}
 	}
-	ceilSet := false
-	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_CEIL")); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 32 {
-			c.AnonPoWCeil = n
-			ceilSet = true
+	// KMin defaults to the work needed to hit the target at the assumed hashrate —
+	// i.e. a mainstream device solves in ~target, and that is also the bot floor.
+	c.AnonPoWKMin = powKForHashrate(c.AnonPoWHashrate, c.AnonPoWTargetMS, c.AnonPoWSubBits, 1, 1<<30)
+	if c.AnonPoWKMin < 1 {
+		c.AnonPoWKMin = 1
+	}
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_KMIN")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 {
+			c.AnonPoWKMin = n
 		} else {
-			log.Printf("[AUTH] invalid AUTH_ANON_POW_CEIL %q, using default %d", v, c.AnonPoWCeil)
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_KMIN %q, using default %d", v, c.AnonPoWKMin)
 		}
 	}
-	// When the ceil wasn't set explicitly, keep the default adaptive headroom
-	// above the (possibly derived) base so per-IP escalation still has room.
-	if !ceilSet {
-		c.AnonPoWCeil = c.AnonPoWBits + defaultAnonPoWHeadroom
-		if c.AnonPoWCeil > 32 {
-			c.AnonPoWCeil = 32
+	c.AnonPoWKMax = c.AnonPoWKMin * anonPoWKMaxFactor
+	if v := strings.TrimSpace(os.Getenv("AUTH_ANON_POW_KMAX")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 1 {
+			c.AnonPoWKMax = n
+		} else {
+			log.Printf("[AUTH] invalid AUTH_ANON_POW_KMAX %q, using default %d", v, c.AnonPoWKMax)
 		}
 	}
-	if c.AnonPoWCeil < c.AnonPoWBits {
-		log.Printf("[AUTH] AUTH_ANON_POW_CEIL (%d) < BITS (%d); raising ceil to bits", c.AnonPoWCeil, c.AnonPoWBits)
-		c.AnonPoWCeil = c.AnonPoWBits
+	if c.AnonPoWKMax < c.AnonPoWKMin {
+		log.Printf("[AUTH] AUTH_ANON_POW_KMAX (%d) < KMin (%d); raising to KMin", c.AnonPoWKMax, c.AnonPoWKMin)
+		c.AnonPoWKMax = c.AnonPoWKMin
 	}
+	log.Printf("[AUTH] anon PoW: %d sub-puzzles ×%d bits floor (target %dms @ %.0f H/s), k∈[%d,%d]",
+		c.AnonPoWKMin, c.AnonPoWSubBits, c.AnonPoWTargetMS, c.AnonPoWHashrate, c.AnonPoWKMin, c.AnonPoWKMax)
 	c.oauth = &oauth2.Config{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,

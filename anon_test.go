@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"net/http/httptest"
 	"strconv"
@@ -56,35 +57,63 @@ func TestLeadingZeroBits(t *testing.T) {
 	}
 }
 
-func TestPowSolvedRoundTrip(t *testing.T) {
-	challenge := "fixed-challenge-token"
-	// Brute-force a 12-bit solution (cheap, deterministic in test).
-	var solution string
-	for i := 0; i < 1<<24; i++ {
+// subSolve brute-forces a solution for sub-puzzle j at subBits leading zeros.
+func subSolve(t *testing.T, challenge string, j, subBits int) string {
+	t.Helper()
+	for i := 0; i < 1<<27; i++ {
 		s := strconv.Itoa(i)
-		if powSolved(challenge, s, 12) {
-			solution = s
-			break
+		sum := sha256.Sum256([]byte(challenge + ":" + strconv.Itoa(j) + ":" + s))
+		if leadingZeroBits(sum[:]) >= subBits {
+			return s
 		}
 	}
-	if solution == "" {
-		t.Fatal("no 12-bit solution found")
+	t.Fatalf("no sub-solution at %d bits", subBits)
+	return ""
+}
+
+// solveAnonMulti solves all k sub-puzzles for a challenge.
+func solveAnonMulti(t *testing.T, challenge string, subBits, k int) []string {
+	t.Helper()
+	sols := make([]string, k)
+	for j := 0; j < k; j++ {
+		sols[j] = subSolve(t, challenge, j, subBits)
 	}
-	if !powSolved(challenge, solution, 12) {
-		t.Error("found solution should validate at 12 bits")
+	return sols
+}
+
+func TestPowMultiSolvedRoundTrip(t *testing.T) {
+	challenge := "fixed-challenge-token"
+	subBits, k := 12, 3
+	sols := solveAnonMulti(t, challenge, subBits, k)
+	if !powMultiSolved(challenge, sols, subBits, k) {
+		t.Error("found solutions should validate")
 	}
-	if powSolved(challenge, "0", 12) && solution != "0" {
-		t.Error("solution '0' should almost never satisfy 12 bits")
+	// Wrong count must fail.
+	if powMultiSolved(challenge, sols[:k-1], subBits, k) {
+		t.Error("short solution set must be rejected")
+	}
+	// A corrupted entry must fail.
+	bad := append([]string(nil), sols...)
+	bad[1] = "definitely-not-valid"
+	if powMultiSolved(challenge, bad, subBits, k) {
+		t.Error("invalid sub-solution must be rejected")
 	}
 }
 
 func anonTestCfg() authConfig {
-	return authConfig{Secret: []byte("test-secret-test-secret"), AnonPoWBits: 20, AnonPoWCeil: 24}
+	return authConfig{
+		Secret:          []byte("test-secret-test-secret"),
+		AnonPoWSubBits:  12,
+		AnonPoWTargetMS: 7000,
+		AnonPoWHashrate: 200000,
+		AnonPoWKMin:     2,
+		AnonPoWKMax:     8,
+	}
 }
 
 func TestAnonChallengeRoundTrip(t *testing.T) {
 	c := anonTestCfg()
-	tok, err := c.signAnonChallenge("203.0.113.7", 20)
+	tok, err := c.signAnonChallenge("203.0.113.7", 12, 5)
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}
@@ -92,8 +121,8 @@ func TestAnonChallengeRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("verify: %v", err)
 	}
-	if ch.Bits != 20 {
-		t.Errorf("Bits = %d, want 20", ch.Bits)
+	if ch.SubBits != 12 || ch.K != 5 {
+		t.Errorf("subBits/k = %d/%d, want 12/5", ch.SubBits, ch.K)
 	}
 	if ch.Nonce == "" {
 		t.Error("Nonce should be set")
@@ -102,7 +131,7 @@ func TestAnonChallengeRoundTrip(t *testing.T) {
 
 func TestAnonChallengeRejectsWrongIP(t *testing.T) {
 	c := anonTestCfg()
-	tok, _ := c.signAnonChallenge("203.0.113.7", 20)
+	tok, _ := c.signAnonChallenge("203.0.113.7", 12, 5)
 	if _, err := c.verifyAnonChallenge(tok, "203.0.113.8"); err == nil {
 		t.Error("challenge bound to one IP must reject another IP")
 	}
@@ -110,7 +139,7 @@ func TestAnonChallengeRejectsWrongIP(t *testing.T) {
 
 func TestAnonChallengeRejectsTamper(t *testing.T) {
 	c := anonTestCfg()
-	tok, _ := c.signAnonChallenge("203.0.113.7", 20)
+	tok, _ := c.signAnonChallenge("203.0.113.7", 12, 5)
 	if _, err := c.verifyAnonChallenge(tok+"x", "203.0.113.7"); err == nil {
 		t.Error("tampered challenge must fail signature check")
 	}
@@ -119,7 +148,7 @@ func TestAnonChallengeRejectsTamper(t *testing.T) {
 func TestAnonChallengeRejectsExpired(t *testing.T) {
 	c := anonTestCfg()
 	payload, _ := json.Marshal(anonChallenge{
-		Nonce: "n", IPHash: ipHash(c.Secret, "203.0.113.7"), Bits: 20,
+		Nonce: "n", IPHash: ipHash(c.Secret, "203.0.113.7"), SubBits: 12, K: 5,
 		Purpose: "anon-pow", IssuedAt: time.Now().Add(-10 * time.Minute).Unix(),
 		ExpiresAt: time.Now().Add(-time.Minute).Unix(),
 	})
@@ -153,45 +182,35 @@ func TestAnonGuardConsumeEvictsExpired(t *testing.T) {
 	}
 }
 
-func TestAnonGuardBitsEscalate(t *testing.T) {
+func TestAnonGuardKEscalate(t *testing.T) {
 	g := newAnonGuard()
-	base, ceil := 20, 24
-	if got := g.bitsFor("203.0.113.7", base, ceil); got != base {
-		t.Errorf("first request bits = %d, want %d", got, base)
+	baseK := 8
+	kMax := baseK + 5*anonKEscalationStep
+	if got := g.kFor("203.0.113.7", baseK, kMax); got != baseK {
+		t.Errorf("first request k = %d, want %d", got, baseK)
 	}
 	for i := 0; i < 3; i++ {
 		g.recordMint("203.0.113.7")
 	}
-	if got := g.bitsFor("203.0.113.7", base, ceil); got != base+3 {
-		t.Errorf("after 3 mints bits = %d, want %d", got, base+3)
+	want := baseK + 3*anonKEscalationStep
+	if got := g.kFor("203.0.113.7", baseK, kMax); got != want {
+		t.Errorf("after 3 mints k = %d, want %d", got, want)
 	}
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 50; i++ {
 		g.recordMint("203.0.113.7")
 	}
-	if got := g.bitsFor("203.0.113.7", base, ceil); got != ceil {
-		t.Errorf("bits should cap at ceil %d, got %d", ceil, got)
+	if got := g.kFor("203.0.113.7", baseK, kMax); got != kMax {
+		t.Errorf("k should cap at kMax %d, got %d", kMax, got)
 	}
 }
 
-func TestAnonGuardBitsPerIP(t *testing.T) {
+func TestAnonGuardKPerIP(t *testing.T) {
 	g := newAnonGuard()
 	g.recordMint("203.0.113.7")
 	g.recordMint("203.0.113.7")
-	if got := g.bitsFor("198.51.100.9", 20, 24); got != 20 {
-		t.Errorf("untouched IP should be base 20, got %d", got)
+	if got := g.kFor("198.51.100.9", 8, 64); got != 8 {
+		t.Errorf("untouched IP should be base 8, got %d", got)
 	}
-}
-
-func solveAnon(t *testing.T, challenge string, bits int) string {
-	t.Helper()
-	for i := 0; i < 1<<27; i++ {
-		s := strconv.Itoa(i)
-		if powSolved(challenge, s, bits) {
-			return s
-		}
-	}
-	t.Fatalf("no solution at %d bits", bits)
-	return ""
 }
 
 func TestHandleAnonChallengeReturnsToken(t *testing.T) {
@@ -208,12 +227,21 @@ func TestHandleAnonChallengeReturnsToken(t *testing.T) {
 	}
 	var resp struct {
 		Challenge string `json:"challenge"`
-		Bits      int    `json:"bits"`
+		SubBits   int    `json:"subBits"`
+		K         int    `json:"k"`
 	}
 	json.NewDecoder(w.Body).Decode(&resp)
-	if resp.Challenge == "" || resp.Bits != 20 {
-		t.Errorf("resp = %+v, want challenge set + bits 20", resp)
+	if resp.Challenge == "" || resp.SubBits != 12 || resp.K < c.AnonPoWKMin {
+		t.Errorf("resp = %+v, want challenge set, subBits 12, k>=%d", resp, c.AnonPoWKMin)
 	}
+}
+
+// redeemBody solves a challenge and returns a JSON redeem body.
+func redeemBody(t *testing.T, chTok string, subBits, k int, redirect string) string {
+	t.Helper()
+	sols := solveAnonMulti(t, chTok, subBits, k)
+	b, _ := json.Marshal(map[string]any{"challenge": chTok, "solutions": sols, "redirect": redirect})
+	return string(b)
 }
 
 func TestHandleAnonRedeemHappyPath(t *testing.T) {
@@ -224,9 +252,8 @@ func TestHandleAnonRedeemHappyPath(t *testing.T) {
 	c.AnonTTL = 30 * time.Minute
 	c.BaseURL = "https://kunaldawn.com"
 	// Mint a low-difficulty challenge directly for a fast test.
-	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
-	sol := solveAnon(t, chTok, 12)
-	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/wiki"}`
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12, 3)
+	body := redeemBody(t, chTok, 12, 3, "/wiki")
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
 	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")
@@ -255,9 +282,8 @@ func TestHandleAnonRedeemRejectsReplay(t *testing.T) {
 	c.anonGuard = newAnonGuard()
 	c.CookieName = "kd_session"
 	c.AnonTTL = 30 * time.Minute
-	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
-	sol := solveAnon(t, chTok, 12)
-	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12, 3)
+	body := redeemBody(t, chTok, 12, 3, "/")
 	mk := func() *httptest.ResponseRecorder {
 		r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
 		r.RemoteAddr = "127.0.0.1:1234"
@@ -280,9 +306,8 @@ func TestHandleAnonRedeemRejectsWrongIP(t *testing.T) {
 	c.anonGuard = newAnonGuard()
 	c.CookieName = "kd_session"
 	c.AnonTTL = 30 * time.Minute
-	chTok, _ := c.signAnonChallenge("203.0.113.7", 12)
-	sol := solveAnon(t, chTok, 12)
-	body := `{"challenge":"` + chTok + `","solution":"` + sol + `","redirect":"/"}`
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12, 3)
+	body := redeemBody(t, chTok, 12, 3, "/")
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
 	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.99") // different IP
@@ -299,8 +324,8 @@ func TestHandleAnonRedeemRejectsBadSolution(t *testing.T) {
 	c.anonGuard = newAnonGuard()
 	c.CookieName = "kd_session"
 	c.AnonTTL = 30 * time.Minute
-	chTok, _ := c.signAnonChallenge("203.0.113.7", 20)
-	body := `{"challenge":"` + chTok + `","solution":"definitely-not-valid","redirect":"/"}`
+	chTok, _ := c.signAnonChallenge("203.0.113.7", 12, 3)
+	body := `{"challenge":"` + chTok + `","solutions":["bad","bad","bad"],"redirect":"/"}`
 	r := httptest.NewRequest("POST", "/auth/anon/redeem", strings.NewReader(body))
 	r.RemoteAddr = "127.0.0.1:1234"
 	r.Header.Set("CF-Connecting-IP", "203.0.113.7")

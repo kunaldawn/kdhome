@@ -328,36 +328,46 @@ func TestLoadAuthConfigAnonDefaults(t *testing.T) {
 	if c.AnonTTL != 30*time.Minute {
 		t.Errorf("AnonTTL = %v, want 30m", c.AnonTTL)
 	}
-	// Default base derives from a 10s target @ 50k H/s -> 19 bits; ceil = +4 = 23.
-	if c.AnonPoWBits != 19 || c.AnonPoWCeil != 23 {
-		t.Errorf("bits/ceil = %d/%d, want 19/23", c.AnonPoWBits, c.AnonPoWCeil)
+	// Defaults: 14-bit sub-puzzles, 7s target @ 200k H/s -> KMin = round(200k*7/2^14)
+	// = 85; KMax = KMin * anonPoWKMaxFactor = 680.
+	if c.AnonPoWSubBits != defaultAnonPoWSubBits || c.AnonPoWTargetMS != defaultAnonPoWTargetMS {
+		t.Errorf("subBits/targetMS = %d/%d, want %d/%d", c.AnonPoWSubBits, c.AnonPoWTargetMS, defaultAnonPoWSubBits, defaultAnonPoWTargetMS)
+	}
+	if c.AnonPoWKMin != 85 || c.AnonPoWKMax != 85*anonPoWKMaxFactor {
+		t.Errorf("kMin/kMax = %d/%d, want 85/%d", c.AnonPoWKMin, c.AnonPoWKMax, 85*anonPoWKMaxFactor)
 	}
 }
 
 func TestLoadAuthConfigAnonOverrides(t *testing.T) {
 	t.Setenv("AUTH_ANON_ENABLED", "1")
 	t.Setenv("AUTH_ANON_TTL", "15m")
-	t.Setenv("AUTH_ANON_POW_BITS", "18")
-	t.Setenv("AUTH_ANON_POW_CEIL", "26")
+	t.Setenv("AUTH_ANON_POW_SUBBITS", "12")
+	t.Setenv("AUTH_ANON_POW_MS", "6000")
+	t.Setenv("AUTH_ANON_POW_HASHRATE", "100000")
+	t.Setenv("AUTH_ANON_POW_KMIN", "50")
+	t.Setenv("AUTH_ANON_POW_KMAX", "200")
 	c := loadAuthConfig()
 	if c.AnonTTL != 15*time.Minute {
 		t.Errorf("AnonTTL = %v, want 15m", c.AnonTTL)
 	}
-	if c.AnonPoWBits != 18 || c.AnonPoWCeil != 26 {
-		t.Errorf("bits/ceil = %d/%d, want 18/26", c.AnonPoWBits, c.AnonPoWCeil)
+	if c.AnonPoWSubBits != 12 || c.AnonPoWTargetMS != 6000 || c.AnonPoWHashrate != 100000 {
+		t.Errorf("subBits/targetMS/hashrate = %d/%d/%.0f, want 12/6000/100000", c.AnonPoWSubBits, c.AnonPoWTargetMS, c.AnonPoWHashrate)
+	}
+	if c.AnonPoWKMin != 50 || c.AnonPoWKMax != 200 {
+		t.Errorf("kMin/kMax = %d/%d, want 50/200", c.AnonPoWKMin, c.AnonPoWKMax)
 	}
 }
 
-func TestLoadAuthConfigAnonCeilFloor(t *testing.T) {
+func TestLoadAuthConfigKMaxFloor(t *testing.T) {
 	t.Setenv("AUTH_ANON_ENABLED", "on")
-	t.Setenv("AUTH_ANON_POW_BITS", "26")
-	// AUTH_ANON_POW_CEIL left unset; default is 24, which is below bits=26.
+	t.Setenv("AUTH_ANON_POW_KMIN", "100")
+	t.Setenv("AUTH_ANON_POW_KMAX", "40") // below KMin; must be raised to KMin
 	c := loadAuthConfig()
-	if c.AnonPoWBits != 26 {
-		t.Fatalf("AnonPoWBits = %d, want 26", c.AnonPoWBits)
+	if c.AnonPoWKMin != 100 {
+		t.Fatalf("AnonPoWKMin = %d, want 100", c.AnonPoWKMin)
 	}
-	if c.AnonPoWCeil < c.AnonPoWBits {
-		t.Fatalf("AnonPoWCeil (%d) < AnonPoWBits (%d); ceil should have been raised", c.AnonPoWCeil, c.AnonPoWBits)
+	if c.AnonPoWKMax < c.AnonPoWKMin {
+		t.Fatalf("AnonPoWKMax (%d) < KMin (%d); should have been raised", c.AnonPoWKMax, c.AnonPoWKMin)
 	}
 }
 
@@ -400,21 +410,23 @@ func TestLoginPageHidesGuestButtonWhenAnonDisabled(t *testing.T) {
 	}
 }
 
-func TestPowBitsForDuration(t *testing.T) {
+func TestPowKForHashrate(t *testing.T) {
 	cases := []struct {
-		hashrate float64
-		ms       int
-		want     int
+		hashrate         float64
+		ms               int
+		subBits          int
+		kMin, kMax, want int
 	}{
-		{50000, 5000, 18},  // 50k*5 = 250k hashes, log2 ≈ 17.93 -> 18
-		{50000, 1000, 16},  // 50k hashes, log2 ≈ 15.6 -> 16
-		{100000, 5000, 19}, // 500k hashes, log2 ≈ 18.93 -> 19
-		{50000, 1, 6},      // 50 hashes, log2 ≈ 5.6 -> 6
-		{1e15, 1000, 32},   // clamps to 32
+		{200000, 7000, 14, 1, 1 << 30, 85}, // 1.4M hashes / 2^14 ≈ 85.4 -> 85
+		{50000, 5000, 14, 1, 1 << 30, 15},  // 250k / 2^14 ≈ 15.26 -> 15
+		{1, 7000, 14, 10, 100, 10},         // tiny work clamps up to kMin
+		{1e9, 7000, 14, 1, 50, 50},         // huge work clamps down to kMax
+		{0, 7000, 14, 1, 100, 1},           // hashrate floored to 1 -> ~0 -> kMin
 	}
 	for _, c := range cases {
-		if got := powBitsForDuration(c.hashrate, c.ms); got != c.want {
-			t.Errorf("powBitsForDuration(%.0f, %d) = %d, want %d", c.hashrate, c.ms, got, c.want)
+		if got := powKForHashrate(c.hashrate, c.ms, c.subBits, c.kMin, c.kMax); got != c.want {
+			t.Errorf("powKForHashrate(%.0f, %d, %d, %d, %d) = %d, want %d",
+				c.hashrate, c.ms, c.subBits, c.kMin, c.kMax, got, c.want)
 		}
 	}
 }
@@ -443,27 +455,16 @@ func TestHumanizeDuration(t *testing.T) {
 	}
 }
 
-func TestLoadAuthConfigAnonMsDerivesBits(t *testing.T) {
+func TestLoadAuthConfigAnonMsDerivesKMin(t *testing.T) {
 	t.Setenv("AUTH_ANON_ENABLED", "on")
-	t.Setenv("AUTH_ANON_POW_BITS", "") // ensure not set, so MS governs
-	t.Setenv("AUTH_ANON_POW_CEIL", "") // ensure not set, so headroom applies
 	t.Setenv("AUTH_ANON_POW_HASHRATE", "50000")
 	t.Setenv("AUTH_ANON_POW_MS", "5000")
+	// SubBits default 14: KMin = round(50000*5 / 2^14) = round(15.26) = 15.
 	c := loadAuthConfig()
-	if c.AnonPoWBits != 18 {
-		t.Errorf("derived bits = %d, want 18 (5000ms @ 50000 H/s)", c.AnonPoWBits)
+	if c.AnonPoWKMin != 15 {
+		t.Errorf("derived kMin = %d, want 15 (5000ms @ 50000 H/s, 14-bit)", c.AnonPoWKMin)
 	}
-	if c.AnonPoWCeil != c.AnonPoWBits+defaultAnonPoWHeadroom {
-		t.Errorf("ceil = %d, want base+%d (%d)", c.AnonPoWCeil, defaultAnonPoWHeadroom, c.AnonPoWBits+defaultAnonPoWHeadroom)
-	}
-}
-
-func TestLoadAuthConfigAnonBitsOverridesMs(t *testing.T) {
-	t.Setenv("AUTH_ANON_ENABLED", "on")
-	t.Setenv("AUTH_ANON_POW_BITS", "21") // explicit BITS must win
-	t.Setenv("AUTH_ANON_POW_MS", "5000")
-	c := loadAuthConfig()
-	if c.AnonPoWBits != 21 {
-		t.Errorf("bits = %d, want 21 (explicit BITS overrides MS)", c.AnonPoWBits)
+	if c.AnonPoWKMax != c.AnonPoWKMin*anonPoWKMaxFactor {
+		t.Errorf("kMax = %d, want kMin*%d (%d)", c.AnonPoWKMax, anonPoWKMaxFactor, c.AnonPoWKMin*anonPoWKMaxFactor)
 	}
 }

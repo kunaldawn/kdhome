@@ -15,7 +15,7 @@ import (
 // it was: same key, and verifySession checked only signature + exp.
 func TestChallengeTokenRejectedAsSession(t *testing.T) {
 	c := anonTestCfg()
-	tok, err := c.signAnonChallenge("203.0.113.7", 12)
+	tok, err := c.signAnonChallenge("203.0.113.7", 12, 3)
 	if err != nil {
 		t.Fatalf("sign challenge: %v", err)
 	}
@@ -171,19 +171,29 @@ func TestConsumeRejectsExpiredChallenge(t *testing.T) {
 	}
 }
 
-// ─── adaptive-difficulty burst escalation ───
+// ─── adaptive difficulty: escalate on mints, NOT on challenge-issue bursts ───
 
-func TestBitsForEscalatesOnBurst(t *testing.T) {
+// Regression guard: the old scheme escalated at challenge-ISSUE time, so a user
+// whose grind ran long and who simply refreshed re-issued challenges and ratcheted
+// their own difficulty into a self-DoS. kFor must ignore issue bursts entirely;
+// only completed mints (real logins) raise k.
+func TestKForIgnoresChallengeBurst(t *testing.T) {
 	g := newAnonGuard()
 	key := "203.0.113.7"
-	if d := g.bitsFor(key, 20, 99); d != 20 {
-		t.Fatalf("fresh bitsFor = %d, want 20 (base)", d)
+	baseK := 8
+	if k := g.kFor(key, baseK, 999); k != baseK {
+		t.Fatalf("fresh kFor = %d, want %d (base)", k, baseK)
 	}
-	for i := 0; i < 5; i++ {
-		g.allowChallenge(key) // simulate a 5-challenge burst
+	for i := 0; i < 10; i++ {
+		g.allowChallenge(key) // a 10-challenge burst (refreshes/retries)
 	}
-	if d := g.bitsFor(key, 20, 99); d != 24 {
-		t.Fatalf("after a 5-challenge burst bitsFor = %d, want 24 (base + 4 outstanding)", d)
+	if k := g.kFor(key, baseK, 999); k != baseK {
+		t.Fatalf("after a challenge burst kFor = %d, want %d — issue bursts must NOT escalate", k, baseK)
+	}
+	// A completed mint, however, does raise k.
+	g.recordMint(key)
+	if k := g.kFor(key, baseK, 999); k != baseK+anonKEscalationStep {
+		t.Fatalf("after a mint kFor = %d, want %d", k, baseK+anonKEscalationStep)
 	}
 }
 

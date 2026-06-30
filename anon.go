@@ -8,6 +8,7 @@ import (
 	"math/bits"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -92,11 +93,32 @@ func leadingZeroBits(b []byte) int {
 	return n
 }
 
-// powSolved reports whether sha256(challenge + ":" + solution) has at least
-// `difficulty` leading zero bits.
-func powSolved(challenge, solution string, difficulty int) bool {
-	sum := sha256.Sum256([]byte(challenge + ":" + solution))
-	return leadingZeroBits(sum[:]) >= difficulty
+// powMultiSolved reports whether the client solved all k independent sub-puzzles:
+// for every index j in [0,k), sha256(challenge + ":" + j + ":" + solutions[j])
+// must have at least subBits leading zero bits.
+//
+// Splitting one big puzzle into k small ones keeps the SAME expected work
+// (k·2^subBits hashes) and the SAME cheap verification (k hashes), but collapses
+// the solve-time variance: a single-target search is geometric (coefficient of
+// variation ≈ 1, so "sometimes <1s, sometimes never"), whereas the sum of k
+// independent searches is Erlang-k with CV = 1/√k. At k≈64 the wall-clock lands
+// in a tight band around the target instead of a heavy-tailed lottery.
+func powMultiSolved(challenge string, solutions []string, subBits, k int) bool {
+	if k <= 0 || len(solutions) != k {
+		return false
+	}
+	for j := 0; j < k; j++ {
+		// Cap each solution length so a hostile client can't force oversized
+		// digest inputs (the array length is already pinned to the signed k).
+		if len(solutions[j]) > 64 {
+			return false
+		}
+		sum := sha256.Sum256([]byte(challenge + ":" + strconv.Itoa(j) + ":" + solutions[j]))
+		if leadingZeroBits(sum[:]) < subBits {
+			return false
+		}
+	}
+	return true
 }
 
 // anonChallengeEpoch rotates the challenge-signing key once per process start, so
@@ -129,7 +151,8 @@ func anonChallengeKey(secret []byte) []byte {
 type anonChallenge struct {
 	Nonce     string `json:"n"`
 	IPHash    string `json:"ih"`
-	Bits      int    `json:"b"`
+	SubBits   int    `json:"d"` // leading-zero bits required per sub-puzzle
+	K         int    `json:"k"` // number of independent sub-puzzles
 	Purpose   string `json:"pur"`
 	IssuedAt  int64  `json:"iat"`
 	ExpiresAt int64  `json:"exp"`
@@ -138,9 +161,9 @@ type anonChallenge struct {
 const anonChallengePurpose = "anon-pow"
 const anonChallengeTTL = 90 * time.Second
 
-// signAnonChallenge mints a fresh signed challenge for ip at the given
-// difficulty.
-func (c authConfig) signAnonChallenge(ip string, difficulty int) (string, error) {
+// signAnonChallenge mints a fresh signed challenge for ip: k sub-puzzles of
+// subBits leading zero bits each.
+func (c authConfig) signAnonChallenge(ip string, subBits, k int) (string, error) {
 	nonce, err := randomNonce()
 	if err != nil {
 		return "", err
@@ -149,7 +172,8 @@ func (c authConfig) signAnonChallenge(ip string, difficulty int) (string, error)
 	payload, err := json.Marshal(anonChallenge{
 		Nonce:     nonce,
 		IPHash:    ipHash(c.Secret, rateKey(ip)),
-		Bits:      difficulty,
+		SubBits:   subBits,
+		K:         k,
 		Purpose:   anonChallengePurpose,
 		IssuedAt:  now.Unix(),
 		ExpiresAt: now.Add(anonChallengeTTL).Unix(),
@@ -297,13 +321,15 @@ func (g *anonGuard) allowRedeem(key string) bool {
 	return true
 }
 
-// bitsFor returns the adaptive difficulty for key: base + (recent mints) +
-// (outstanding challenge issues in the burst window), capped at ceil. Folding in
-// recent issues escalates difficulty at ISSUE time, so a burst of unsolved
-// challenges can't all be minted at base difficulty (the issue itself, already
-// recorded by allowChallenge, is excluded so a single fresh challenge stays at
-// base). It also prunes the mint window for key.
-func (g *anonGuard) bitsFor(key string, base, ceil int) int {
+// kFor returns the adaptive sub-puzzle count for key: baseK (already sized to the
+// caller's device) plus a LINEAR penalty for each recent successful mint, capped
+// at kMax. Escalating on mints (real, completed logins) — not on challenge issues
+// — is deliberate: the old bits-based scheme escalated at ISSUE time, so a user
+// whose first grind ran long and who simply refreshed the page kept re-issuing
+// challenges and ratcheted their own difficulty toward the ceiling (a self-DoS).
+// Challenge-issue bursts are still bounded, by the allowChallenge rate limit.
+// Also prunes the mint window for key.
+func (g *anonGuard) kFor(key string, baseK, kMax int) int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	now := time.Now().Unix()
@@ -315,21 +341,11 @@ func (g *anonGuard) bitsFor(key string, base, ceil int) int {
 	} else {
 		g.recent[key] = kept
 	}
-	issueCut := now - int64(anonChallengeRateWindow.Seconds())
-	issued := 0
-	for _, t := range g.chReq[key] { // non-mutating count (don't disturb chReq)
-		if t > issueCut {
-			issued++
-		}
+	k := baseK + len(kept)*anonKEscalationStep
+	if k > kMax {
+		k = kMax
 	}
-	if issued > 0 {
-		issued-- // exclude the current request's own issue
-	}
-	difficulty := base + len(kept) + issued
-	if difficulty > ceil {
-		difficulty = ceil
-	}
-	return difficulty
+	return k
 }
 
 // recordMint logs a successful mint for key.
@@ -385,15 +401,32 @@ func (c authConfig) handleAnonChallenge(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "rate limited", http.StatusTooManyRequests)
 		return
 	}
-	difficulty := c.anonGuard.bitsFor(key, c.AnonPoWBits, c.AnonPoWCeil)
-	tok, err := c.signAnonChallenge(ip, difficulty)
+	// Optional device benchmark: the client may report its measured SHA-256
+	// hashrate so the server can size k to hit the target solve time on THAT
+	// device. Absent or implausible values fall back to the assumed hashrate, and
+	// the result is always clamped to [KMin, KMax] — KMin is a hard work floor, so
+	// a client that under-reports (or omits) its rate still pays bot-grade cost.
+	var req struct {
+		HPS float64 `json:"hps"`
+	}
+	_ = json.NewDecoder(http.MaxBytesReader(w, r.Body, 256)).Decode(&req) // optional body
+	hps := req.HPS
+	if !(hps > 0) {
+		hps = c.AnonPoWHashrate
+	}
+	if hps > anonPoWHashrateCap {
+		hps = anonPoWHashrateCap
+	}
+	baseK := powKForHashrate(hps, c.AnonPoWTargetMS, c.AnonPoWSubBits, c.AnonPoWKMin, c.AnonPoWKMax)
+	k := c.anonGuard.kFor(key, baseK, c.AnonPoWKMax)
+	tok, err := c.signAnonChallenge(ip, c.AnonPoWSubBits, k)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
-	json.NewEncoder(w).Encode(map[string]any{"challenge": tok, "bits": difficulty})
+	json.NewEncoder(w).Encode(map[string]any{"challenge": tok, "subBits": c.AnonPoWSubBits, "k": k})
 }
 
 // handleAnonRedeem validates a solved challenge (signature, IP-binding, PoW,
@@ -408,11 +441,13 @@ func (c authConfig) handleAnonRedeem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Challenge string `json:"challenge"`
-		Solution  string `json:"solution"`
-		Redirect  string `json:"redirect"`
+		Challenge string   `json:"challenge"`
+		Solutions []string `json:"solutions"`
+		Redirect  string   `json:"redirect"`
 	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&body); err != nil {
+	// Solutions is one short integer string per sub-puzzle; KMax sub-puzzles at a
+	// few bytes each fits comfortably under this cap.
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 65536)).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
@@ -426,7 +461,7 @@ func (c authConfig) handleAnonRedeem(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad challenge", http.StatusForbidden)
 		return
 	}
-	if !powSolved(body.Challenge, body.Solution, ch.Bits) {
+	if !powMultiSolved(body.Challenge, body.Solutions, ch.SubBits, ch.K) {
 		http.Error(w, "bad solution", http.StatusForbidden)
 		return
 	}
