@@ -103,7 +103,7 @@
   .crt {
     position: relative; z-index: 2;
     width: 100%; max-width: 480px;
-    border: 1px solid var(--line); border-radius: 12px;
+    border: 1px solid var(--line); border-radius: 18px;
     /* Low alpha so ~66% of the demoscene transmits; the 2.5px backdrop-blur
        dissolves individual ASCII glyph cells into smooth color smudges so text
        edges no longer collide with sharp character edges. Blur does the
@@ -118,8 +118,8 @@
     content: ""; position: absolute; width: 18px; height: 18px; pointer-events: none;
     border: 2px solid var(--lime); opacity: 0.7;
   }
-  .crt::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
-  .crt::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+  .crt::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; border-top-left-radius: 18px; }
+  .crt::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; border-bottom-right-radius: 18px; }
 
   /* ── HUD strips (top scene/timer, bottom channel/ticker) ── */
   .hud {
@@ -130,6 +130,7 @@
   .hud-top {
     grid-template-columns: 1fr auto 1fr;
     border-bottom: 1px solid var(--line);
+    border-radius: 17px 17px 0 0;
     background:
       linear-gradient(180deg, rgba(0,255,150,0.05), transparent),
       linear-gradient(180deg, rgba(5,17,13,0.66) 0%, rgba(5,17,13,0.34) 100%);
@@ -142,6 +143,7 @@
   .hud-bot {
     display: block; padding: 6px 0 7px;
     border-top: 1px solid var(--line);
+    border-radius: 0 0 17px 17px;
     background:
       linear-gradient(0deg, rgba(0,255,150,0.05), transparent),
       linear-gradient(0deg, rgba(5,17,13,0.66) 0%, rgba(5,17,13,0.34) 100%);
@@ -172,7 +174,9 @@
   .fx-ticker .tk-warn { color:#ffb648; } .fx-ticker .tk-dim { color:#4a8f76; }
 
   /* ── Card body ── */
-  .body { padding: 20px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+  /* flex:1 so the body fills a tall panel; content stays vertically centered and
+     the HUD strips pin to the panel's top/bottom edges. */
+  .body { padding: 20px 18px 18px; display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; justify-content: center; }
   .title { text-align: center; margin: 0; }
   .title .t-main {
     display: block; font-size: 17px; letter-spacing: 2px; color: var(--teal);
@@ -397,6 +401,12 @@
   dialog.info .d-body .amber { color: var(--amber); }
   dialog.info .d-foot { padding: 0 clamp(12px,1.1vw,18px) clamp(10px,0.9vw,14px); font-size: 0.85em; opacity: 0.6; }
 
+  /* Desktop zoom is applied via transform:scale() in JS — a UNIFORM, aspect-ratio
+     preserving zoom (like browser zoom) that fits the panel's natural size to
+     ~70% of the viewport height. transform-origin:center + body centering keep it
+     centred, which lands the top ~15vh down, just below the background banner. */
+  .crt { transform-origin: center center; }
+
   /* ══════════════════ Mobile ══════════════════ */
   @media (max-width: 520px) {
     body { padding: 14px; align-items: flex-start; }
@@ -406,6 +416,7 @@
     .crt {
       max-width: 100%; -webkit-backdrop-filter: none; backdrop-filter: none;
       background: rgba(7,22,17,0.55);
+      min-height: 88vh; min-height: 88dvh;
       box-shadow: 0 0 0 1px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.40), 0 0 30px rgba(0,255,150,0.07);
     }
     .fx-bg { opacity: 0.85; }
@@ -605,6 +616,38 @@
         bannerRowFrac: 0.12
       });
     })();
+  </script>
+
+  <!-- Uniform panel zoom: scale the whole console (aspect-ratio preserved, like
+       browser zoom) so it fits ~70% of the viewport height on desktop. The
+       layout box stays the natural size (transform doesn't reflow), so body
+       centering keeps it centred; offsetHeight is transform-independent, so
+       there is no measure/scale feedback loop. -->
+  <script>
+  (function () {
+    var crt = document.querySelector('.crt');
+    if (!crt) return;
+    var mqMobile = window.matchMedia('(max-width: 520px)');
+    var TARGET = 0.70, MIN = 0.75, MAX = 2.6, MARGIN = 48;
+    function fit() {
+      if (mqMobile.matches) { crt.style.transform = ''; return; }  // mobile: natural full-width
+      var natH = crt.offsetHeight, natW = crt.offsetWidth;          // layout size (unscaled)
+      if (!natH || !natW) return;
+      var s = Math.min(
+        TARGET * window.innerHeight / natH,           // fit ~70% of height
+        (window.innerWidth - MARGIN) / natW,          // never wider than the viewport
+        MAX
+      );
+      if (s < MIN) s = MIN;
+      crt.style.transform = 'scale(' + s.toFixed(4) + ')';
+    }
+    fit();
+    window.addEventListener('resize', fit);
+    window.addEventListener('load', fit);            // re-fit once the mono font loads
+    // Re-fit when the panel's natural height changes (manifest <details>, PoW
+    // console). offsetHeight is transform-independent, so this never loops.
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(crt);
+  })();
   </script>
 
   <!-- Info popup wiring (native <dialog>; Esc + close button + backdrop-click) -->
