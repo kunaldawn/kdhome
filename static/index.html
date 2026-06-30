@@ -6870,10 +6870,6 @@
 
         // Power options
         window.showShutdownDialog = function () {
-          if (!confirm('Are you sure you want to shutdown the vault?')) {
-            toggleStartMenu();
-            return;
-          }
           toggleStartMenu();
           runShutdownSequence();
         };
@@ -8383,6 +8379,21 @@
           window.startMusicPlayback();
         }
       }
+
+      // ─── Autoplay by default ───
+      // Browsers block audio before a user gesture, and the login-page click
+      // doesn't carry into this document. So arm a one-shot listener: the first
+      // pointer / key / touch anywhere starts playback (same path as the play
+      // button). If the playlist isn't loaded yet, startMusicPlayback defers via
+      // pendingAutoStart and maybeAutoStart fires it once the fetch resolves.
+      (function armAutoplay() {
+        var evs = ['pointerdown', 'keydown', 'touchstart'];
+        function go() {
+          evs.forEach(function (ev) { window.removeEventListener(ev, go, true); });
+          window.startMusicPlayback();
+        }
+        evs.forEach(function (ev) { window.addEventListener(ev, go, { capture: true, passive: true }); });
+      })();
 
       // ─── Fetch playlist from server ───
       fetch('/api/playlist')
