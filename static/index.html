@@ -8559,6 +8559,51 @@
       }
     })();
     </script>
+
+    <!-- Custom retro cursor (same as the login screen): lime pixel arrow that
+         becomes a target reticle over clickables. Drawn in the DOM at the top of
+         the stack (above the desktop windows), scaled with the viewport, dropped
+         on touch. -->
+    <style>
+      html.kd-customcursor, html.kd-customcursor * { cursor: none !important; }
+      #kd-cursor {
+        position: fixed; left: 0; top: 0; width: 0; height: 0; z-index: 2147483647;
+        pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
+        transform: translate(-100px, -100px); will-change: transform;
+      }
+      #kd-cursor.on { opacity: 1; }
+      #kd-cursor svg { position: absolute; filter: drop-shadow(0 0 1.5px rgba(5,17,13,0.95)) drop-shadow(0 0 3px rgba(5,17,13,0.6)); }
+      #kd-cursor .cur-arrow { left: -3px; top: -2px; }
+      #kd-cursor .cur-point { left: -12px; top: -12px; display: none; }
+      #kd-cursor.point .cur-arrow { display: none; }
+      #kd-cursor.point .cur-point { display: block; }
+    </style>
+    <script>
+    (function () {
+      var root = document.documentElement;
+      var cur = document.createElement('div');
+      cur.id = 'kd-cursor'; cur.setAttribute('aria-hidden', 'true');
+      cur.innerHTML =
+        '<svg class="cur-arrow" width="22" height="22" viewBox="0 0 22 22"><path d="M3 2L3 17L7.5 13L10.5 19.5L13 18.5L10 12L16 12Z" fill="#05110d" stroke="#00ff99" stroke-width="1.7" stroke-linejoin="round"/></svg>' +
+        '<svg class="cur-point" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="#05110d" fill-opacity="0.55" stroke="#00ff99" stroke-width="1.8"/><path d="M12 1L12 5M12 19L12 23M1 12L5 12M19 12L23 12" stroke="#00ff99" stroke-width="1.8"/><circle cx="12" cy="12" r="1.8" fill="#00ff99"/></svg>';
+      document.body.appendChild(cur);
+      root.classList.add('kd-customcursor');
+      var sel = 'a,button,[role="button"],[onclick],summary,label,select,.clickable,' +
+        'input[type="button"],input[type="submit"],input[type="checkbox"],input[type="radio"]';
+      var uiScale = 1;
+      function calc() { var m = Math.min(window.innerWidth, window.innerHeight) / 780; return m < 0.85 ? 0.85 : (m > 2.2 ? 2.2 : m); }
+      calc(); uiScale = calc();
+      window.addEventListener('resize', function () { uiScale = calc(); });
+      document.addEventListener('mousemove', function (e) {
+        cur.style.transform = 'translate(' + e.clientX + 'px,' + e.clientY + 'px) scale(' + uiScale + ')';
+        cur.classList.add('on');
+        var t = e.target;
+        if (t && t.closest && t.closest(sel)) cur.classList.add('point'); else cur.classList.remove('point');
+      }, { passive: true });
+      document.addEventListener('mouseleave', function () { cur.classList.remove('on'); });
+      window.addEventListener('touchstart', function () { root.classList.remove('kd-customcursor'); cur.style.display = 'none'; }, { passive: true, once: true });
+    })();
+    </script>
 </body>
 
 </html>

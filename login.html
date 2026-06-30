@@ -339,18 +339,29 @@
     background: repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, transparent 1px 3px);
   }
   .pow-console > * { position: relative; }
-  .pc-line { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
   .pc-head {
-    justify-content: space-between; color: var(--lime); letter-spacing: 1px;
-    margin-bottom: 6px; text-transform: uppercase; font-size: 9.5px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    color: var(--lime); letter-spacing: 1px; margin-bottom: 6px;
+    text-transform: uppercase; font-size: 9.5px;
   }
+  .pc-head-r { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
   .pc-head .spin { color: var(--lime); text-shadow: 0 0 6px rgba(0,255,150,0.7); }
-  .pc-k { color: #4a8f76; flex: 0 0 auto; font-size: 9px; letter-spacing: 0.5px; }
-  .pc-hash { font-variant-numeric: tabular-nums; color: #7fe9c0; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+  .pc-close {
+    border: 1px solid rgba(127,209,179,0.5); background: transparent; color: var(--teal);
+    width: 16px; height: 16px; border-radius: 4px; cursor: pointer; padding: 0;
+    font-size: 10px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .pc-close:hover { background: rgba(255,72,120,0.18); color: #ff8aa6; border-color: rgba(255,72,120,0.55); }
+  /* Aligned key→value grid: labels right-aligned in a fixed gutter, values share
+     a left edge, all numerics tabular so nothing jitters as digits change. */
+  .pc-data { display: grid; grid-template-columns: max-content 1fr; gap: 3px 10px; align-items: baseline; }
+  .pc-k { color: #4a8f76; font-size: 9px; letter-spacing: 0.5px; text-align: right; white-space: nowrap; }
+  .pc-hash, .pc-target, .pc-v { font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 0; }
+  .pc-hash { color: #7fe9c0; overflow: hidden; text-overflow: ellipsis; }
   .pc-hash .hz { color: var(--lime); font-weight: 700; text-shadow: 0 0 7px rgba(0,255,150,0.75); }
   .pc-target { color: var(--amber); letter-spacing: 1px; }
   .pc-target .tz { color: var(--lime); font-weight: 700; }
-  #pc-rate, #pc-nonce { color: var(--teal); font-variant-numeric: tabular-nums; }
+  .pc-v { color: var(--teal); }
   .pc-bar {
     position: relative; height: 13px; border: 1px solid rgba(0,255,150,0.28); border-radius: 3px;
     background: rgba(0,0,0,0.45); overflow: hidden; margin: 3px 0 7px;
@@ -365,7 +376,10 @@
   .pc-bar-pct {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     font-size: 9px; font-weight: 700; color: #d8fff0; letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
   }
+  /* Fixed-width percent in the button so it doesn't jitter 1→2→3 digits. */
+  #grind-pct { display: inline-block; min-width: 2.7em; text-align: right; font-variant-numeric: tabular-nums; }
   .pow-console.done { border-color: rgba(0,255,150,0.7); box-shadow: inset 0 0 22px rgba(0,255,150,0.12), 0 0 22px rgba(0,255,150,0.18); }
   .pow-console.fail { border-color: rgba(255,72,120,0.6); }
   .pow-console.fail .pc-head { color: #ff6b8a; }
@@ -604,25 +618,30 @@
 
         <!-- PRIMARY: anonymous guest -->
         <div class="opt">
-          <button type="button" class="btn btn-primary" id="anon-guest-btn" data-redirect="{{.Redirect}}" aria-label="Anonymous login — prove you are human">
-            <span class="b-label"><span class="b-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><rect x="4.5" y="1" width="9" height="5.5" rx="2" fill="currentColor"/><rect x="1" y="5.5" width="16" height="2.5" rx="1.25" fill="currentColor"/><circle cx="5.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 13.5h1.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>Anonymous Login<span class="b-suffix"> [Prove Human]</span></span>
+          <button type="button" class="btn btn-primary" id="anon-guest-btn" data-redirect="{{.Redirect}}" aria-label="Sign in anonymously with proof-of-work">
+            <span class="b-label"><span class="b-icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18" aria-hidden="true" focusable="false"><rect x="4.5" y="1" width="9" height="5.5" rx="2" fill="currentColor"/><rect x="1" y="5.5" width="16" height="2.5" rx="1.25" fill="currentColor"/><circle cx="5.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12.5" cy="13.5" r="2.8" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M8.3 13.5h1.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></span>Sign in Anonymously<span class="b-suffix"> · proof-of-work</span></span>
             <span class="grind"><span class="spin" id="pc-spin1">⠋</span><span id="grind-label">FORGING ACCESS KEY</span><span id="grind-pct">0%</span></span>
           </button>
           <div class="meta anon">
             <span>no account</span><span class="dot">·</span>
             <span>bot-gated</span><span class="dot">·</span>
-            <span>proof of work</span><span class="dot">·</span>
             <span class="ttl">{{.AnonTTLHuman}}</span>
             <button type="button" class="info-btn" id="anon-info-btn" aria-label="How guest entry works" aria-haspopup="dialog"><span class="i-glyph">?</span></button>
           </div>
           <div class="anon-status" id="anon-status" aria-live="polite"></div>
           <!-- Live SHA-256 grind telemetry (purely decorative; aria-hidden). -->
           <div class="pow-console" id="pow-console" aria-hidden="true">
-            <div class="pc-line pc-head"><span id="pc-state">SHA-256 PROOF-OF-WORK</span><span class="spin" id="pc-spin2">⠋</span></div>
+            <div class="pc-head">
+              <span id="pc-state">SHA-256 PROOF-OF-WORK</span>
+              <span class="pc-head-r"><span class="spin" id="pc-spin2">⠋</span><button type="button" class="pc-close" id="pc-close" aria-label="Cancel">✕</button></span>
+            </div>
             <div class="pc-bar"><span class="pc-fill" id="pc-fill"></span><span class="pc-bar-pct" id="pc-bar-pct">0%</span></div>
-            <div class="pc-line"><span class="pc-k">HASH</span><span class="pc-hash" id="pc-hash"><span class="hz" id="pc-hz"></span><span id="pc-hr">—</span></span></div>
-            <div class="pc-line"><span class="pc-k">TARGET</span><span class="pc-target" id="pc-target">—</span></div>
-            <div class="pc-line"><span class="pc-k">RATE</span><span id="pc-rate">0 H/s</span><span class="pc-k">NONCE</span><span id="pc-nonce">0</span></div>
+            <div class="pc-data">
+              <span class="pc-k">HASH</span><span class="pc-hash" id="pc-hash"><span class="hz" id="pc-hz"></span><span id="pc-hr">—</span></span>
+              <span class="pc-k">TARGET</span><span class="pc-target" id="pc-target">—</span>
+              <span class="pc-k">RATE</span><span class="pc-v" id="pc-rate">0 H/s</span>
+              <span class="pc-k">NONCE</span><span class="pc-v" id="pc-nonce">0</span>
+            </div>
           </div>
         </div>
 
@@ -828,10 +847,10 @@
         render(true);
         setTimeout(typeNext, 13 + rnd(30));                 // ~13–43 ms/char, jittered
       } else {
-        render(false);                                       // pause: cursor blinks
-        // Blank lines flick past; content lines hold a beat (longer if punctuated).
-        var pause = meta.t === '' ? 120 : (260 + rnd(360));
-        setTimeout(function () { commit(); typeNext(); }, pause);
+        render(false);
+        // No dwell at line end — commit and roll straight into the next line for
+        // a faster stream (a tiny tick keeps blank lines from flashing past).
+        setTimeout(function () { commit(); typeNext(); }, meta.t === '' ? 30 : 45);
       }
     }
 
@@ -899,7 +918,7 @@
       '<svg class="cur-point" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="#05110d" fill-opacity="0.55" stroke="#00ff99" stroke-width="1.8"/><path d="M12 1L12 5M12 19L12 23M1 12L5 12M19 12L23 12" stroke="#00ff99" stroke-width="1.8"/><circle cx="12" cy="12" r="1.8" fill="#00ff99"/></svg>';
     document.body.appendChild(cur);
     root.classList.add('kd-customcursor');
-    var sel = 'a,.btn,.info-btn,.d-close,summary,[role=button]';
+    var sel = 'a,.btn,.info-btn,.d-close,.pc-close,summary,[role=button]';
 
     // A modal <dialog> (showModal) renders in the browser TOP LAYER, above all
     // z-index — so the cursor + trail must live INSIDE the open dialog to stay
@@ -1096,9 +1115,29 @@
       '  i++;' +
       ' }' +
       '};';
-    var worker = null;
+    var worker = null, grindReject = null, cancelled = false;
+
+    // Cancel/close: abort the grind, hide the console, restore the button.
+    function hardReset() {
+      if (worker) { try { worker.terminate(); } catch (e) {} worker = null; }
+      spinStop('⠋');
+      btn.classList.remove('solving');
+      if (con) con.classList.remove('live', 'done', 'fail');
+      btn.disabled = false;
+      setPct(0);
+      say('');
+    }
+    function cancel() {
+      cancelled = true;
+      hardReset();
+      if (grindReject) { var r = grindReject; grindReject = null; r(new Error('cancelled')); }
+    }
+    var elClose = document.getElementById('pc-close');
+    if (elClose) elClose.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); cancel(); });
 
     btn.addEventListener('click', async function () {
+      if (btn.disabled) return;
+      cancelled = false;
       btn.disabled = true;
       btn.classList.add('solving');
       if (con) { con.classList.remove('done', 'fail'); con.classList.add('live'); }
@@ -1126,6 +1165,7 @@
         worker = new Worker(url);
         URL.revokeObjectURL(url);
         var solution = await new Promise(function (resolve, reject) {
+          grindReject = reject;
           worker.onmessage = function (e) {
             var d = e.data;
             if (d.hash) setHash(d.hash);
@@ -1143,6 +1183,7 @@
           worker.onerror = function () { reject(new Error('worker')); };
           worker.postMessage({ challenge: ch.challenge, bits: ch.bits });
         });
+        grindReject = null;
         worker.terminate();
         worker = null;
         setPct(1); spinStop('✔');
@@ -1164,6 +1205,8 @@
         var rd = await rdResp.json();
         window.location.assign(rd.redirect);
       } catch (err) {
+        grindReject = null;
+        if (cancelled) { cancelled = false; return; } // user closed it; already reset
         if (worker) { worker.terminate(); worker = null; }
         spinStop('✕');
         if (con) con.classList.add('fail');
