@@ -8380,20 +8380,9 @@
         }
       }
 
-      // ─── Autoplay by default ───
-      // Browsers block audio before a user gesture, and the login-page click
-      // doesn't carry into this document. So arm a one-shot listener: the first
-      // pointer / key / touch anywhere starts playback (same path as the play
-      // button). If the playlist isn't loaded yet, startMusicPlayback defers via
-      // pendingAutoStart and maybeAutoStart fires it once the fetch resolves.
-      (function armAutoplay() {
-        var evs = ['pointerdown', 'keydown', 'touchstart'];
-        function go() {
-          evs.forEach(function (ev) { window.removeEventListener(ev, go, true); });
-          window.startMusicPlayback();
-        }
-        evs.forEach(function (ev) { window.addEventListener(ev, go, { capture: true, passive: true }); });
-      })();
+      // ─── Autoplay disabled ───
+      // Music no longer starts on its own. Playback begins only when the user
+      // hits the play button (startMusicPlayback is still exposed for that path).
 
       // ─── Fetch playlist from server ───
       fetch('/api/playlist')
@@ -8599,8 +8588,8 @@
       }
       #kd-cursor.on { opacity: 1; }
       #kd-cursor svg { position: absolute; filter: drop-shadow(0 0 1.5px rgba(5,17,13,0.95)) drop-shadow(0 0 3px rgba(5,17,13,0.6)); }
-      #kd-cursor .cur-arrow { left: -3px; top: -2px; }
-      #kd-cursor .cur-point { left: -12px; top: -12px; display: none; }
+      #kd-cursor .cur-arrow { left: -2px; top: -1px; }
+      #kd-cursor .cur-point { left: -7px; top: -7px; display: none; }
       #kd-cursor.point .cur-arrow { display: none; }
       #kd-cursor.point .cur-point { display: block; }
     </style>
@@ -8610,8 +8599,8 @@
       var cur = document.createElement('div');
       cur.id = 'kd-cursor'; cur.setAttribute('aria-hidden', 'true');
       cur.innerHTML =
-        '<svg class="cur-arrow" width="22" height="22" viewBox="0 0 22 22"><path d="M3 2L3 17L7.5 13L10.5 19.5L13 18.5L10 12L16 12Z" fill="#05110d" stroke="#00ff99" stroke-width="1.7" stroke-linejoin="round"/></svg>' +
-        '<svg class="cur-point" width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="#05110d" fill-opacity="0.55" stroke="#00ff99" stroke-width="1.8"/><path d="M12 1L12 5M12 19L12 23M1 12L5 12M19 12L23 12" stroke="#00ff99" stroke-width="1.8"/><circle cx="12" cy="12" r="1.8" fill="#00ff99"/></svg>';
+        '<svg class="cur-arrow" width="15" height="15" viewBox="0 0 22 22"><path d="M3 2L3 17L7.5 13L10.5 19.5L13 18.5L10 12L16 12Z" fill="#05110d" stroke="#00ff99" stroke-width="2" stroke-linejoin="round"/></svg>' +
+        '<svg class="cur-point" width="14" height="14" viewBox="0 0 14 14"><rect x="1.5" y="1.5" width="11" height="11" fill="#05110d" fill-opacity="0.55" stroke="#00ff99" stroke-width="1.8"/><rect x="6" y="6" width="2" height="2" fill="#00ff99"/></svg>';
       document.body.appendChild(cur);
       root.classList.add('kd-customcursor');
       var sel = 'a,button,[role="button"],[onclick],summary,label,select,.clickable,' +
